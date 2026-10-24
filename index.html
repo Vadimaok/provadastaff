@@ -848,6 +848,19 @@ body.tile-rearrange-mode #addBtn{opacity:.35;pointer-events:none}
 .tile-order-setting .save{margin-top:0}
 .tile-order-reset{width:100%;margin-top:8px}
 #wallpaperSelect,#accentSelect{display:none}
+.device-sessions-list{display:grid;gap:9px}
+.device-session-group-title{display:flex;align-items:center;justify-content:space-between;margin:9px 0 2px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.device-session-group-title span{padding:3px 7px;border-radius:99px;background:rgba(var(--accent-rgb),.12);color:var(--accent)}
+.device-session-card{display:flex;align-items:center;gap:11px;min-width:0;padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(135,155,185,.045)}
+.device-session-card.is-current{border-color:rgba(var(--accent-rgb),.3);background:rgba(var(--accent-rgb),.07)}
+.device-session-icon{width:39px;height:39px;flex:0 0 39px;display:grid;place-items:center;border-radius:12px;background:rgba(var(--accent-rgb),.13);color:var(--accent);font-size:22px}
+.device-session-copy{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.device-session-copy strong{font-size:12px;overflow-wrap:anywhere}
+.device-session-copy span,.device-session-copy small{font-size:10px;color:var(--muted);overflow-wrap:anywhere}
+.device-session-live{flex:0 0 auto;padding:5px 7px;border-radius:8px;background:rgba(52,211,153,.12);color:#34d399;font-size:9px;font-weight:800}
+.device-session-live.is-offline{background:rgba(148,163,184,.12);color:var(--muted)}
+.device-sessions-empty{padding:12px;border:1px dashed var(--line);border-radius:13px;color:var(--muted);font-size:12px;line-height:1.5}
+.settings-device-status{margin:0 0 12px;padding:10px 12px;border-radius:12px;background:rgba(135,155,185,.07);font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
 @media(min-width:680px){.dashboard-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-tiles>.hero{grid-column:1/-1}}
 @media(prefers-reduced-motion:reduce){.dashboard-tiles [data-dashboard-tile]{transition:none!important}}
 
@@ -1141,6 +1154,16 @@ body.tile-rearrange-mode #addBtn{opacity:.35;pointer-events:none}
         <label class="field"><span>Новый пароль</span><input id="settingsPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Минимум 6 символов"></label>
         <label class="field"><span>Повтори новый пароль</span><input id="settingsPasswordRepeat" type="password" minlength="6" autocomplete="new-password" placeholder="Повтори пароль"></label>
         <button class="save" id="changePasswordBtn" type="button">Обновить пароль</button>
+      </section>
+    </section>
+
+    <section class="settings-group-card" aria-labelledby="settingsDevicesTitle">
+      <div class="settings-group-heading"><span class="settings-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M9 5h6M10 18.5h4"/></svg></span><div><h3 id="settingsDevicesTitle">Устройства</h3><p>Текущий вход и другие устройства с активным сеансом.</p></div></div>
+      <section class="settings-subsection">
+        <div id="deviceSessionsStatus" class="settings-device-status" role="status" aria-live="polite">Проверяю сеанс устройства…</div>
+        <div id="deviceSessionsList" class="device-sessions-list"><div class="settings-hint">Загружаю список устройств…</div></div>
+        <button class="ghost" id="refreshDeviceSessionsBtn" type="button" style="width:100%;margin-top:10px">Обновить список</button>
+        <p class="settings-hint">Активным считается сеанс, который связывался с облаком в последние 2 минуты. Для общего списка устройств нужна таблица сеансов в Supabase.</p>
       </section>
     </section>
 
@@ -1995,6 +2018,7 @@ async function activateCloudUser(user,forceReload=false){
       startCloudLiveSync();
       startTaskNotificationPolling();
       startRejectedReportPolling();
+      startDeviceSession();
       return;
     }
     const {data,error}=result||{};
@@ -2018,6 +2042,7 @@ async function activateCloudUser(user,forceReload=false){
     startTaskNotificationPolling();
     startCloudLiveSync();
     startRejectedReportPolling();
+    startDeviceSession();
     authMessage('Вход выполнен.');
     render();
   })().catch(error=>{
@@ -2086,6 +2111,7 @@ async function signUp(){
 async function signOut(){
   if(!cloudClient) return;
   closeProfileMenu(); closeSettings();
+  await stopDeviceSession();
   const {error}=await cloudClient.auth.signOut();
   if(error) authMessage(error.message,true);
 }
@@ -2499,6 +2525,94 @@ const PROFILE_THEME_KEY='minitrati.theme.v1';
 const PROFILE_APPEARANCE_KEY='minitrati.appearance.v1';
 const DEFAULT_APPEARANCE={wallpaper:'grid',accent:'blue',buttonStyle:'solid',density:'comfortable'};
 setupDashboardTileReordering();
+
+// Per-device heartbeat registry. This is separate from expense sync and never stores passwords/tokens.
+const DEVICE_SESSION_KEY='provoda.device-session.v1';
+let deviceSessionTimer=null;
+let deviceSessionId=null;
+function deviceSessionIdForUser(userId){
+  const key=DEVICE_SESSION_KEY+'.'+userId;
+  try{
+    let id=localStorage.getItem(key);
+    if(!id){id=(crypto.randomUUID?crypto.randomUUID():('dev-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)));localStorage.setItem(key,id);}
+    return id;
+  }catch{return 'dev-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
+}
+function currentDeviceDetails(){
+  const ua=navigator.userAgent||'';
+  let name='Неизвестное устройство',type='desktop';
+  if(/iPhone/i.test(ua)){name='iPhone';type='phone';}
+  else if(/iPad/i.test(ua)||(/Macintosh/i.test(ua)&&navigator.maxTouchPoints>1)){name='iPad';type='tablet';}
+  else if(/Android/i.test(ua)){name=/Mobile/i.test(ua)?'Android-телефон':'Android-планшет';type=/Mobile/i.test(ua)?'phone':'tablet';}
+  else if(/Windows/i.test(ua)){name='Компьютер Windows';type='desktop';}
+  else if(/Macintosh|Mac OS X/i.test(ua)){name='Mac';type='desktop';}
+  else if(/Linux/i.test(ua)){name='Компьютер Linux';type='desktop';}
+  let browser='Браузер';
+  if(/CriOS/i.test(ua))browser='Chrome на iOS';
+  else if(/FxiOS/i.test(ua))browser='Firefox на iOS';
+  else if(/EdgiOS/i.test(ua))browser='Edge на iOS';
+  else if(/Safari/i.test(ua)&&!/Chrome|Chromium|CriOS|Edg|OPR/i.test(ua))browser='Safari';
+  else if(/Edg/i.test(ua))browser='Microsoft Edge';
+  else if(/Chrome|Chromium/i.test(ua))browser='Chrome';
+  else if(/Firefox/i.test(ua))browser='Firefox';
+  return {name,type,browser,user_agent:ua.slice(0,400)};
+}
+function renderDeviceSessions(rows=[],message=''){
+  const list=document.querySelector('#deviceSessionsList'),status=document.querySelector('#deviceSessionsStatus');
+  if(!list||!status)return;
+  const me=deviceSessionId||(cloudUser?deviceSessionIdForUser(cloudUser.id):null);
+  const now=Date.now(),active=(Array.isArray(rows)?rows:[]).filter(x=>x&&x.last_seen_at&&now-Date.parse(x.last_seen_at)<120000).sort((a,b)=>Date.parse(b.last_seen_at)-Date.parse(a.last_seen_at));
+  const current=active.filter(x=>x.session_id===me),others=active.filter(x=>x.session_id!==me);
+  const local=currentDeviceDetails();
+  status.textContent=message||((cloudUser&&cloudClient)?'Облачный сеанс активен · обновление каждые 30 секунд':'Нет активного подключения к облаку');
+  const card=(x,isCurrent)=>'<article class="device-session-card '+(isCurrent?'is-current':'')+'"><span class="device-session-icon">'+(x.device_type==='phone'?'▯':x.device_type==='tablet'?'▤':'▣')+'</span><div class="device-session-copy"><strong>'+escapeHtml(x.device_name||'Устройство')+(isCurrent?' · Это устройство':'')+'</strong><span>'+escapeHtml(x.browser_name||'Браузер')+'</span><small>Последняя активность: '+escapeHtml(x.last_seen_at?new Date(x.last_seen_at).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'}):'сейчас')+'</small></div><span class="device-session-live">Активно</span></article>';
+  const localCard='<article class="device-session-card is-current"><span class="device-session-icon">'+(local.type==='phone'?'▯':local.type==='tablet'?'▤':'▣')+'</span><div class="device-session-copy"><strong>'+escapeHtml(local.name)+' · Это устройство</strong><span>'+escapeHtml(local.browser)+'</span><small>Этот браузер · '+(cloudUser?'аккаунт '+escapeHtml(cloudUser.email||'подключён'):'не вошли в аккаунт')+'</small></div><span class="device-session-live '+(cloudUser?'':'is-offline')+'">'+(cloudUser?'Текущее':'Локально')+'</span></article>';
+  list.innerHTML='<div class="device-session-group-title">Текущее устройство</div>'+(current.length?card(current[0],true):localCard)+'<div class="device-session-group-title">Другие устройства <span>'+(others.length)+'</span></div>'+(others.length?others.map(x=>card(x,false)).join(''):'<div class="device-sessions-empty">Других активных устройств пока не найдено.</div>');
+}
+async function refreshDeviceSessions(){
+  const list=document.querySelector('#deviceSessionsList'),status=document.querySelector('#deviceSessionsStatus');
+  if(!cloudClient||!cloudUser){renderDeviceSessions([],'Сначала войди в аккаунт.');return;}
+  if(list)list.innerHTML='<div class="settings-hint">Проверяю облачные сеансы…</div>';
+  try{
+    const {data,error}=await cloudClient.from('device_sessions').select('session_id,device_name,device_type,browser_name,last_seen_at').eq('user_id',cloudUser.id).order('last_seen_at',{ascending:false}).limit(30);
+    if(error)throw error;
+    renderDeviceSessions(data||[]);
+  }catch(error){
+    console.info('Device session list unavailable:',error?.message||error);
+    renderDeviceSessions([],/device_sessions|schema cache|relation .* does not exist/i.test(error?.message||'')?'Таблица сеансов ещё не создана в Supabase. Выполни supabase/device-sessions.sql.':'Облако не ответило на запрос устройств. Проверь подключение и нажми «Обновить список».');
+    const list=document.querySelector('#deviceSessionsList');
+    if(list)list.insertAdjacentHTML('beforeend','<div class="device-sessions-empty">Список других устройств недоступен, пока нет связи с облаком.</div>');
+  }
+}
+async function sendDeviceHeartbeat(){
+  if(!cloudClient||!cloudUser)return;
+  const details=currentDeviceDetails();
+  const {error}=await cloudClient.from('device_sessions').upsert({
+    user_id:cloudUser.id,session_id:deviceSessionId,device_name:details.name,device_type:details.type,
+    browser_name:details.browser,user_agent:details.user_agent,last_seen_at:new Date().toISOString()
+  },{onConflict:'user_id,session_id'});
+  if(error)throw error;
+}
+async function startDeviceSession(){
+  if(!cloudClient||!cloudUser)return;
+  deviceSessionId=deviceSessionIdForUser(cloudUser.id);
+  if(deviceSessionTimer)clearInterval(deviceSessionTimer);
+  try{await sendDeviceHeartbeat();await refreshDeviceSessions();}
+  catch(error){console.info('Device session heartbeat unavailable:',error?.message||error);}
+  deviceSessionTimer=setInterval(async()=>{
+    try{await sendDeviceHeartbeat();if(document.querySelector('#settingsSheet')?.classList.contains('open'))await refreshDeviceSessions();}
+    catch(error){console.info('Device heartbeat failed:',error?.message||error);}
+  },30000);
+}
+async function stopDeviceSession(){
+  if(deviceSessionTimer)clearInterval(deviceSessionTimer);
+  deviceSessionTimer=null;
+  if(cloudClient&&cloudUser&&deviceSessionId){
+    try{await cloudClient.from('device_sessions').delete().eq('user_id',cloudUser.id).eq('session_id',deviceSessionId);}catch{}
+  }
+  deviceSessionId=null;
+}
+
 function profileThemeKey(){ return PROFILE_THEME_KEY+'.'+(cloudUser?.id||'guest'); }
 function profileAppearanceKey(){ return PROFILE_APPEARANCE_KEY+'.'+(cloudUser?.id||'guest'); }
 function readAppearance(){
@@ -2619,6 +2733,8 @@ function openSettings(){
   status.textContent='';
   status.style.color='';
   syncProfileUI();
+  renderDeviceSessions([],cloudUser?'Обновляю список устройств…':'Сначала войди в аккаунт.');
+  if(cloudUser)refreshDeviceSessions();
   // Reset the scroll position each time; allow native touch scrolling on iOS.
   panel.scrollTop=0;
   requestAnimationFrame(()=>{panel.scrollTop=0;});
@@ -2700,6 +2816,7 @@ async function changeAccountPassword(){
   settingsStatus('Пароль успешно обновлён.');
 }
 
+document.querySelector('#refreshDeviceSessionsBtn')?.addEventListener('click',refreshDeviceSessions);
 document.querySelector('#settingsLogoutBtn').addEventListener('click',signOut);
 document.querySelector('#settingsCsvBtn').addEventListener('click',exportCSV);
 document.querySelector('#settingsBackupBtn').addEventListener('click',exportBackup);
