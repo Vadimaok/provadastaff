@@ -1812,7 +1812,9 @@ async function syncLatestCloudData(){
   try{
     const {data,error}=await cloudClient.from('user_data').select('data,updated_at').eq('user_id',userId).maybeSingle();
     if(error)throw error;
-    if(!cloudUser||cloudUser.id!==userId||!data)return;
+    if(!cloudUser||cloudUser.id!==userId)return;
+    hideCloudConnectionBanner();
+    if(!data)return;
     const incoming=validState(data.data);
     const signature=JSON.stringify(incoming);
     const updated=String(data.updated_at||'');
