@@ -2598,10 +2598,20 @@ async function startDeviceSession(){
   deviceSessionId=deviceSessionIdForUser(cloudUser.id);
   if(deviceSessionTimer)clearInterval(deviceSessionTimer);
   try{await sendDeviceHeartbeat();await refreshDeviceSessions();}
-  catch(error){console.info('Device session heartbeat unavailable:',error?.message||error);}
+  catch(error){
+    console.info('Device session heartbeat unavailable:',error?.message||error);
+    const status=document.querySelector('#deviceSessionsStatus');
+    if(status&&document.querySelector('#settingsSheet')?.classList.contains('open'))status.textContent='Не удалось отправить сеанс в облако: '+(error?.message||'ошибка подключения');
+  }
   deviceSessionTimer=setInterval(async()=>{
-    try{await sendDeviceHeartbeat();if(document.querySelector('#settingsSheet')?.classList.contains('open'))await refreshDeviceSessions();}
-    catch(error){console.info('Device heartbeat failed:',error?.message||error);}
+    try{
+      await sendDeviceHeartbeat();
+      if(document.querySelector('#settingsSheet')?.classList.contains('open'))await refreshDeviceSessions();
+    }catch(error){
+      console.info('Device heartbeat failed:',error?.message||error);
+      const status=document.querySelector('#deviceSessionsStatus');
+      if(status&&document.querySelector('#settingsSheet')?.classList.contains('open'))status.textContent='Связь с облаком потеряна или таблица сеансов недоступна: '+(error?.message||'ошибка подключения');
+    }
   },30000);
 }
 async function stopDeviceSession(){
