@@ -1912,9 +1912,61 @@ function stopTaskNotificationPolling(){
   if(adminNotificationTimer)clearInterval(adminNotificationTimer);
   adminNotificationTimer=null;lastSeenTaskNotificationIds=new Set();
 }
-async function activateCloudUser(user){
+async function cloudFetchWithTimeout(input,init={}){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),12000);
+  let externalAbort;
+  if(init.signal){
+    if(init.signal.aborted)controller.abort();
+    else {externalAbort=()=>controller.abort();init.signal.addEventListener('abort',externalAbort,{once:true});}
+  }
+  try{return await fetch(input,{...init,signal:controller.signal});}
+  finally{clearTimeout(timeout);if(externalAbort)init.signal.removeEventListener('abort',externalAbort);}
+}
+function showCloudConnectionBanner(message,user){
+  let banner=document.querySelector('#cloudConnectionBanner');
+  if(!banner){
+    banner=document.createElement('div');banner.id='cloudConnectionBanner';
+    banner.style.cssText='position:fixed;z-index:9999;top:calc(8px + env(safe-area-inset-top));left:12px;right:12px;max-width:520px;margin:auto;padding:12px 14px;border:1px solid rgba(251,191,36,.35);border-radius:16px;background:rgba(24,29,39,.97);color:#f4f6fb;box-shadow:0 12px 35px rgba(0,0,0,.28);backdrop-filter:blur(18px);font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;gap:10px';
+    const text=document.createElement('span');text.id='cloudConnectionBannerText';text.style.flex='1';
+    const button=document.createElement('button');button.id='cloudConnectionBannerRetry';button.type='button';button.textContent='Повторить';button.style.cssText='flex-shrink:0;padding:9px 12px;border-radius:10px;background:#7c5cff;color:#fff;font-weight:700;font:inherit';
+    button.addEventListener('click',async()=>{
+      const user=window.__provodaRetryUser;
+      if(!user||!cloudClient)return;
+      button.disabled=true;button.textContent='Проверяю…';
+      try{await activateCloudUser(user,true);}
+      finally{if(button.isConnected){button.disabled=false;button.textContent='Повторить';}}
+    });
+    banner.append(text,button);document.body.appendChild(banner);
+  }
+  const text=banner.querySelector('#cloudConnectionBannerText');if(text)text.textContent=message;
+  const button=banner.querySelector('#cloudConnectionBannerRetry');
+  if(button&&user)window.__provodaRetryUser=user;
+  banner.hidden=false;
+}
+function hideCloudConnectionBanner(){document.querySelector('#cloudConnectionBanner')?.remove();window.__provodaRetryUser=null;}
+async function fetchCloudUserData(userId){
+  let lastError;
+  for(let attempt=0;attempt<3;attempt++){
+    try{
+      const result=await Promise.race([
+        cloudClient.from('user_data').select('data').eq('user_id',userId).maybeSingle(),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('Запрос к базе превысил лимит ожидания.')),14000))
+      ]);
+      if(result?.error)throw result.error;
+      return result;
+    }catch(error){
+      lastError=error;
+      console.warn('Cloud data attempt '+(attempt+1)+' failed:',error?.message||error);
+      if(attempt<2)await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
+    }
+  }
+  throw lastError||new Error('Не удалось получить данные из облака.');
+}
+
+async function activateCloudUser(user,forceReload=false){
   if(!user || !cloudClient) return;
-  if(cloudUser && cloudUser.id===user.id){
+  if(cloudUser && cloudUser.id===user.id && !forceReload){
     document.querySelector('#authGate').classList.add('hidden');
     startTaskNotificationPolling();
     return;
@@ -1924,19 +1976,23 @@ async function activateCloudUser(user){
     authMessage('Загружаю твои расходы из облака…');
     let result;
     try{
-      result=await Promise.race([
-        cloudClient.from('user_data').select('data').eq('user_id',user.id).maybeSingle(),
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error('Облако не ответило за 15 секунд. Проверь подключение и попробуй обновить страницу.')),15000))
-      ]);
+      result=await fetchCloudUserData(user.id);
     }catch(error){
-      console.error('Cloud data load failed:',error);
-      const message=String(error?.message||'');
-      authMessage(/timeout|не ответило|15 секунд/i.test(message)
-        ? message
-        : (/fetch|network|load failed|failed to fetch/i.test(message)
-          ? 'Не удалось связаться с облаком. Интернет может работать, а адрес облачной базы — не отвечать.'
-          : 'Не удалось загрузить расходы: '+message),true);
-      showCloudRetry(user);
+      console.error('Cloud data load failed after retries:',error);
+      // Valid session: show only this user's locally cached data while the cloud is unavailable.
+      let cachedState=null;
+      try{const raw=localStorage.getItem(LS+'.'+user.id);if(raw)cachedState=validState(JSON.parse(raw));}catch{}
+      cloudUser=user;
+      if(cachedState)state=cachedState;
+      cloudLastUpdatedAt=null;
+      cloudLastDataSignature=JSON.stringify(state);
+      document.querySelector('#authGate').classList.add('hidden');
+      if(typeof syncProfileUI==='function')syncProfileUI();
+      render();
+      showCloudConnectionBanner('Нет ответа от облака. Показываю сохранённые на этом устройстве данные; попробую подключиться снова.',user);
+      startCloudLiveSync();
+      startTaskNotificationPolling();
+      startRejectedReportPolling();
       return;
     }
     const {data,error}=result||{};
@@ -1946,6 +2002,7 @@ async function activateCloudUser(user){
       return;
     }
     document.querySelector('#cloudRetryBtn')?.remove();
+    hideCloudConnectionBanner();
     cloudUser=user;
     state=validState(data ? data.data : null);
     cloudLastUpdatedAt=null;
@@ -1968,6 +2025,7 @@ async function activateCloudUser(user){
   return activationInProgress;
 }
 function deactivateCloudUser(){
+  hideCloudConnectionBanner();
   stopTaskNotificationPolling();
   stopCloudLiveSync();
   stopRejectedReportPolling();
@@ -2058,7 +2116,8 @@ async function initCloudAuth(){
   }
   try{
     cloudClient=window.supabase.createClient(window.MINITRATI_SUPABASE_URL,window.MINITRATI_SUPABASE_ANON_KEY,{
-      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},
+      global:{fetch:cloudFetchWithTimeout}
     });
     cloudClient.auth.onAuthStateChange((_event,session)=>{
       queueMicrotask(()=>{ if(session && session.user) activateCloudUser(session.user); else deactivateCloudUser(); });
