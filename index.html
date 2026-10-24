@@ -814,6 +814,43 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
 .knz-rejected-inline p{margin:7px 0 0;font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text-color,#e5e7eb)}
 .knz-task-rejected{border-color:rgba(225,75,75,.32)!important}
 @media(max-width:600px){#toast,#toast2{bottom:calc(22px + env(safe-area-inset-bottom));min-width:0;width:calc(100vw - 32px);border-radius:14px}#knzRejectedBanner{width:calc(100% - 24px);margin:12px auto 16px;padding:15px 14px 15px 17px}}
+
+/* Dashboard tile customization */
+.dashboard-tiles{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:0 auto;max-width:760px}
+.dashboard-tiles>.hero{grid-column:1/-1;min-width:0}
+.dashboard-tiles>.grid,.dashboard-tiles>.feature-grid{display:contents!important}
+.dashboard-tiles [data-dashboard-tile]{min-width:0;position:relative;transition:box-shadow .22s ease,border-color .22s ease,opacity .22s ease}
+.dashboard-tiles [data-dashboard-tile] .tile-drag-handle{display:none;position:absolute;right:10px;top:10px;z-index:4;width:36px;height:36px;border-radius:12px;border:1px solid rgba(var(--accent-rgb),.28);background:rgba(var(--accent-rgb),.12);color:var(--accent);align-items:center;justify-content:center;font-size:19px;font-weight:800;touch-action:none;user-select:none;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+body.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile] .tile-drag-handle{display:flex}
+body.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile]{outline:1px dashed rgba(var(--accent-rgb),.42);outline-offset:2px}
+body.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile].tile-dragging{opacity:.72;z-index:8;box-shadow:0 22px 50px rgba(0,0,0,.28);border-color:var(--accent)}
+body.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile] h2{padding-right:40px}
+.tile-arrange-bar{display:none;position:fixed;z-index:25;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(calc(100% - 24px),520px);align-items:center;justify-content:space-between;gap:12px;padding:9px 10px 9px 15px;border:1px solid rgba(var(--accent-rgb),.35);border-radius:16px;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(18px);box-shadow:0 14px 35px rgba(0,0,0,.22);font-size:12px;font-weight:700}
+body.tile-rearrange-mode .tile-arrange-bar{display:flex}
+.tile-arrange-bar button{padding:9px 14px;border-radius:11px;background:var(--accent);color:#fff;font-weight:800;white-space:nowrap}
+body.tile-rearrange-mode #addBtn{opacity:.35;pointer-events:none}
+.wallpaper-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.wallpaper-option{min-width:0;display:flex;flex-direction:column;gap:4px;text-align:left;padding:8px;border-radius:15px;border:1px solid var(--line);background:rgba(128,145,166,.045);color:var(--text)}
+.wallpaper-option strong{font-size:12px}.wallpaper-option small{font-size:10px;color:var(--muted)}
+.wallpaper-option[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px rgba(var(--accent-rgb),.14);background:rgba(var(--accent-rgb),.07)}
+.wallpaper-thumb{position:relative;display:block;height:68px;overflow:hidden;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#0b1017}
+.wallpaper-thumb:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 70% 0%,rgba(79,140,255,.4),transparent 55%),linear-gradient(180deg,#121a26,#090d13)}
+.wallpaper-thumb i{position:absolute;inset:13px 12px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.wallpaper-thumb-aurora:before{background:radial-gradient(ellipse at 15% 10%,rgba(37,185,154,.7),transparent 45%),radial-gradient(ellipse at 85% 15%,rgba(148,114,245,.7),transparent 50%),linear-gradient(145deg,#0a1419,#10101b)}
+.wallpaper-thumb-plain:before{background:linear-gradient(180deg,#202833,#11161e)}
+.wallpaper-thumb-midnight:before{background:radial-gradient(ellipse at 50% 0%,rgba(79,140,255,.5),transparent 65%),linear-gradient(145deg,#09111f,#080e18)}
+.accent-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:0 0 14px}
+.accent-option{display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 3px;border-radius:13px;border:1px solid var(--line);background:rgba(128,145,166,.045);color:var(--muted);font-size:10px;font-weight:700}
+.accent-option i{display:block;width:24px;height:24px;border-radius:50%;background:var(--swatch);box-shadow:0 0 0 3px color-mix(in srgb,var(--swatch) 18%,transparent),inset 0 1px 2px rgba(255,255,255,.35)}
+.accent-option[aria-pressed="true"]{border-color:var(--accent);color:var(--text);background:rgba(var(--accent-rgb),.08)}
+.tile-order-setting{padding:14px;margin-top:14px;border:1px solid var(--line);border-radius:16px;background:rgba(128,145,166,.045)}
+.tile-order-setting p{font-size:12px;line-height:1.5;color:var(--muted);margin:5px 0 12px}
+.tile-order-setting .save{margin-top:0}
+.tile-order-reset{width:100%;margin-top:8px}
+#wallpaperSelect,#accentSelect{display:none}
+@media(min-width:680px){.dashboard-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-tiles>.hero{grid-column:1/-1}}
+@media(prefers-reduced-motion:reduce){.dashboard-tiles [data-dashboard-tile]{transition:none!important}}
+
 </style>
 <base target="_blank">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
@@ -867,18 +904,18 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
   </div>
 
   <div id="knzRejectedBanner" class="knz-rejected-banner hidden" role="alert"><strong>Задача не засчитана</strong><span id="knzRejectedBannerText">Старший КНЗ отклонил результат задачи.</span></div>
-    <section class="hero">
+    <div id="dashboardTiles" class="dashboard-tiles"><section class="hero" data-dashboard-tile="total">
     <div class="small">Потрачено в этом месяце</div>
     <div class="sum" id="total">0 ₽</div>
     <div class="sub" id="stats"></div>
   </section>
 
   <main class="grid">
-    <section class="card">
+    <section class="card" data-dashboard-tile="categories">
       <h2>Категории</h2>
       <div id="cats"></div>
     </section>
-    <section class="card">
+    <section class="card" data-dashboard-tile="recent">
       <div class="recent-heading"><h2>Последние покупки</h2><span class="recent-count" id="recentCount">0</span></div>
       <div class="list" id="recent"></div>
       <button class="history-toggle" id="toggleRecentBtn" type="button" aria-expanded="false">Посмотреть историю покупок <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
@@ -887,7 +924,7 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
     </section>
   </main>
   <section class="feature-grid" aria-label="Инструменты Provoda staff">
-    <section class="card feature-card budget-card">
+    <section class="card feature-card budget-card" data-dashboard-tile="budget">
       <div class="feature-heading"><div><span class="feature-kicker">КОНТРОЛЬ РАСХОДОВ</span><h2>Бюджет на месяц</h2></div><span class="feature-icon">◉</span></div>
       <div class="budget-total"><strong id="budgetSpent">0 ₽</strong><span id="budgetRemaining">Лимит не задан</span></div>
       <div class="budget-track"><i id="budgetProgress"></i></div>
@@ -895,13 +932,13 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
       <button class="save feature-save" id="saveBudgetBtn" type="button">Сохранить бюджет</button>
       <p class="feature-note" id="budgetMessage">Установи лимит, чтобы следить за расходами.</p>
     </section>
-    <section class="card feature-card">
+    <section class="card feature-card" data-dashboard-tile="analytics">
       <div class="feature-heading"><div><span class="feature-kicker">КУДА УХОДЯТ ДЕНЬГИ</span><h2>Аналитика</h2></div><span class="feature-icon">▥</span></div>
       <div id="analyticsSummary" class="analytics-summary"></div>
       <div id="analyticsBars" class="analytics-bars"></div>
       <p class="feature-note">Распределение покупок текущего месяца по категориям.</p>
     </section>
-    <section class="card feature-card">
+    <section class="card feature-card" data-dashboard-tile="favorites">
       <div class="feature-heading"><div><span class="feature-kicker">БЫСТРЫЙ ДОСТУП</span><h2>Избранное</h2></div><span class="feature-icon">♡</span></div>
       <div id="favoritesList" class="feature-list"><p class="muted">Добавляй товары в избранное значком ☆ рядом с покупкой.</p></div>
     </section>
@@ -914,7 +951,9 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
     </section>
   </section>
 </div>
+</div>
 
+<div id="tileArrangeBar" class="tile-arrange-bar" role="status" aria-live="polite"><span>Перетаскивай плитки за ручку ↕</span><button type="button" id="finishTileArrangeBtn">Готово</button></div>
 <button class="fab" id="addBtn">+ Добавить</button>
 
 <div class="sheet" id="sheet" aria-hidden="true">
@@ -1109,8 +1148,17 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
       <div class="settings-group-heading"><span class="settings-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></span><div><h3 id="settingsAppearanceTitle">Персонализация</h3><p>Подстрой цвета, фон и плотность интерфейса под себя.</p></div></div>
       <section class="settings-subsection">
         <label class="field"><span>Тема приложения</span><select id="themeSelect"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="system">Как в системе</option></select></label>
-        <label class="field"><span>Обои и фон</span><select id="wallpaperSelect"><option value="grid">Графитовая сетка</option><option value="aurora">Северное сияние</option><option value="plain">Чистый минимализм</option><option value="midnight">Полночный синий</option></select></label>
-        <label class="field"><span>Акцентный цвет</span><select id="accentSelect"><option value="blue">Холодный синий</option><option value="violet">Фиолетовый</option><option value="emerald">Изумрудный</option><option value="amber">Янтарный</option><option value="rose">Бордовый</option></select></label>
+        <label class="field"><span>Обои и фон</span><select id="wallpaperSelect"><option value="grid">Графитовая сетка</option><option value="aurora">Северное сияние</option><option value="plain">Чистый минимализм</option><option value="midnight">Полночный синий</option></select></label><div class="wallpaper-options" role="group" aria-label="Выбрать обои">
+<button type="button" class="wallpaper-option" data-wallpaper-choice="grid"><span class="wallpaper-thumb wallpaper-thumb-grid"><i></i></span><strong>Графит</strong><small>Спокойная сетка</small></button>
+<button type="button" class="wallpaper-option" data-wallpaper-choice="aurora"><span class="wallpaper-thumb wallpaper-thumb-aurora"><i></i></span><strong>Сияние</strong><small>Цветные переливы</small></button>
+<button type="button" class="wallpaper-option" data-wallpaper-choice="plain"><span class="wallpaper-thumb wallpaper-thumb-plain"><i></i></span><strong>Минимализм</strong><small>Чистый фон</small></button>
+<button type="button" class="wallpaper-option" data-wallpaper-choice="midnight"><span class="wallpaper-thumb wallpaper-thumb-midnight"><i></i></span><strong>Полночь</strong><small>Глубокий синий</small></button></div>
+        <label class="field"><span>Акцентный цвет</span><select id="accentSelect"><option value="blue">Холодный синий</option><option value="violet">Фиолетовый</option><option value="emerald">Изумрудный</option><option value="amber">Янтарный</option><option value="rose">Бордовый</option></select></label><div class="accent-options" role="group" aria-label="Выбрать акцентный цвет">
+<button type="button" class="accent-option" data-accent-choice="blue"><i style="--swatch:#4f8cff"></i><span>Синий</span></button>
+<button type="button" class="accent-option" data-accent-choice="violet"><i style="--swatch:#9472f5"></i><span>Фиолетовый</span></button>
+<button type="button" class="accent-option" data-accent-choice="emerald"><i style="--swatch:#25b99a"></i><span>Изумруд</span></button>
+<button type="button" class="accent-option" data-accent-choice="amber"><i style="--swatch:#e5a63c"></i><span>Янтарь</span></button>
+<button type="button" class="accent-option" data-accent-choice="rose"><i style="--swatch:#e16d86"></i><span>Розовый</span></button></div>
         <label class="field"><span>Стиль кнопок</span><select id="buttonStyleSelect"><option value="solid">Заливка — выразительно</option><option value="soft">Мягкий — сдержанно</option><option value="outline">Контур — минимализм</option></select></label>
         <label class="field"><span>Плотность интерфейса</span><select id="densitySelect"><option value="comfortable">Просторно</option><option value="compact">Компактно</option></select></label>
         <div class="appearance-preview" aria-live="polite"><span class="appearance-preview-label">Предпросмотр</span><div class="appearance-preview-buttons"><span class="preview-primary" id="appearancePreviewPrimary">Добавить покупку</span><span class="preview-secondary" id="appearancePreviewSecondary">Отмена</span></div><span class="settings-hint">Настройки сохраняются отдельно в этом браузере.</span></div>
@@ -1126,6 +1174,11 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
           <label><input type="checkbox" data-feature-visible="analytics"><span><strong>Аналитика расходов</strong><small>Категории и суммы</small></span></label>
           <label><input type="checkbox" data-feature-visible="favorites" checked><span><strong>Избранные товары</strong><small>Быстрое добавление покупок</small></span></label>
           <label><input type="checkbox" data-feature-visible="export" checked><span><strong>Данные и инструменты</strong><small>Экспорт, архив, новый месяц и уведомления</small></span></label>
+        </div>
+        <div class="tile-order-setting">
+          <div><strong>Порядок плиток</strong><p>Переставь категории, покупки, бюджет и остальные блоки под себя. Работает касанием на iPhone и Android.</p></div>
+          <button type="button" class="save" id="configureTileOrderBtn">Переставить плитки</button>
+          <button type="button" class="ghost tile-order-reset" id="resetTileOrderBtn">Вернуть исходный порядок</button>
         </div>
         <div class="settings-notifications"><div><strong>Уведомления о расходах</strong><p>Показывать сумму покупки и остаток бюджета.</p><span id="settingsNotificationsStatus">Настройка браузера</span></div><button class="ghost" id="settingsNotificationsBtn" type="button">Настроить</button></div>
       </section>
@@ -1670,6 +1723,7 @@ function bindFinanceFeatures(){
   $('#restoreBackupFile').addEventListener('change',restoreBackup);
   $('#notificationsBtn').addEventListener('click',enableNotifications);
   setupFeaturePanels();
+setupDashboardTileReordering();
   $('#favoritesList').addEventListener('click',e=>{
     const add=e.target.closest('[data-fav-add]'),remove=e.target.closest('[data-fav-remove]');
     if(add)addFavoritePurchase(add.dataset.favAdd);
@@ -2363,6 +2417,24 @@ async function bootCloudAuthWithFallback(){
 }
 bootCloudAuthWithFallback();
 
+
+/* Saved dashboard tile order and touch-friendly drag mode */
+const DASHBOARD_ORDER_KEY='provoda.dashboard-order.v1';
+const DASHBOARD_TILE_DEFAULTS=['total','categories','recent','budget','analytics','favorites'];
+let dashboardTileOrder=[...DASHBOARD_TILE_DEFAULTS];
+let dashboardDragState=null;
+function dashboardTiles(){return DASHBOARD_TILE_DEFAULTS.map(id=>document.querySelector('[data-dashboard-tile="'+id+'"]')).filter(Boolean);}
+function readDashboardTileOrder(){try{const saved=JSON.parse(localStorage.getItem(DASHBOARD_ORDER_KEY)||'null');if(Array.isArray(saved)){const valid=saved.filter(id=>DASHBOARD_TILE_DEFAULTS.includes(id));dashboardTileOrder=[...valid,...DASHBOARD_TILE_DEFAULTS.filter(id=>!valid.includes(id))];}}catch{}}
+function animateDashboardReorder(){const els=dashboardTiles(),before=new Map(els.map(el=>[el,el.getBoundingClientRect()]));els.forEach(el=>{el.style.order=String(dashboardTileOrder.indexOf(el.dataset.dashboardTile));});requestAnimationFrame(()=>{els.forEach(el=>{const a=before.get(el),b=el.getBoundingClientRect();if(!a||!b.width||!b.height)return;const dx=a.left-b.left,dy=a.top-b.top;if(Math.abs(dx)+Math.abs(dy)<2)return;if(el.animate)el.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'translate(0,0)'}],{duration:230,easing:'cubic-bezier(.2,.8,.2,1)'});});});}
+function persistDashboardTileOrder(){try{localStorage.setItem(DASHBOARD_ORDER_KEY,JSON.stringify(dashboardTileOrder))}catch{}}
+function applyDashboardTileOrder(animate=false){dashboardTiles().forEach(el=>{if(!dashboardTileOrder.includes(el.dataset.dashboardTile))dashboardTileOrder.push(el.dataset.dashboardTile);});if(animate)animateDashboardReorder();else dashboardTiles().forEach(el=>{el.style.order=String(dashboardTileOrder.indexOf(el.dataset.dashboardTile));});document.querySelectorAll('[data-dashboard-tile]').forEach(el=>{if(!el.querySelector('.tile-drag-handle')){const handle=document.createElement('button');handle.type='button';handle.className='tile-drag-handle';handle.setAttribute('aria-label','Перетащить плитку');handle.title='Зажми и перетащи';handle.textContent='↕';handle.addEventListener('pointerdown',startDashboardTileDrag);el.appendChild(handle);}});}
+function startDashboardTileDrag(e){if(!document.body.classList.contains('tile-rearrange-mode'))return;const tile=e.currentTarget.closest('[data-dashboard-tile]');if(!tile)return;e.preventDefault();dashboardDragState={id:tile.dataset.dashboardTile,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,moved:false};tile.classList.add('tile-dragging');try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}document.addEventListener('pointermove',moveDashboardTile,{passive:false});document.addEventListener('pointerup',endDashboardTileDrag,{once:true});document.addEventListener('pointercancel',endDashboardTileDrag,{once:true});}
+function moveDashboardTile(e){if(!dashboardDragState)return;e.preventDefault();const tile=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('[data-dashboard-tile]');if(!tile||!DASHBOARD_TILE_DEFAULTS.includes(tile.dataset.dashboardTile))return;const from=dashboardTileOrder.indexOf(dashboardDragState.id),to=dashboardTileOrder.indexOf(tile.dataset.dashboardTile);if(from===to||from<0||to<0)return;dashboardDragState.moved=true;const [moving]=dashboardTileOrder.splice(from,1);dashboardTileOrder.splice(to,0,moving);applyDashboardTileOrder(true);}
+function endDashboardTileDrag(){document.removeEventListener('pointermove',moveDashboardTile);document.removeEventListener('pointercancel',endDashboardTileDrag);document.querySelectorAll('.tile-dragging').forEach(el=>el.classList.remove('tile-dragging'));if(dashboardDragState?.moved){persistDashboardTileOrder();toast('Порядок плиток сохранён');}dashboardDragState=null;}
+function setDashboardRearrangeMode(enabled){document.body.classList.toggle('tile-rearrange-mode',enabled);if(!enabled)endDashboardTileDrag();const bar=document.querySelector('#tileArrangeBar');if(bar)bar.setAttribute('aria-hidden',String(!enabled));if(enabled)toast('Зажми ↕ на плитке и перетащи её');}
+function setupDashboardTileReordering(){readDashboardTileOrder();applyDashboardTileOrder(false);document.querySelector('#configureTileOrderBtn')?.addEventListener('click',()=>{closeSettings();setDashboardRearrangeMode(true);});document.querySelector('#finishTileArrangeBtn')?.addEventListener('click',()=>setDashboardRearrangeMode(false));document.querySelector('#resetTileOrderBtn')?.addEventListener('click',()=>{dashboardTileOrder=[...DASHBOARD_TILE_DEFAULTS];persistDashboardTileOrder();applyDashboardTileOrder(true);settingsStatus('Исходный порядок плиток восстановлен.');});}
+function updateVisualChoiceStates(a=readAppearance()){document.querySelectorAll('[data-wallpaper-choice]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.wallpaperChoice===a.wallpaper)));document.querySelectorAll('[data-accent-choice]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.accentChoice===a.accent)));}
+
 const PROFILE_THEME_KEY='minitrati.theme.v1';
 const PROFILE_APPEARANCE_KEY='minitrati.appearance.v1';
 const DEFAULT_APPEARANCE={wallpaper:'grid',accent:'blue',buttonStyle:'solid',density:'comfortable'};
@@ -2386,6 +2458,7 @@ function applyAppearance(appearance=readAppearance(),persist=true){
   controls.forEach(([selector,value])=>{const el=document.querySelector(selector);if(el)el.value=value});
   if(persist){try{localStorage.setItem(profileAppearanceKey(),JSON.stringify(a))}catch{}}
   updateAppearancePreview(a);
+  updateVisualChoiceStates(a);
 }
 function updateAppearancePreview(a=readAppearance()){
   const primary=document.querySelector('#appearancePreviewPrimary');
@@ -2594,6 +2667,8 @@ document.querySelector('#removeAvatarBtn').addEventListener('click',removeAvatar
 document.querySelector('#themeSelect').addEventListener('change',e=>applyTheme(e.target.value));
 document.querySelector('#wallpaperSelect').addEventListener('change',e=>applyAppearance({...readAppearance(),wallpaper:e.target.value}));
 document.querySelector('#accentSelect').addEventListener('change',e=>applyAppearance({...readAppearance(),accent:e.target.value}));
+document.querySelectorAll('[data-wallpaper-choice]').forEach(btn=>btn.addEventListener('click',()=>applyAppearance({...readAppearance(),wallpaper:btn.dataset.wallpaperChoice})));
+document.querySelectorAll('[data-accent-choice]').forEach(btn=>btn.addEventListener('click',()=>applyAppearance({...readAppearance(),accent:btn.dataset.accentChoice})));
 document.querySelector('#buttonStyleSelect').addEventListener('change',e=>applyAppearance({...readAppearance(),buttonStyle:e.target.value}));
 document.querySelector('#densitySelect').addEventListener('change',e=>applyAppearance({...readAppearance(),density:e.target.value}));
 document.querySelector('#resetAppearanceBtn').addEventListener('click',resetAppearance);
