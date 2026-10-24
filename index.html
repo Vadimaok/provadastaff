@@ -2607,5 +2607,65 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
   if(theme==='system')applyTheme('system',false);
 });
 </script>
+
+<script id="provoda-modal-scroll-lock">
+(function(){
+  let locked=false, savedY=0, previous=null;
+  function hasVisibleModal(){
+    return Array.from(document.querySelectorAll('[aria-modal="true"]')).some(el=>{
+      if(!el.isConnected || !el.getClientRects().length) return false;
+      const style=getComputedStyle(el);
+      return style.display!=='none' && style.visibility!=='hidden' && Number(style.opacity||1)!==0;
+    });
+  }
+  function syncScrollLock(){
+    const shouldLock=hasVisibleModal();
+    if(shouldLock && !locked){
+      locked=true;
+      savedY=window.scrollY||window.pageYOffset||0;
+      previous={
+        htmlOverflow:document.documentElement.style.overflow,
+        bodyOverflow:document.body.style.overflow,
+        bodyPosition:document.body.style.position,
+        bodyTop:document.body.style.top,
+        bodyLeft:document.body.style.left,
+        bodyRight:document.body.style.right,
+        bodyWidth:document.body.style.width,
+        bodyTouchAction:document.body.style.touchAction
+      };
+      document.documentElement.style.overflow='hidden';
+      document.body.style.overflow='hidden';
+      document.body.style.position='fixed';
+      document.body.style.top=(-savedY)+'px';
+      document.body.style.left='0';
+      document.body.style.right='0';
+      document.body.style.width='100%';
+      document.body.style.touchAction='none';
+    }else if(!shouldLock && locked){
+      locked=false;
+      document.documentElement.style.overflow=previous?.htmlOverflow||'';
+      document.body.style.overflow=previous?.bodyOverflow||'';
+      document.body.style.position=previous?.bodyPosition||'';
+      document.body.style.top=previous?.bodyTop||'';
+      document.body.style.left=previous?.bodyLeft||'';
+      document.body.style.right=previous?.bodyRight||'';
+      document.body.style.width=previous?.bodyWidth||'';
+      document.body.style.touchAction=previous?.bodyTouchAction||'';
+      window.scrollTo(0,savedY);
+      previous=null;
+    }
+  }
+  const observer=new MutationObserver(syncScrollLock);
+  function init(){
+    syncScrollLock();
+    observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','aria-hidden','aria-modal']});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')setTimeout(syncScrollLock,0);});
+    window.addEventListener('resize',syncScrollLock,{passive:true});
+    window.addEventListener('pageshow',syncScrollLock);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
+
 </body>
 </html>
