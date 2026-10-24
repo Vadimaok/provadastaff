@@ -1723,7 +1723,6 @@ function bindFinanceFeatures(){
   $('#restoreBackupFile').addEventListener('change',restoreBackup);
   $('#notificationsBtn').addEventListener('click',enableNotifications);
   setupFeaturePanels();
-setupDashboardTileReordering();
   $('#favoritesList').addEventListener('click',e=>{
     const add=e.target.closest('[data-fav-add]'),remove=e.target.closest('[data-fav-remove]');
     if(add)addFavoritePurchase(add.dataset.favAdd);
@@ -2438,6 +2437,7 @@ function updateVisualChoiceStates(a=readAppearance()){document.querySelectorAll(
 const PROFILE_THEME_KEY='minitrati.theme.v1';
 const PROFILE_APPEARANCE_KEY='minitrati.appearance.v1';
 const DEFAULT_APPEARANCE={wallpaper:'grid',accent:'blue',buttonStyle:'solid',density:'comfortable'};
+setupDashboardTileReordering();
 function profileThemeKey(){ return PROFILE_THEME_KEY+'.'+(cloudUser?.id||'guest'); }
 function profileAppearanceKey(){ return PROFILE_APPEARANCE_KEY+'.'+(cloudUser?.id||'guest'); }
 function readAppearance(){
