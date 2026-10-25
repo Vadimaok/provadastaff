@@ -2292,7 +2292,7 @@ async function adminLoadRoles(){
   userSel.innerHTML='<option value="">Выбери аккаунт</option>'+adminAccounts.map(u=>'<option value="'+escapeHtml(u.user_id)+'">'+escapeHtml(adminAccountName(u))+' · '+escapeHtml(u.email||'без почты')+'</option>').join('');
   if([...userSel.options].some(o=>o.value===chosen))userSel.value=chosen;
   const selected=adminAccounts.find(u=>u.user_id===userSel.value);
-  document.querySelector('#adminRoleSelect').value=['employee','employee_knz','shift_senior'].includes(selected?.role)?selected.role:'employee';
+  document.querySelector('#adminRoleSelect').value=['employee','employee_knz','shift_senior','shift_day','shift_night'].includes(selected?.role)?selected.role:'employee';
 }
 async function adminSaveRole(){
   const userId=document.querySelector('#adminRoleUser').value;
@@ -2723,7 +2723,7 @@ async function openRequestedTeamView(){
 }
 async function refreshCurrentUserRole(){
   if(!cloudClient||!cloudUser){currentUserRole='employee';applyRoleUI();return;}
-  try{const {data,error}=await cloudClient.rpc('user_get_my_role');if(error)throw error;currentUserRole=['employee','employee_knz','shift_senior'].includes(data)?data:'employee';}
+  try{const {data,error}=await cloudClient.rpc('user_get_my_role');if(error)throw error;currentUserRole=['employee','employee_knz','shift_senior','shift_day','shift_night'].includes(data)?data:'employee';}
   catch(e){console.info('Role could not be loaded:',e?.message||e);}
   applyRoleUI();
   if(currentUserRole==='employee_knz')refreshKnzRejectedBanner();
@@ -2734,8 +2734,8 @@ async function refreshKnzRejectedBanner(){
   try{const {data,error}=await cloudClient.rpc('user_list_my_knz_tasks');if(error)throw error;const rejected=(Array.isArray(data)?data:[]).filter(t=>t.status==='rejected');banner.classList.toggle('hidden',!rejected.length);const txt=document.querySelector('#knzRejectedBannerText');if(txt)txt.textContent=rejected.length===1?'Задача «'+rejected[0].title+'» не засчитана.':'Не засчитаны задачи: '+rejected.map(t=>t.title).join(', ');}catch(e){console.info('Не удалось проверить отклонённые задачи:',e?.message||e);}
 }
 function applyRoleUI(){
-  const labels={employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'Старший КНЗ'};
-  const badge=document.querySelector('#profileRoleBadge');if(badge){badge.textContent=labels[currentUserRole]||labels.employee;badge.classList.remove('role-shift','role-knz','role-employee');badge.classList.add(currentUserRole==='shift_senior'?'role-shift':currentUserRole==='employee_knz'?'role-knz':'role-employee');badge.classList.toggle('hidden',!cloudUser);}
+  const labels={employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ / Старший КНЗ',shift_day:'Дневная смена',shift_night:'Ночная смена'};
+  const badge=document.querySelector('#profileRoleBadge');if(badge){badge.textContent=labels[currentUserRole]||labels.employee;badge.classList.remove('role-shift','role-knz','role-employee');badge.classList.add(currentUserRole==='shift_senior'?'role-shift':currentUserRole==='employee_knz'?'role-knz':(currentUserRole==='shift_day'||currentUserRole==='shift_night')?'role-shift':'role-employee');badge.classList.toggle('hidden',!cloudUser);}
   const shift=document.querySelector('#openShiftPanelBtn');if(shift)shift.classList.toggle('admin-visible',!!cloudUser&&currentUserRole==='shift_senior');
   const knz=document.querySelector('#openKnzTasksBtn');if(knz)knz.classList.toggle('admin-visible',!!cloudUser&&currentUserRole==='employee_knz');
 }
@@ -2956,7 +2956,7 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
-<script src="./daily-reports.js?v=1"></script>
+<script src="./daily-reports.js?v=2"></script>
 
 </body>
 </html>
