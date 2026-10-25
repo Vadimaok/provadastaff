@@ -28,6 +28,12 @@ jobs:
         working-directory: desktop
         run: npm install
 
+      - name: Prepare Provoda Staff icon
+        shell: pwsh
+        working-directory: desktop
+        run: |
+          $iconBytes = [Convert]::FromBase64String((Get-Content -Raw provoda-icon.ico.base64).Trim())
+          [IO.File]::WriteAllBytes('provoda-icon.ico', $iconBytes)
       - name: Build portable EXE
         working-directory: desktop
         run: npm run dist
