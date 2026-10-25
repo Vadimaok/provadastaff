@@ -78,25 +78,6 @@ create policy daily_reports_update_own_pending on public.daily_reports for updat
 using (submitted_by=(select auth.uid()) and status='pending')
 with check (submitted_by=(select auth.uid()) and status='pending' and reviewed_by is null and reviewed_at is null);
 
-insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
-values ('daily-report-photos','daily-report-photos',false,12582912,array['image/jpeg','image/png','image/webp','image/heic'])
-on conflict (id) do nothing;
-drop policy if exists daily_report_photos_upload_own on storage.objects;
-create policy daily_report_photos_upload_own on storage.objects for insert to authenticated
-with check (bucket_id='daily-report-photos' and (storage.foldername(name))[1]='reports' and (storage.foldername(name))[2]=(select auth.uid())::text);
-drop policy if exists daily_report_photos_read_authorized on storage.objects;
-create policy daily_report_photos_read_authorized on storage.objects for select to authenticated
-using (bucket_id='daily-report-photos' and (
-  (storage.foldername(name))[2]=(select auth.uid())::text or public.is_current_admin() or exists (
-    select 1 from public.user_roles r where r.user_id=(select auth.uid()) and r.role='shift_senior'
-  )
-));
-drop policy if exists daily_report_photos_delete_authorized on storage.objects;
-create policy daily_report_photos_delete_authorized on storage.objects for delete to authenticated
-using (bucket_id='daily-report-photos' and (public.is_current_admin() or exists (
-  select 1 from public.user_roles r where r.user_id=(select auth.uid()) and r.role='shift_senior'
-)));
-
 create or replace function public.daily_report_review(report_id uuid, decision text, note text default '')
 returns boolean language plpgsql security definer set search_path = '' as $$
 begin
@@ -165,4 +146,66 @@ end; $$;
 revoke all on function public.admin_set_user_role(uuid,text) from public,anon;
 grant execute on function public.admin_set_user_role(uuid,text) to authenticated;
 
+alter table public.daily_reports add column if not exists author_name text not null default '';
+
+
+-- Safe role helpers: callers do not need direct SELECT permission on user_roles.
+create or replace function public.daily_report_my_role()
+returns text language sql stable security definer set search_path = '' as $$
+  select coalesce((select r.role from public.user_roles r where r.user_id=(select auth.uid()) limit 1),'employee');
+$$;
+revoke all on function public.daily_report_my_role() from public,anon;
+grant execute on function public.daily_report_my_role() to authenticated;
+
+create or replace function public.daily_report_is_reviewer()
+returns boolean language sql stable security definer set search_path = '' as $$
+  select public.is_current_admin() or public.daily_report_my_role()='shift_senior';
+$$;
+revoke all on function public.daily_report_is_reviewer() from public,anon;
+grant execute on function public.daily_report_is_reviewer() to authenticated;
+
+drop policy if exists daily_reports_read_own_or_reviewer on public.daily_reports;
+create policy daily_reports_read_own_or_reviewer on public.daily_reports for select to authenticated
+using (submitted_by=(select auth.uid()) or public.daily_report_is_reviewer());
+drop policy if exists daily_report_categories_admin_write on public.daily_report_categories;
+create policy daily_report_categories_admin_write on public.daily_report_categories for all to authenticated
+using (public.daily_report_is_reviewer()) with check (public.daily_report_is_reviewer());
+
+create or replace function public.admin_set_user_role(target_user_id uuid, new_role text)
+returns boolean language plpgsql security definer set search_path = '' as $$
+declare actor_role text;
+begin
+  actor_role := public.daily_report_my_role();
+  if not public.is_current_admin() and actor_role <> 'shift_senior' then
+    raise exception 'Доступ запрещён: нужны права Админа или СТ' using errcode='42501';
+  end if;
+  if new_role not in ('employee','employee_knz','shift_senior','shift_day','shift_night') then raise exception 'Недопустимая роль'; end if;
+  if not public.is_current_admin() and new_role not in ('shift_day','shift_night','employee') then
+    raise exception 'СТ может назначать только дневную и ночную смену или снимать эту роль' using errcode='42501';
+  end if;
+  if not exists(select 1 from auth.users where id=target_user_id) then raise exception 'Аккаунт не найден'; end if;
+  insert into public.user_roles(user_id,role,updated_by,updated_at)
+  values(target_user_id,new_role,(select auth.uid()),now())
+  on conflict(user_id) do update set role=excluded.role,updated_by=excluded.updated_by,updated_at=now();
+  return true;
+end; $$;
+revoke all on function public.admin_set_user_role(uuid,text) from public,anon;
+grant execute on function public.admin_set_user_role(uuid,text) to authenticated;
+
+create or replace function public.daily_report_list_users()
+returns table(user_id uuid, display_name text, role text)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not public.is_current_admin() and public.daily_report_my_role()<>'shift_senior' then
+    raise exception 'Доступно только Админу и СТ' using errcode='42501';
+  end if;
+  return query select u.id,
+    coalesce(nullif(u.raw_user_meta_data->>'display_name',''),nullif(u.raw_user_meta_data->>'username',''),u.email,'Сотрудник')::text,
+    coalesce(r.role,'employee')::text
+  from auth.users u left join public.user_roles r on r.user_id=u.id order by 2;
+end; $$;
+revoke all on function public.daily_report_list_users() from public,anon;
+grant execute on function public.daily_report_list_users() to authenticated;
+
+alter table public.daily_reports add column if not exists yandex_disk_url text not null default '';
 alter table public.daily_reports add column if not exists author_name text not null default '';
