@@ -1,8 +1,8 @@
 {
-  "name": "minitrati-android",
+  "name": "provoda-staff-android",
   "version": "1.0.0",
   "private": true,
-  "description": "Android wrapper for the Минитраты web app",
+  "description": "Provoda Staff Android app wrapper",
   "scripts": {
     "android:sync": "cap sync android"
   },
