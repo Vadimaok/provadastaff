@@ -119,10 +119,13 @@ end; $$;
 revoke all on function public.daily_report_admin_set_enabled(boolean) from public,anon;
 grant execute on function public.daily_report_admin_set_enabled(boolean) to authenticated;
 
--- Extend the existing role selector with dedicated report submitter roles.
+-- Separate primary account role from the additional shift-report role.
+alter table public.user_roles add column if not exists shift_role text;
+update public.user_roles set shift_role=role, role='employee' where role in ('shift_day','shift_night') and (shift_role is null or shift_role='');
 alter table public.user_roles drop constraint if exists user_roles_role_check;
-alter table public.user_roles add constraint user_roles_role_check
-  check (role in ('employee','employee_knz','shift_senior','shift_day','shift_night'));
+alter table public.user_roles add constraint user_roles_role_check check (role in ('employee','employee_knz','shift_senior'));
+alter table public.user_roles drop constraint if exists user_roles_shift_role_check;
+alter table public.user_roles add constraint user_roles_shift_role_check check (shift_role is null or shift_role in ('shift_day','shift_night'));
 
 create or replace function public.admin_set_user_role(target_user_id uuid, new_role text)
 returns boolean language plpgsql security definer set search_path = '' as $$
@@ -149,11 +152,18 @@ alter table public.daily_reports add column if not exists author_name text not n
 
 -- Safe role helpers: callers do not need direct SELECT permission on user_roles.
 create or replace function public.daily_report_my_role()
-returns text language sql stable security definer set search_path = '' as $$
+returns text language sql stable security definer set search_path = '' as $
   select coalesce((select r.role from public.user_roles r where r.user_id=(select auth.uid()) limit 1),'employee');
-$$;
+$;
 revoke all on function public.daily_report_my_role() from public,anon;
 grant execute on function public.daily_report_my_role() to authenticated;
+
+create or replace function public.user_get_my_shift_role()
+returns text language sql stable security definer set search_path = '' as $
+  select (select r.shift_role from public.user_roles r where r.user_id=(select auth.uid()) limit 1);
+$;
+revoke all on function public.user_get_my_shift_role() from public,anon;
+grant execute on function public.user_get_my_shift_role() to authenticated;
 
 create or replace function public.daily_report_is_reviewer()
 returns boolean language sql stable security definer set search_path = '' as $$
@@ -171,16 +181,9 @@ using (public.daily_report_is_reviewer()) with check (public.daily_report_is_rev
 
 create or replace function public.admin_set_user_role(target_user_id uuid, new_role text)
 returns boolean language plpgsql security definer set search_path = '' as $$
-declare actor_role text;
 begin
-  actor_role := public.daily_report_my_role();
-  if not public.is_current_admin() and actor_role <> 'shift_senior' then
-    raise exception 'Доступ запрещён: нужны права Админа или СТ' using errcode='42501';
-  end if;
-  if new_role not in ('employee','employee_knz','shift_senior','shift_day','shift_night') then raise exception 'Недопустимая роль'; end if;
-  if not public.is_current_admin() and new_role not in ('shift_day','shift_night','employee') then
-    raise exception 'СТ может назначать только дневную и ночную смену или снимать эту роль' using errcode='42501';
-  end if;
+  if not public.is_current_admin() then raise exception 'Доступ запрещён: нужны права администратора' using errcode='42501'; end if;
+  if new_role not in ('employee','employee_knz','shift_senior') then raise exception 'Основная роль должна быть: Сотрудник, Сотрудник КНЗ или СТ'; end if;
   if not exists(select 1 from auth.users where id=target_user_id) then raise exception 'Аккаунт не найден'; end if;
   insert into public.user_roles(user_id,role,updated_by,updated_at)
   values(target_user_id,new_role,(select auth.uid()),now())
@@ -190,8 +193,26 @@ end; $$;
 revoke all on function public.admin_set_user_role(uuid,text) from public,anon;
 grant execute on function public.admin_set_user_role(uuid,text) to authenticated;
 
+create or replace function public.admin_set_user_shift_role(target_user_id uuid, new_shift_role text)
+returns boolean language plpgsql security definer set search_path = '' as $$
+declare actor_role text;
+begin
+  actor_role := public.daily_report_my_role();
+  if not public.is_current_admin() and actor_role <> 'shift_senior' then
+    raise exception 'Доступ запрещён: нужны права Админа или СТ' using errcode='42501';
+  end if;
+  if new_shift_role is not null and new_shift_role not in ('shift_day','shift_night') then raise exception 'Дополнительная роль должна быть дневной или ночной сменой'; end if;
+  if not exists(select 1 from auth.users where id=target_user_id) then raise exception 'Аккаунт не найден'; end if;
+  insert into public.user_roles(user_id,role,shift_role,updated_by,updated_at)
+  values(target_user_id,'employee',new_shift_role,(select auth.uid()),now())
+  on conflict(user_id) do update set shift_role=excluded.shift_role,updated_by=excluded.updated_by,updated_at=now();
+  return true;
+end; $$;
+revoke all on function public.admin_set_user_shift_role(uuid,text) from public,anon;
+grant execute on function public.admin_set_user_shift_role(uuid,text) to authenticated;
+
 create or replace function public.daily_report_list_users()
-returns table(user_id uuid, display_name text, role text)
+returns table(user_id uuid, display_name text, role text, shift_role text)
 language plpgsql stable security definer set search_path = '' as $$
 begin
   if not public.is_current_admin() and public.daily_report_my_role()<>'shift_senior' then
@@ -199,7 +220,7 @@ begin
   end if;
   return query select u.id,
     coalesce(nullif(u.raw_user_meta_data->>'display_name',''),nullif(u.raw_user_meta_data->>'username',''),u.email,'Сотрудник')::text,
-    coalesce(r.role,'employee')::text
+    coalesce(r.role,'employee')::text, r.shift_role
   from auth.users u left join public.user_roles r on r.user_id=u.id order by 2;
 end; $$;
 revoke all on function public.daily_report_list_users() from public,anon;
