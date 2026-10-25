@@ -823,7 +823,7 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
 .dashboard-tiles [data-dashboard-tile] .tile-drag-handle{display:none;position:absolute;right:10px;top:10px;z-index:4;width:36px;height:36px;border-radius:12px;border:1px solid rgba(var(--accent-rgb),.28);background:rgba(var(--accent-rgb),.12);color:var(--accent);align-items:center;justify-content:center;font-size:19px;font-weight:800;touch-action:none;user-select:none;box-shadow:0 4px 12px rgba(0,0,0,.12)}
 body.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile] .tile-drag-handle{display:flex}
 body.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile]{outline:1px dashed rgba(var(--accent-rgb),.42);outline-offset:2px}
-body.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile].tile-dragging{opacity:.72;z-index:8;box-shadow:0 22px 50px rgba(0,0,0,.28);border-color:var(--accent)}
+body.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile].tile-dragging{opacity:.92;z-index:8;box-shadow:0 16px 36px rgba(0,0,0,.22);border-color:var(--accent);transition:box-shadow .18s ease,opacity .18s ease}\nbody.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile]{will-change:transform}\nbody.tile-rearrange-mode .dashboard-tiles{touch-action:pan-y}
 body.tile-rearrange-mode .dashboard-tiles [data-dashboard-tile] h2{padding-right:40px}
 .tile-arrange-bar{display:none;position:fixed;z-index:25;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(calc(100% - 24px),520px);align-items:center;justify-content:space-between;gap:12px;padding:9px 10px 9px 15px;border:1px solid rgba(var(--accent-rgb),.35);border-radius:16px;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(18px);box-shadow:0 14px 35px rgba(0,0,0,.22);font-size:12px;font-weight:700}
 body.tile-rearrange-mode .tile-arrange-bar{display:flex}
@@ -1521,7 +1521,7 @@ function autofill(){
     if([...$('#category').options].some(o=>o.value===hit.category)) $('#category').value=hit.category;
   }
 }
-function openSheet(){ $('#sheet').classList.add('open'); $('#sheet').setAttribute('aria-hidden','false'); setTimeout(()=>$('#name').focus(),80); }
+function openSheet(){ $('#sheet').classList.add('open'); $('#sheet').setAttribute('aria-hidden','false'); if(!matchMedia('(pointer: coarse)').matches)setTimeout(()=>$('#name').focus(),120); }
 function closeSheet(){ $('#sheet').classList.remove('open'); $('#sheet').setAttribute('aria-hidden','true'); }
 function saveEntry(){
   const name=$('#name').value.trim(); const price=parseFloat(String($('#price').value).replace(',','.')); const qty=parseFloat(String($('#qty').value).replace(',','.'))||1; const date=$('#date').value||today(); const category=$('#category').value||'другое';
@@ -2511,12 +2511,42 @@ let dashboardTileOrder=[...DASHBOARD_TILE_DEFAULTS];
 let dashboardDragState=null;
 function dashboardTiles(){return DASHBOARD_TILE_DEFAULTS.map(id=>document.querySelector('[data-dashboard-tile="'+id+'"]')).filter(Boolean);}
 function readDashboardTileOrder(){try{const saved=JSON.parse(localStorage.getItem(DASHBOARD_ORDER_KEY)||'null');if(Array.isArray(saved)){const valid=saved.filter(id=>DASHBOARD_TILE_DEFAULTS.includes(id));dashboardTileOrder=[...valid,...DASHBOARD_TILE_DEFAULTS.filter(id=>!valid.includes(id))];}}catch{}}
-function animateDashboardReorder(){const els=dashboardTiles(),before=new Map(els.map(el=>[el,el.getBoundingClientRect()]));els.forEach(el=>{el.style.order=String(dashboardTileOrder.indexOf(el.dataset.dashboardTile));});requestAnimationFrame(()=>{els.forEach(el=>{const a=before.get(el),b=el.getBoundingClientRect();if(!a||!b.width||!b.height)return;const dx=a.left-b.left,dy=a.top-b.top;if(Math.abs(dx)+Math.abs(dy)<2)return;if(el.animate)el.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'translate(0,0)'}],{duration:230,easing:'cubic-bezier(.2,.8,.2,1)'});});});}
+let dashboardReorderAnimating=false;
+let dashboardPendingTarget=null;
+function animateDashboardReorder(){
+  if(dashboardReorderAnimating)return;
+  const els=dashboardTiles(),before=new Map(els.map(el=>[el,el.getBoundingClientRect()]));
+  els.forEach(el=>{el.style.order=String(dashboardTileOrder.indexOf(el.dataset.dashboardTile));});
+  dashboardReorderAnimating=true;
+  requestAnimationFrame(()=>{
+    const animations=[];
+    els.forEach(el=>{
+      const a=before.get(el),b=el.getBoundingClientRect();
+      if(!a||!b.width||!b.height)return;
+      const dx=a.left-b.left,dy=a.top-b.top;
+      if(Math.abs(dx)+Math.abs(dy)<2)return;
+      if(el.animate)animations.push(el.animate([{transform:'translate3d('+dx+'px,'+dy+'px,0)'},{transform:'translate3d(0,0,0)'}],{duration:280,easing:'cubic-bezier(.22,.75,.25,1)'}));
+    });
+    Promise.all(animations.map(a=>a.finished.catch(()=>{}))).finally(()=>{
+      dashboardReorderAnimating=false;
+      if(dashboardPendingTarget){const target=dashboardPendingTarget;dashboardPendingTarget=null;reorderDashboardToward(target);}
+    });
+  });
+}
 function persistDashboardTileOrder(){try{localStorage.setItem(DASHBOARD_ORDER_KEY,JSON.stringify(dashboardTileOrder))}catch{}}
 function applyDashboardTileOrder(animate=false){dashboardTiles().forEach(el=>{if(!dashboardTileOrder.includes(el.dataset.dashboardTile))dashboardTileOrder.push(el.dataset.dashboardTile);});if(animate)animateDashboardReorder();else dashboardTiles().forEach(el=>{el.style.order=String(dashboardTileOrder.indexOf(el.dataset.dashboardTile));});document.querySelectorAll('[data-dashboard-tile]').forEach(el=>{if(!el.querySelector('.tile-drag-handle')){const handle=document.createElement('button');handle.type='button';handle.className='tile-drag-handle';handle.setAttribute('aria-label','Перетащить плитку');handle.title='Зажми и перетащи';handle.textContent='↕';handle.addEventListener('pointerdown',startDashboardTileDrag);el.appendChild(handle);}});}
-function startDashboardTileDrag(e){if(!document.body.classList.contains('tile-rearrange-mode'))return;const tile=e.currentTarget.closest('[data-dashboard-tile]');if(!tile)return;e.preventDefault();dashboardDragState={id:tile.dataset.dashboardTile,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,moved:false};tile.classList.add('tile-dragging');try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}document.addEventListener('pointermove',moveDashboardTile,{passive:false});document.addEventListener('pointerup',endDashboardTileDrag,{once:true});document.addEventListener('pointercancel',endDashboardTileDrag,{once:true});}
-function moveDashboardTile(e){if(!dashboardDragState)return;e.preventDefault();const tile=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('[data-dashboard-tile]');if(!tile||!DASHBOARD_TILE_DEFAULTS.includes(tile.dataset.dashboardTile))return;const from=dashboardTileOrder.indexOf(dashboardDragState.id),to=dashboardTileOrder.indexOf(tile.dataset.dashboardTile);if(from===to||from<0||to<0)return;dashboardDragState.moved=true;const [moving]=dashboardTileOrder.splice(from,1);dashboardTileOrder.splice(to,0,moving);applyDashboardTileOrder(true);}
-function endDashboardTileDrag(){document.removeEventListener('pointermove',moveDashboardTile);document.removeEventListener('pointercancel',endDashboardTileDrag);document.querySelectorAll('.tile-dragging').forEach(el=>el.classList.remove('tile-dragging'));if(dashboardDragState?.moved){persistDashboardTileOrder();toast('Порядок плиток сохранён');}dashboardDragState=null;}
+function startDashboardTileDrag(e){if(!document.body.classList.contains('tile-rearrange-mode'))return;const tile=e.currentTarget.closest('[data-dashboard-tile]');if(!tile)return;e.preventDefault();dashboardPendingTarget=null;dashboardDragState={id:tile.dataset.dashboardTile,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,moved:false,lastTarget:tile.dataset.dashboardTile};tile.classList.add('tile-dragging');try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}document.addEventListener('pointermove',moveDashboardTile,{passive:false});document.addEventListener('pointerup',endDashboardTileDrag,{once:true});document.addEventListener('pointercancel',endDashboardTileDrag,{once:true});}
+function reorderDashboardToward(targetId){
+  if(!dashboardDragState||!DASHBOARD_TILE_DEFAULTS.includes(targetId))return;
+  if(dashboardReorderAnimating){dashboardPendingTarget=targetId;return;}
+  const from=dashboardTileOrder.indexOf(dashboardDragState.id),to=dashboardTileOrder.indexOf(targetId);
+  if(from===to||from<0||to<0)return;
+  dashboardDragState.moved=true;dashboardDragState.lastTarget=targetId;
+  const [moving]=dashboardTileOrder.splice(from,1);dashboardTileOrder.splice(to,0,moving);
+  applyDashboardTileOrder(true);
+}
+function moveDashboardTile(e){if(!dashboardDragState)return;e.preventDefault();const tile=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('[data-dashboard-tile]');if(!tile||!DASHBOARD_TILE_DEFAULTS.includes(tile.dataset.dashboardTile)||tile.dataset.dashboardTile===dashboardDragState.id)return;const rect=tile.getBoundingClientRect();const horizontal=e.clientX>=rect.left&&e.clientX<=rect.right;const vertical=e.clientY>=rect.top&&e.clientY<=rect.bottom;if(!horizontal||!vertical)return;reorderDashboardToward(tile.dataset.dashboardTile);}
+function endDashboardTileDrag(){document.removeEventListener('pointermove',moveDashboardTile);document.removeEventListener('pointercancel',endDashboardTileDrag);document.querySelectorAll('.tile-dragging').forEach(el=>el.classList.remove('tile-dragging'));if(dashboardDragState?.moved){persistDashboardTileOrder();toast('Порядок плиток сохранён');}dashboardDragState=null;dashboardPendingTarget=null;}
 function setDashboardRearrangeMode(enabled){document.body.classList.toggle('tile-rearrange-mode',enabled);if(!enabled)endDashboardTileDrag();const bar=document.querySelector('#tileArrangeBar');if(bar)bar.setAttribute('aria-hidden',String(!enabled));if(enabled)toast('Зажми ↕ на плитке и перетащи её');}
 function setupDashboardTileReordering(){readDashboardTileOrder();applyDashboardTileOrder(false);document.querySelector('#configureTileOrderBtn')?.addEventListener('click',()=>{closeSettings();setDashboardRearrangeMode(true);});document.querySelector('#finishTileArrangeBtn')?.addEventListener('click',()=>setDashboardRearrangeMode(false));document.querySelector('#resetTileOrderBtn')?.addEventListener('click',()=>{dashboardTileOrder=[...DASHBOARD_TILE_DEFAULTS];persistDashboardTileOrder();applyDashboardTileOrder(true);settingsStatus('Исходный порядок плиток восстановлен.');});}
 function updateVisualChoiceStates(a=readAppearance()){document.querySelectorAll('[data-wallpaper-choice]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.wallpaperChoice===a.wallpaper)));document.querySelectorAll('[data-accent-choice]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.accentChoice===a.accent)));}
