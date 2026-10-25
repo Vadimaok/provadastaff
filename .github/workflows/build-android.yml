@@ -67,7 +67,7 @@ jobs:
           path = pathlib.Path('android/app/build.gradle')
           content = path.read_text()
           content = re.sub(r'versionCode\s+\d+', f'versionCode {code}', content, count=1)
-          content = re.sub(r'versionName\s+"[^"]+"', f'versionName "{version}"', content, count=1)
+          content = re.sub(r"versionName\\s+['\"][^'\"]+['\"]", f"versionName '{version}'", content, count=1)
           path.write_text(content)
           PY
 
