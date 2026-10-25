@@ -2,7 +2,7 @@
 (() => {
   const $ = (s, root=document) => root.querySelector(s);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let cats=[], reports=[], isAdmin=false, isReviewer=false, isEnabled=true, canSubmit=false, userRole='employee', activeShift='day', users=[];
+  let cats=[], reports=[], isAdmin=false, isReviewer=false, isEnabled=true, canSubmit=false, userRole='employee', shiftRole=null, activeShift='day', activeView='new', users=[];
   let liveChannel=null, livePollTimer=null, liveRefreshTimer=null, liveRefreshBusy=false, liveRefreshQueued=false;
   function ensureUI(){
     if(!$('#openDailyReportsBtn')){
@@ -37,7 +37,7 @@
       <div class="dr-actions"><button class="dr-btn primary" id="drPreview">Предварительный просмотр</button><button class="dr-btn" id="drSubmit">Отправить отчёт</button></div><div id="drPreviewBox" class="dr-card dr-hidden"></div></section>
       <section id="drHistoryView" class="dr-hidden"><div class="dr-actions"><button class="dr-btn" id="drExport">Предпросмотр Excel</button><button class="dr-btn primary" id="drCopyExcel">Копировать строки для Excel</button><button class="dr-btn" id="drDownloadCsv">Скачать CSV</button></div><div id="drHistoryList"></div><div id="drExcelPreview" class="dr-card dr-hidden"></div></section>
       <section id="drSettingsView" class="dr-hidden"><div class="dr-card" id="drModuleSettingsCard"><label class="dr-item-head"><strong>Модуль сменных отчётов включён</strong><input id="drEnabled" type="checkbox"></label><div class="dr-actions"><button class="dr-btn primary" id="drSaveEnabled">Сохранить</button></div></div>
-      <div class="dr-card"><h3>Назначение дневной / ночной роли</h3><p class="small">Доступно Админу и СТ. СТ может назначать дневную и ночную смену.</p><div class="dr-grid"><label>Сотрудник<select id="drUserSelect"></select></label><label>Роль<select id="drUserRole"><option value="shift_day">Дневная смена</option><option value="shift_night">Ночная смена</option><option value="employee">Без роли смены</option></select></label></div><div class="dr-actions"><button class="dr-btn primary" id="drSaveUserRole">Сохранить роль</button></div></div>
+      <div class="dr-card"><h3>Назначение дневной / ночной роли</h3><p class="small">Доступно Админу и СТ. СТ может назначать дневную и ночную смену.</p><div class="dr-grid"><label>Сотрудник<select id="drUserSelect"></select></label><label>Дополнительная роль смены<select id="drUserRole"><option value="">Без сменной роли</option><option value="shift_day">Дневная смена</option><option value="shift_night">Ночная смена</option></select></label></div><div class="dr-actions"><button class="dr-btn primary" id="drSaveUserRole">Сохранить роль</button></div></div>
       <div class="dr-card"><h3>Категории отчётов</h3><div id="drCategoryList"></div><div class="dr-grid"><label>Смена<select id="drCatShift"><option value="day">Дневная</option><option value="night">Ночная</option></select></label><label>Название категории<input id="drCatTitle" maxlength="180" placeholder="Например, чистая стойка"></label></div><div class="dr-actions"><button class="dr-btn primary" id="drAddCategory">Добавить категорию</button></div></div></section>
     </section>`;
     document.body.appendChild(sheet);
@@ -61,7 +61,8 @@
   async function getRole(){
     try{const {data,error}=await cloudClient.rpc('is_current_admin');if(error)throw error;isAdmin=!!data;}catch{isAdmin=false;}
     try{const {data,error}=await cloudClient.rpc('daily_report_my_role');if(error)throw error;userRole=data||currentUserRole||'employee';}catch{userRole=(typeof currentUserRole!=='undefined'&&currentUserRole)||'employee';}
-    isReviewer=isAdmin||userRole==='shift_senior';canSubmit=isAdmin||isReviewer||userRole==='shift_day'||userRole==='shift_night';
+    try{const {data,error}=await cloudClient.rpc('user_get_my_shift_role');if(error)throw error;shiftRole=data||null;}catch{shiftRole=null;}
+    isReviewer=isAdmin||userRole==='shift_senior';canSubmit=isAdmin||isReviewer||shiftRole==='shift_day'||shiftRole==='shift_night';
     const menuButton=$('#openDailyReportsBtn');if(menuButton)menuButton.classList.toggle('hidden',!canSubmit&&!isReviewer);
   }
   async function load(options={}){
@@ -80,15 +81,22 @@
       $('#drSettingsTab').classList.toggle('dr-hidden',!isReviewer);
       $('#drModuleSettingsCard').classList.toggle('dr-hidden',!isAdmin);
       $('#drEnabled').checked=isEnabled;
-      if(!canSubmit&&!isReviewer)notice('Для заполнения отчёта Админ или СТ должен назначить роль дневной или ночной смены.',true);
-      renderChecklist();renderHistory();renderCategories();
-      if(isReviewer)await loadUsers();
+      const canSeeNew=(isEnabled||isAdmin||isReviewer)&&canSubmit;
+      $('#drNewView').classList.toggle('dr-hidden',activeView!=='new'||!canSeeNew);
+      $('#drHistoryView').classList.toggle('dr-hidden',activeView!=='history');
+      $('#drSettingsView').classList.toggle('dr-hidden',activeView!=='settings'||!isReviewer);
+      document.querySelectorAll('#drTabs [data-dr-view]').forEach(b=>b.classList.toggle('primary',b.dataset.drView===activeView));
+      if(!canSubmit&&!isReviewer)notice('Для заполнения отчёта Админ или СТ должен назначить дополнительную роль дневной или ночной смены.',true);
+      if(!silent){renderChecklist();renderHistory();renderCategories();if(isReviewer)await loadUsers();}
+      else if(activeView==='history'){renderHistory();}
       if(!silent){if(!isEnabled&&!isReviewer)notice('Модуль временно отключён администратором.');
       else if(canSubmit||isReviewer)notice('');}
     }catch(e){notice('Ошибка загрузки сменных отчётов: '+(e.message||'проверь SQL-файл supabase/daily-reports.sql'),true);}
   }
   function showView(view){
     if(view==='settings'&&!isReviewer)return;
+    if(view==='new'&&!canSubmit)return;
+    activeView=view;
     $('#drNewView').classList.toggle('dr-hidden',view!=='new');
     $('#drHistoryView').classList.toggle('dr-hidden',view!=='history');
     $('#drSettingsView').classList.toggle('dr-hidden',view!=='settings');
@@ -97,7 +105,7 @@
   }
   function activeCats(){return cats.filter(c=>c.shift_type===activeShift&&c.enabled).sort((a,b)=>a.position-b.position);}
   function renderChecklist(){
-    if(userRole==='shift_day')$('#drShift').value='day';else if(userRole==='shift_night')$('#drShift').value='night';
+    if(shiftRole==='shift_day')$('#drShift').value='day';else if(shiftRole==='shift_night')$('#drShift').value='night';
     $('#drShift').disabled=!isAdmin&&!isReviewer;activeShift=$('#drShift').value;
     $('#drChecklist').innerHTML=activeCats().map((c,i)=>'<article class="dr-card"><label class="dr-check"><input type="checkbox" data-dr-check="'+esc(c.id)+'"><span><strong>'+(i+1)+'. '+esc(c.title)+'</strong><div class="small">Отметь пункт после проверки и загрузки материалов в папку Яндекс Диска.</div></span></label></article>').join('')||'<div class="dr-card">Нет активных категорий для этой смены.</div>';
   }
@@ -111,7 +119,7 @@
   async function submitReport(){
     if(!canSubmit){notice('Для отправки нужна роль дневной или ночной смены.',true);return;}
     if(!isEnabled&&!isReviewer){notice('Модуль отключён.',true);return;}
-    if((userRole==='shift_day'&&$('#drShift').value!=='day')||(userRole==='shift_night'&&$('#drShift').value!=='night')){notice('У тебя нет доступа к этому типу смены.',true);return;}
+    if((shiftRole==='shift_day'&&$('#drShift').value!=='day')||(shiftRole==='shift_night'&&$('#drShift').value!=='night')){notice('У тебя нет доступа к этому типу смены.',true);return;}
     const url=$('#drYandexUrl').value.trim();
     if(!/^https?:\/\//i.test(url)||!/(yandex\.(ru|com)|disk\.yandex\.)/i.test(url)){notice('Добавь корректную ссылку на Яндекс Диск.',true);return;}
     const items=checklistState();if(items.some(x=>!x.completed)){notice('Отметь каждый пункт чек-листа перед отправкой.',true);return;}
@@ -155,14 +163,14 @@
   async function loadUsers(){
     try{
       const {data,error}=await cloudClient.rpc('daily_report_list_users');if(error)throw error;users=Array.isArray(data)?data:[];
-      const sel=$('#drUserSelect'),old=sel.value;sel.innerHTML=users.map(u=>'<option value="'+esc(u.user_id)+'">'+esc(u.display_name)+' · '+esc(({shift_day:'Дневная смена',shift_night:'Ночная смена',shift_senior:'СТ',employee_knz:'КНЗ',employee:'Сотрудник'})[u.role]||u.role)+'</option>').join('');
+      const sel=$('#drUserSelect'),old=sel.value;sel.innerHTML=users.map(u=>'<option value="'+esc(u.user_id)+'">'+esc(u.display_name)+' · '+esc(({shift_senior:'СТ',employee_knz:'Сотрудник КНЗ',employee:'Сотрудник'})[u.role]||u.role)+' · '+esc(({shift_day:'Дневная смена',shift_night:'Ночная смена'})[u.shift_role]||'без сменной роли')+'</option>').join('');
       if(users.some(u=>u.user_id===old))sel.value=old;
-      const chosen=users.find(u=>u.user_id===sel.value);if(chosen&&['shift_day','shift_night'].includes(chosen.role))$('#drUserRole').value=chosen.role;else $('#drUserRole').value='employee';
+      const chosen=users.find(u=>u.user_id===sel.value);$('#drUserRole').value=chosen?.shift_role||'';
     }catch(e){notice('Не удалось загрузить список сотрудников для назначения ролей: '+(e.message||''),true);}
   }
   async function saveUserRole(){
     const userId=$('#drUserSelect').value,role=$('#drUserRole').value;if(!userId){notice('Выбери сотрудника.',true);return;}
-    try{const {error}=await cloudClient.rpc('admin_set_user_role',{target_user_id:userId,new_role:role});if(error)throw error;notice('Роль сотрудника сохранена.');await loadUsers();}catch(e){notice(e.message||'Не удалось назначить роль.',true);}
+    try{const {error}=await cloudClient.rpc('admin_set_user_shift_role',{target_user_id:userId,new_shift_role:role||null});if(error)throw error;notice('Дополнительная роль смены сохранена.');await loadUsers();}catch(e){notice(e.message||'Не удалось назначить роль.',true);}
   }
   function excelRows(){return reports.filter(r=>r.status!=='pending').map(r=>({fio:r.author_name||(r.submitted_by===cloudUser.id?(cloudUser.user_metadata?.display_name||cloudUser.email||'Вы'):'Сотрудник'),url:r.yandex_disk_url||'',comment:r.reviewer_comment||''}));}
   function showExcelPreview(){
