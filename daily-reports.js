@@ -48,7 +48,7 @@
     $('#drSaveEnabled').addEventListener('click',saveEnabled);
     $('#drAddCategory').addEventListener('click',addCategory);
     $('#drTabs').addEventListener('click',e=>{const b=e.target.closest('[data-dr-view]');if(b)showView(b.dataset.drView);});
-    $('#drChecklist').addEventListener('change',e=>{const input=e.target.closest('[data-dr-files]');if(input){draftFiles[input.dataset.drFiles]=[...(input.files||[])];previewDraft=null;previewLocalFiles(e);}});
+    $('#drChecklist').addEventListener('change',e=>{const input=e.target.closest('[data-dr-files]');if(input){draftFiles[input.dataset.drFiles]=[...(draftFiles[input.dataset.drFiles]||[]),...(input.files||[])];previewDraft=null;previewLocalFiles(e);input.value='';}});
     $('#drHistoryList').addEventListener('click',historyAction);
     $('#drCategoryList').addEventListener('click',categoryAction);
   }
@@ -90,13 +90,13 @@
     if(userRole==='shift_day')$('#drShift').value='day';else if(userRole==='shift_night')$('#drShift').value='night';
     $('#drShift').disabled=!isAdmin&&!isReviewer;activeShift=$('#drShift').value;draftFiles={};previewDraft=null;
     const list=activeCats();
-    $('#drChecklist').innerHTML=list.map((c,i)=>`<article class="dr-card dr-item"><div class="dr-item-head"><h4>${i+1}. ${esc(c.title)}</h4><span class="small">Фото</span></div><div class="dr-upload"><input type="file" accept="image/*" capture="environment" multiple data-dr-files="${esc(c.id)}" aria-label="Фото: ${esc(c.title)}"></div><div class="dr-photo-grid" data-dr-preview="${esc(c.id)}"></div></article>`).join('')||'<div class="dr-card">Нет активных категорий для этой смены.</div>';
+    $('#drChecklist').innerHTML=list.map((c,i)=>`<article class="dr-card dr-item"><div class="dr-item-head"><h4>${i+1}. ${esc(c.title)}</h4><span class="small">Фото</span></div><div class="dr-upload"><label class="dr-btn">Из галереи<input type="file" accept="image/*" multiple data-dr-files="${esc(c.id)}" data-dr-source="gallery" aria-label="Выбрать фото из галереи: ${esc(c.title)}"></label><label class="dr-btn">Сфотографировать<input type="file" accept="image/*" capture="environment" data-dr-files="${esc(c.id)}" data-dr-source="camera" aria-label="Сделать фото: ${esc(c.title)}"></label></div><div class="dr-photo-grid" data-dr-preview="${esc(c.id)}"></div></article>`).join('')||'<div class="dr-card">Нет активных категорий для этой смены.</div>';
     // File preview listener is attached once in ensureUI.
   }
   function previewLocalFiles(e){
     const input=e.target.closest('[data-dr-files]');if(!input)return;
     const box=$('[data-dr-preview="'+CSS.escape(input.dataset.drFiles)+'"]');if(!box)return;
-    box.innerHTML='';[...(input.files||[])].forEach(f=>{const img=document.createElement('img');img.alt=f.name;img.src=URL.createObjectURL(f);box.appendChild(img);});
+    box.innerHTML='';(draftFiles[input.dataset.drFiles]||[]).forEach(f=>{const img=document.createElement('img');img.alt=f.name;img.src=URL.createObjectURL(f);box.appendChild(img);});
   }
   function showPreview(){
     const shift=$('#drShift').value, date=$('#drDate').value||new Date().toISOString().slice(0,10);
