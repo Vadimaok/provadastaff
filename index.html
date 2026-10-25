@@ -2289,6 +2289,14 @@ async function adminSaveNotebook(){
 }
 async function adminLoadRoles(){
   const userSel=document.querySelector('#adminRoleUser');if(!userSel)return;
+  // The shift-role RPC is maintained by the shift-report module, so the account list stays compatible with older admin_list_accounts RPCs.
+  try{
+    const {data,error}=await cloudClient.rpc('daily_report_list_users');
+    if(!error&&Array.isArray(data)){
+      data.forEach(row=>{const account=adminAccounts.find(u=>u.user_id===row.user_id);if(account)account.shift_role=row.shift_role||null;});
+      adminRenderAccounts();
+    }
+  }catch{}
   const chosen=userSel.value;
   userSel.innerHTML='<option value="">Выбери аккаунт</option>'+adminAccounts.map(u=>'<option value="'+escapeHtml(u.user_id)+'">'+escapeHtml(adminAccountName(u))+' · '+escapeHtml(u.email||'без почты')+'</option>').join('');
   if([...userSel.options].some(o=>o.value===chosen))userSel.value=chosen;
