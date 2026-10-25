@@ -1112,7 +1112,7 @@ body.tile-rearrange-mode #addBtn{opacity:.35;pointer-events:none}
         <h3>Роли сотрудников</h3>
         <p class="settings-hint">Выбери пользователя и назначь ему роль. Изменения применяются сразу после сохранения.</p>
         <label class="admin-role-field">Сотрудник<select id="adminRoleUser"><option value="">Выбери аккаунт</option></select></label>
-        <label class="admin-role-field">Роль<select id="adminRoleSelect"><option value="employee">Сотрудник</option><option value="employee_knz">Сотрудник КНЗ</option><option value="shift_senior">Старший КНЗ</option></select></label>
+        <label class="admin-role-field">Роль<select id="adminRoleSelect"><option value="employee">Сотрудник</option><option value="employee_knz">Сотрудник КНЗ</option><option value="shift_senior">СТ / Старший КНЗ</option><option value="shift_day">Дневная смена</option><option value="shift_night">Ночная смена</option></select></label>
         <div class="admin-inline-actions"><button class="admin-primary" id="adminSaveRoleBtn" type="button">Сохранить роль</button></div>
         <p id="adminRoleStatus" class="admin-status" role="status" aria-live="polite"></p>
       </div>
@@ -2956,6 +2956,7 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
+<script src="./daily-reports.js?v=1"></script>
 
 </body>
 </html>
