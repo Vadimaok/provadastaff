@@ -396,6 +396,7 @@ body.light-theme[data-button-style="soft"] .fab,body.light-theme[data-button-sty
 .admin-account-list{display:flex;flex-direction:column;gap:7px;max-height:62vh;overflow:auto;margin-top:12px}
 .admin-account{width:100%;text-align:left;display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.025);overflow-wrap:anywhere}
 .admin-account.active{border-color:var(--accent);background:rgba(var(--accent-rgb),.1)}.admin-account strong{font-size:13px}.admin-account span{font-size:11px;color:var(--muted)}.admin-account .admin-account-total{font-size:12px;color:var(--text);font-weight:750}
+.admin-account-roles{display:flex;flex-wrap:wrap;gap:5px;margin:3px 0}.admin-role-chip{display:inline-flex;align-items:center;padding:3px 8px;border:1px solid rgba(124,92,255,.35);border-radius:999px;background:rgba(124,92,255,.12);color:var(--text);font-size:11px;font-weight:700;line-height:1.35}
 .admin-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}.admin-detail-head strong{overflow-wrap:anywhere}.admin-detail-head .muted{font-size:12px;margin-top:4px}
 .admin-tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.admin-tools input{flex:1;min-width:160px}
 .admin-table-wrap{overflow:auto;max-height:55vh;border:1px solid var(--line);border-radius:14px}
@@ -2180,7 +2181,7 @@ async function refreshAdminAccess(){
 }
 function adminFormatDate(value){if(!value)return '—';try{return new Date(value).toLocaleDateString('ru-RU',{day:'2-digit',month:'short',year:'numeric'});}catch{return '—';}}
 
-function adminAccountName(u){return String(u?.user_metadata?.display_name||u?.display_name||u?.user_metadata?.username||u?.user_metadata?.name||'').trim()||'Без имени';}
+function adminAccountName(u){return String(u?.display_name||u?.user_metadata?.display_name||u?.user_metadata?.username||u?.user_metadata?.name||'').trim()||'Без имени';}
 const ADMIN_DEV_KEY='provoda.admin.development.v1';
 let adminDevData={notebook:'',tasks:[]};
 let adminTaskFilter='all';
@@ -2351,7 +2352,7 @@ function adminRenderAccounts(){
   const q=(document.querySelector('#adminUserSearch')?.value||'').trim().toLowerCase();
   const visible=adminAccounts.filter(u=>String(u.email||'').toLowerCase().includes(q)||adminAccountName(u).toLowerCase().includes(q)||String(u.user_id||'').toLowerCase().includes(q));
   const list=document.querySelector('#adminAccountsList');
-  list.innerHTML=visible.length?visible.map(u=>'<button type="button" class="admin-account '+(u.user_id===adminSelectedId?'active':'')+'" data-admin-user="'+escapeHtml(u.user_id)+'"><strong>'+escapeHtml(u.email||'Без почты')+'</strong><span>'+escapeHtml(adminAccountName(u))+' · '+escapeHtml(({employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ'})[u.role]||'Сотрудник')+(u.shift_role?' · '+escapeHtml(({shift_day:'Дневная смена',shift_night:'Ночная смена'})[u.shift_role]||u.shift_role):'')+' · создан '+escapeHtml(adminFormatDate(u.created_at))+'</span><span class="admin-account-total">'+fmt(adminTotalForAccount(u))+' · '+Number(u.expense_count||0)+' записей</span></button>').join(''):'<div class="admin-empty">Пользователи не найдены.</div>';
+  list.innerHTML=visible.length?visible.map(u=>{const roleLabels={employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ / Старший КНЗ',shift_day:'Дневная смена',shift_night:'Ночная смена'};const roles=[roleLabels[u.role]||u.role||'Сотрудник',u.shift_role?roleLabels[u.shift_role]||u.shift_role:null].filter(Boolean);return '<button type="button" class="admin-account '+(u.user_id===adminSelectedId?'active':'')+'" data-admin-user="'+escapeHtml(u.user_id)+'"><strong>'+escapeHtml(u.email||'Без почты')+'</strong><span>'+escapeHtml(adminAccountName(u))+'</span><span class="admin-account-roles">'+roles.map(r=>'<span class="admin-role-chip">'+escapeHtml(r)+'</span>').join('')+'</span><span class="settings-hint">Создан '+escapeHtml(adminFormatDate(u.created_at))+'</span><span class="admin-account-total">'+fmt(adminTotalForAccount(u))+' · '+Number(u.expense_count||0)+' записей</span></button>';}).join(''):'<div class="admin-empty">Пользователи не найдены.</div>';
   document.querySelector('#adminUsersCount').textContent=String(adminAccounts.length);
   document.querySelector('#adminGlobalTotal').textContent=fmt(adminAccounts.reduce((a,u)=>a+adminTotalForAccount(u),0));
   document.querySelector('#adminGlobalCount').textContent=String(adminAccounts.reduce((a,u)=>a+Number(u.expense_count||0),0));
