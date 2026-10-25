@@ -1,7 +1,7 @@
 const { app, BrowserWindow, shell, Menu } = require('electron');
 const path = require('node:path');
 
-const APP_URL = 'https://vadimaok.github.io/provadastaff/';
+const APP_URL = `https://vadimaok.github.io/provadastaff/?desktopVersion=${encodeURIComponent(require('./package.json').version)}`;
 const APP_HOST = 'vadimaok.github.io';
 const DESKTOP_CSS = `
   html, body { min-height: 100% !important; }
