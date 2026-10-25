@@ -48,15 +48,15 @@
     $('#drSaveEnabled').addEventListener('click',saveEnabled);
     $('#drAddCategory').addEventListener('click',addCategory);
     $('#drTabs').addEventListener('click',e=>{const b=e.target.closest('[data-dr-view]');if(b)showView(b.dataset.drView);});
-    $('#drChecklist').addEventListener('change',e=>{const input=e.target.closest('[data-dr-files]');if(input){draftFiles[input.dataset.drFiles]=[...(input.files||[])];previewDraft=null;}});
+    $('#drChecklist').addEventListener('change',e=>{const input=e.target.closest('[data-dr-files]');if(input){draftFiles[input.dataset.drFiles]=[...(input.files||[])];previewDraft=null;previewLocalFiles(e);}});
     $('#drHistoryList').addEventListener('click',historyAction);
     $('#drCategoryList').addEventListener('click',categoryAction);
   }
   function notice(msg,bad=false){const el=$('#drNotice');if(el){el.textContent=msg;el.style.color=bad?'var(--bad)':'var(--muted)';}}
   function close(){const s=$('#dailyReportsSheet');if(s){s.classList.remove('open');s.setAttribute('aria-hidden','true');}}
-  function open(){ensureUI();if(!window.cloudClient||!window.cloudUser){notice('Сначала войди в аккаунт.',true);return;}closeProfile();$('#dailyReportsSheet').classList.add('open');$('#dailyReportsSheet').setAttribute('aria-hidden','false');$('#drDate').value=new Date().toISOString().slice(0,10);load();}
+  function open(){ensureUI();if(!cloudClient||!cloudUser){notice('Сначала войди в аккаунт.',true);return;}closeProfile();$('#dailyReportsSheet').classList.add('open');$('#dailyReportsSheet').setAttribute('aria-hidden','false');$('#drDate').value=new Date().toISOString().slice(0,10);load();}
   function closeProfile(){try{if(typeof closeProfileMenu==='function')closeProfileMenu();}catch{}}
-  async function getAdmin(){try{const {data,error}=await cloudClient.rpc('is_current_admin');if(error)throw error;isAdmin=!!data;}catch{isAdmin=false;}isReviewer=isAdmin||window.currentUserRole==='shift_senior';}
+  async function getAdmin(){try{const {data,error}=await cloudClient.rpc('is_current_admin');if(error)throw error;isAdmin=!!data;}catch{isAdmin=false;}isReviewer=isAdmin||currentUserRole==='shift_senior';}
   async function load(){
     notice('Загружаю отчёты…');await getAdmin();
     try{
@@ -89,7 +89,7 @@
     activeShift=$('#drShift').value;draftFiles={};previewDraft=null;
     const list=activeCats();
     $('#drChecklist').innerHTML=list.map((c,i)=>`<article class="dr-card dr-item"><div class="dr-item-head"><h4>${i+1}. ${esc(c.title)}</h4><span class="small">Фото</span></div><div class="dr-upload"><input type="file" accept="image/*" capture="environment" multiple data-dr-files="${esc(c.id)}" aria-label="Фото: ${esc(c.title)}"></div><div class="dr-photo-grid" data-dr-preview="${esc(c.id)}"></div></article>`).join('')||'<div class="dr-card">Нет активных категорий для этой смены.</div>';
-    $('#drChecklist').addEventListener('change',previewLocalFiles,{once:true});
+    // File preview listener is attached once in ensureUI.
   }
   function previewLocalFiles(e){
     const input=e.target.closest('[data-dr-files]');if(!input)return;
