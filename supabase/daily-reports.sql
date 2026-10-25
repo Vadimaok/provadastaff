@@ -230,6 +230,36 @@ alter table public.daily_reports add column if not exists yandex_disk_url text n
 alter table public.daily_reports add column if not exists author_name text not null default '';
 
 
+-- Admin / ST can remove approved or rejected rows from the Excel export.
+-- Pending reports are intentionally never removed by this function.
+create or replace function public.daily_report_delete_excel(report_ids uuid[] default '{}'::uuid[], delete_all boolean default false)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare deleted_count integer;
+begin
+  if not public.daily_report_is_reviewer() then
+    raise exception 'Удалять записи Excel может только Админ или СТ' using errcode='42501';
+  end if;
+
+  if coalesce(delete_all, false) then
+    delete from public.daily_reports
+    where status in ('approved','rejected');
+  else
+    delete from public.daily_reports
+    where status in ('approved','rejected')
+      and id = any(coalesce(report_ids, '{}'::uuid[]));
+  end if;
+
+  get diagnostics deleted_count = row_count;
+  return deleted_count;
+end;
+$;
+revoke all on function public.daily_report_delete_excel(uuid[],boolean) from public, anon;
+grant execute on function public.daily_report_delete_excel(uuid[],boolean) to authenticated;
+
 -- Enable Supabase Realtime for shared app data and shift-report workflow.
 -- Safe to rerun: only adds existing tables not already in the publication.
 do $$
