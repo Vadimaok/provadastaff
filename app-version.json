@@ -1,0 +1,6 @@
+{
+  "latestVersion": "1.0.1",
+  "windowsInstaller": "https://github.com/Vadimaok/provadastaff/releases/latest/download/Provoda-Staff-1.0.1.exe",
+  "androidInstaller": "https://github.com/Vadimaok/provadastaff/releases/latest/download/Provoda-Staff-Android.apk",
+  "releasePage": "https://github.com/Vadimaok/provadastaff/releases/latest"
+}
