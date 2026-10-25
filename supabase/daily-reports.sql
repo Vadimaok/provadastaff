@@ -154,14 +154,14 @@ alter table public.daily_reports add column if not exists author_name text not n
 create or replace function public.daily_report_my_role()
 returns text language sql stable security definer set search_path = '' as $$
   select coalesce((select r.role from public.user_roles r where r.user_id=(select auth.uid()) limit 1),'employee');
-$;
+$$;
 revoke all on function public.daily_report_my_role() from public,anon;
 grant execute on function public.daily_report_my_role() to authenticated;
 
 create or replace function public.user_get_my_shift_role()
 returns text language sql stable security definer set search_path = '' as $$
   select (select r.shift_role from public.user_roles r where r.user_id=(select auth.uid()) limit 1);
-$;
+$$;
 revoke all on function public.user_get_my_shift_role() from public,anon;
 grant execute on function public.user_get_my_shift_role() to authenticated;
 
