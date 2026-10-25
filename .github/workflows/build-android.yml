@@ -10,7 +10,7 @@ on:
       - ".github/workflows/build-android.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -55,9 +55,35 @@ jobs:
               open(path, 'w', encoding='utf-8').write(xml)
           PY
 
+      - name: Set app version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          python - "$VERSION" <<'PY'
+          import pathlib, re, sys
+          version = sys.argv[1]
+          nums = (version.split('.') + ['0', '0'])[:3]
+          code = int(nums[0]) * 10000 + int(nums[1]) * 100 + int(nums[2])
+          path = pathlib.Path('android/app/build.gradle')
+          content = path.read_text()
+          content = re.sub(r'versionCode\s+\d+', f'versionCode {code}', content, count=1)
+          content = re.sub(r'versionName\s+"[^"]+"', f'versionName "{version}"', content, count=1)
+          path.write_text(content)
+          PY
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug
+
+      - name: Publish APK to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Provoda Staff $VERSION" --notes "Provoda Staff installers for version $VERSION."
+          cp android/app/build/outputs/apk/debug/app-debug.apk Provoda-Staff-Android.apk
+          gh release upload "$TAG" Provoda-Staff-Android.apk --clobber
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
