@@ -1,4 +1,5 @@
 const { app, BrowserWindow, shell, Menu } = require('electron');
+const path = require('node:path');
 
 const APP_URL = 'https://vadimaok.github.io/provadastaff/';
 const APP_HOST = 'vadimaok.github.io';
@@ -39,6 +40,7 @@ function openMainWindow() {
     minWidth: 1024,
     minHeight: 700,
     title: 'Provoda Staff',
+    icon: path.join(__dirname, 'provoda-icon.ico'),
     backgroundColor: '#0b0f14',
     autoHideMenuBar: true,
     show: false,
