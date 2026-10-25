@@ -4,6 +4,7 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let cats=[], reports=[], isAdmin=false, isReviewer=false, isEnabled=true, canSubmit=false, userRole='employee', shiftRole=null, activeShift='day', activeView='new', users=[];
   let liveChannel=null, livePollTimer=null, liveRefreshTimer=null, liveRefreshBusy=false, liveRefreshQueued=false;
+  const selectedExcelIds=new Set();
   function ensureUI(){
     if(!$('#openDailyReportsBtn')){
       const anchor=$('#openKnzTasksBtn')||$('#openShiftPanelBtn')||$('#openSettingsBtn');
@@ -22,6 +23,12 @@
       .dr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.dr-grid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}.dr-grid input,.dr-grid select{padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:var(--text)}
       .dr-table-wrap{overflow:auto}.dr-table{width:100%;border-collapse:collapse;font-size:13px}.dr-table th,.dr-table td{padding:10px;border:1px solid var(--line);text-align:left;vertical-align:top}.dr-table td.good{background:rgba(52,211,153,.17)}.dr-table td.warn{background:rgba(251,146,60,.18)}
       .dr-hidden{display:none!important}.dr-check{display:flex;gap:10px;align-items:flex-start}.dr-check input{margin-top:3px}
+      .dr-manage{border:1px solid var(--line);border-radius:14px;margin:12px 0;background:rgba(255,255,255,.025);overflow:hidden}
+      .dr-manage summary{cursor:pointer;padding:13px 15px;font-weight:700;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}
+      .dr-manage summary::-webkit-details-marker{display:none}.dr-manage summary:after{content:'+';font-size:20px;color:var(--muted)}.dr-manage[open] summary:after{content:'−'}
+      .dr-manage-body{padding:0 13px 13px}.dr-select-list{display:grid;gap:7px;max-height:260px;overflow:auto;margin:10px 0}
+      .dr-select-row{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px}
+      .dr-select-row input{width:18px;height:18px;flex:0 0 auto;margin-top:2px}.dr-danger{border-color:rgba(248,113,113,.45);color:#fca5a5}
       @media(max-width:600px){.dr-grid{grid-template-columns:1fr}.dr-shell{padding:13px}}
     `;
     document.head.appendChild(style);
@@ -35,7 +42,7 @@
       <label class="small" for="drYandexUrl">Ссылка на Яндекс Диск</label><input id="drYandexUrl" class="dr-url" type="url" placeholder="https://disk.yandex.ru/..." autocomplete="url">
       <label class="small" for="drSenderComment">Комментарий для Админа / СТ (необязательно)</label><textarea id="drSenderComment" class="dr-comment" placeholder="Пояснение, проблема или сообщение для проверяющих…"></textarea>
       <div class="dr-actions"><button class="dr-btn primary" id="drPreview">Предварительный просмотр</button><button class="dr-btn" id="drSubmit">Отправить отчёт</button></div><div id="drPreviewBox" class="dr-card dr-hidden"></div></section>
-      <section id="drHistoryView" class="dr-hidden"><div class="dr-actions"><button class="dr-btn" id="drExport">Предпросмотр Excel</button><button class="dr-btn primary" id="drCopyExcel">Копировать строки для Excel</button><button class="dr-btn" id="drDownloadCsv">Скачать CSV</button></div><div id="drHistoryList"></div><div id="drExcelPreview" class="dr-card dr-hidden"></div></section>
+      <section id="drHistoryView" class="dr-hidden"><div class="dr-actions"><button class="dr-btn" id="drExport">Предпросмотр Excel</button><button class="dr-btn primary" id="drCopyExcel">Копировать строки для Excel</button><button class="dr-btn" id="drDownloadCsv">Скачать CSV</button></div><details id="drExcelManage" class="dr-manage dr-hidden"><summary>Дополнительно · выборочное удаление Excel</summary><div class="dr-manage-body"><p class="small">Галочки скрыты здесь, чтобы не мешали обычной работе. Выбери одну или несколько записей и подтверди удаление. Полное удаление затронет только одобренные и отклонённые отчёты, которые попадают в Excel; ожидающие проверки останутся.</p><div class="dr-actions"><button class="dr-btn" id="drSelectAllExcel" type="button">Выбрать все</button><button class="dr-btn" id="drClearExcelSelection" type="button">Снять выбор</button></div><div id="drExcelSelectionList" class="dr-select-list"></div><div class="dr-actions"><button class="dr-btn dr-danger" id="drDeleteSelectedExcel" type="button" disabled>Удалить выбранные</button><button class="dr-btn dr-danger" id="drDeleteAllExcel" type="button">Полностью очистить Excel</button></div></div></details><div id="drHistoryList"></div><div id="drExcelPreview" class="dr-card dr-hidden"></div></section>
       <section id="drSettingsView" class="dr-hidden"><div class="dr-card" id="drModuleSettingsCard"><label class="dr-item-head"><strong>Модуль сменных отчётов включён</strong><input id="drEnabled" type="checkbox"></label><div class="dr-actions"><button class="dr-btn primary" id="drSaveEnabled">Сохранить</button></div></div>
       <div class="dr-card"><h3>Назначение дневной / ночной роли</h3><p class="small">Доступно Админу и СТ. СТ может назначать дневную и ночную смену.</p><div class="dr-grid"><label>Сотрудник<select id="drUserSelect"></select></label><label>Дополнительная роль смены<select id="drUserRole"><option value="">Без сменной роли</option><option value="shift_day">Дневная смена</option><option value="shift_night">Ночная смена</option></select></label></div><div class="dr-actions"><button class="dr-btn primary" id="drSaveUserRole">Сохранить роль</button></div></div>
       <div class="dr-card"><h3>Категории отчётов</h3><div id="drCategoryList"></div><div class="dr-grid"><label>Смена<select id="drCatShift"><option value="day">Дневная</option><option value="night">Ночная</option></select></label><label>Название категории<input id="drCatTitle" maxlength="180" placeholder="Например, чистая стойка"></label></div><div class="dr-actions"><button class="dr-btn primary" id="drAddCategory">Добавить категорию</button></div></div></section>
@@ -48,6 +55,11 @@
     $('#drExport').addEventListener('click',showExcelPreview);
     $('#drCopyExcel').addEventListener('click',copyExcelRows);
     $('#drDownloadCsv').addEventListener('click',downloadCsv);
+    $('#drSelectAllExcel').addEventListener('click',()=>{eligibleExcelReports().forEach(r=>selectedExcelIds.add(r.id));renderExcelManage();});
+    $('#drClearExcelSelection').addEventListener('click',()=>{selectedExcelIds.clear();renderExcelManage();});
+    $('#drDeleteSelectedExcel').addEventListener('click',deleteSelectedExcel);
+    $('#drDeleteAllExcel').addEventListener('click',deleteAllExcel);
+    $('#drExcelSelectionList').addEventListener('change',e=>{const cb=e.target.closest('[data-dr-select-excel]');if(!cb)return;if(cb.checked)selectedExcelIds.add(cb.dataset.drSelectExcel);else selectedExcelIds.delete(cb.dataset.drSelectExcel);updateExcelDeleteButton();});
     $('#drSaveEnabled').addEventListener('click',saveEnabled);
     $('#drAddCategory').addEventListener('click',addCategory);
     $('#drSaveUserRole').addEventListener('click',saveUserRole);
@@ -87,8 +99,8 @@
       $('#drSettingsView').classList.toggle('dr-hidden',activeView!=='settings'||!isReviewer);
       document.querySelectorAll('#drTabs [data-dr-view]').forEach(b=>b.classList.toggle('primary',b.dataset.drView===activeView));
       if(!canSubmit&&!isReviewer)notice('Для заполнения отчёта Админ или СТ должен назначить дополнительную роль дневной или ночной смены.',true);
-      if(!silent){renderChecklist();renderHistory();renderCategories();if(isReviewer)await loadUsers();}
-      else if(activeView==='history'){renderHistory();}
+      if(!silent){renderChecklist();renderHistory();renderExcelManage();renderCategories();if(isReviewer)await loadUsers();}
+      else if(activeView==='history'){renderHistory();renderExcelManage();}
       if(!silent){if(!isEnabled&&!isReviewer)notice('Модуль временно отключён администратором.');
       else if(canSubmit||isReviewer)notice('');}
     }catch(e){notice('Ошибка загрузки сменных отчётов: '+(e.message||'проверь SQL-файл supabase/daily-reports.sql'),true);}
@@ -101,7 +113,7 @@
     $('#drHistoryView').classList.toggle('dr-hidden',view!=='history');
     $('#drSettingsView').classList.toggle('dr-hidden',view!=='settings');
     document.querySelectorAll('#drTabs [data-dr-view]').forEach(b=>b.classList.toggle('primary',b.dataset.drView===view));
-    if(view==='history')renderHistory();if(view==='settings'){renderCategories();loadUsers();}
+    if(view==='history'){renderHistory();renderExcelManage();}if(view==='settings'){renderCategories();loadUsers();}
   }
   function activeCats(){return cats.filter(c=>c.shift_type===activeShift&&c.enabled).sort((a,b)=>a.position-b.position);}
   function renderChecklist(){
@@ -172,9 +184,45 @@
     const userId=$('#drUserSelect').value,role=$('#drUserRole').value;if(!userId){notice('Выбери сотрудника.',true);return;}
     try{const {error}=await cloudClient.rpc('admin_set_user_shift_role',{target_user_id:userId,new_shift_role:role||null});if(error)throw error;notice('Дополнительная роль смены сохранена.');await loadUsers();}catch(e){notice(e.message||'Не удалось назначить роль.',true);}
   }
-  function excelRows(){return reports.filter(r=>r.status!=='pending').map(r=>({fio:r.author_name||(r.submitted_by===cloudUser.id?(cloudUser.user_metadata?.display_name||cloudUser.email||'Вы'):'Сотрудник'),url:r.yandex_disk_url||'',comment:r.reviewer_comment||''}));}
+  function eligibleExcelReports(){return reports.filter(r=>r.status==='approved'||r.status==='rejected');}
+  function excelRows(){return eligibleExcelReports().map(r=>({id:r.id,fio:r.author_name||(r.submitted_by===cloudUser.id?(cloudUser.user_metadata?.display_name||cloudUser.email||'Вы'):'Сотрудник'),url:r.yandex_disk_url||'',comment:r.reviewer_comment||''}));}
+  function renderExcelManage(){
+    const box=$('#drExcelManage'),list=$('#drExcelSelectionList');if(!box||!list)return;
+    box.classList.toggle('dr-hidden',!isReviewer);
+    const eligible=eligibleExcelReports(),validIds=new Set(eligible.map(r=>r.id));
+    [...selectedExcelIds].forEach(id=>{if(!validIds.has(id))selectedExcelIds.delete(id);});
+    if(!eligible.length)list.innerHTML='<div class="small">Пока нет одобренных или отклонённых записей для Excel.</div>';
+    else list.innerHTML=eligible.map(r=>{
+      const fio=r.author_name||(r.submitted_by===cloudUser.id?(cloudUser.user_metadata?.display_name||cloudUser.email||'Вы'):'Сотрудник');
+      const date=esc(r.report_date||'Без даты'),shift=r.shift_type==='day'?'Дневная':'Ночная';
+      return '<label class="dr-select-row"><input type="checkbox" data-dr-select-excel="'+esc(r.id)+'" '+(selectedExcelIds.has(r.id)?'checked':'')+'><span><strong>'+esc(fio)+'</strong><div class="small">'+shift+' смена · '+date+' · '+(r.status==='approved'?'Одобрен':'Отклонён')+'</div></span></label>';
+    }).join('');
+    updateExcelDeleteButton();
+  }
+  function updateExcelDeleteButton(){const btn=$('#drDeleteSelectedExcel');if(btn){btn.disabled=selectedExcelIds.size===0;btn.textContent=selectedExcelIds.size?('Удалить выбранные ('+selectedExcelIds.size+')'):'Удалить выбранные';}}
+  async function deleteExcelRecords(ids,deleteAll=false){
+    if(!isReviewer){notice('Удалять Excel-записи может только Админ или СТ.',true);return;}
+    const count=deleteAll?eligibleExcelReports().length:ids.length;
+    if(!count){notice('Нет записей для удаления.',true);return;}
+    const message=deleteAll
+      ? 'ВНИМАНИЕ! Будут безвозвратно удалены ВСЕ '+count+' одобренные/отклонённые записи из Excel. Отчёты на проверке останутся. Продолжить?'
+      : 'ВНИМАНИЕ! Будет безвозвратно удалено записей: '+count+'. Продолжить?';
+    if(!window.confirm(message))return;
+    try{
+      const {data,error}=await cloudClient.rpc('daily_report_delete_excel',{report_ids:ids,delete_all:deleteAll});
+      if(error)throw error;
+      selectedExcelIds.clear();
+      notice('Удалено записей: '+Number(data||0)+'.');
+      await load();
+      showView('history');
+      const details=$('#drExcelManage');if(details)details.open=true;
+      renderExcelManage();
+    }catch(e){notice(e.message||'Не удалось удалить записи Excel.',true);}
+  }
+  function deleteSelectedExcel(){deleteExcelRecords([...selectedExcelIds],false);}
+  function deleteAllExcel(){deleteExcelRecords([],true);}
   function showExcelPreview(){
-    const rows=excelRows(),box=$('#drExcelPreview');box.classList.remove('dr-hidden');
+    const rows=excelRows(),box=$('#drExcelPreview');box.classList.remove('dr-hidden');renderExcelManage();
     box.innerHTML='<h3>Предварительный просмотр Excel</h3><p class="small">Ровно три столбца: Ф.И. · ссылка на Яндекс Диск · замечания. Без замечаний — зелёная ячейка, с замечаниями — оранжевая.</p><div class="dr-table-wrap"><table class="dr-table"><thead><tr><th>Ф.И.</th><th>Ссылка на Яндекс Диск</th><th>Замечания</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.fio)+'</td><td><a href="'+esc(r.url||'#')+'" target="_blank" rel="noopener">'+esc(r.url)+'</a></td><td class="'+(r.comment?'warn':'good')+'">'+esc(r.comment||'Нет замечаний')+'</td></tr>').join('')+'</tbody></table></div><p class="small">Кнопка «Копировать строки» копирует табуляцию между ячейками — вставь в Excel начиная с A1.</p>';
   }
   async function copyExcelRows(){
