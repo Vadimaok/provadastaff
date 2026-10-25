@@ -2,7 +2,7 @@
 (() => {
   const $ = (s, root=document) => root.querySelector(s);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let cats=[], reports=[], isAdmin=false, isReviewer=false, isEnabled=true, activeShift='day', draftFiles={}, previewDraft=null;
+  let cats=[], reports=[], isAdmin=false, isReviewer=false, isEnabled=true, canSubmit=false, userRole='employee', activeShift='day', draftFiles={}, previewDraft=null;
   const defaults = {
     day:['Фотография заполненного холодильника','Фотография кухни','Фотографии мусорок','Заполненные салфетницы'],
     night:['Заполненный холодильник','Фотография кухни','Чистая техника: аэрогриль, духовка, кофемашинка','Фотография бойлера','Фотография кружек','Общий план стойки администрации','Прибранные комнаты; где необходимо — кондиционеры выключены, пульты на месте','Беспроводные девайсы на зарядке','Дополнительные девайсы + сообщение от шефа']
@@ -86,7 +86,7 @@
   }
   function activeCats(){return cats.filter(c=>c.shift_type===activeShift&&c.enabled).sort((a,b)=>a.position-b.position);}
   function renderChecklist(){
-    activeShift=$('#drShift').value;draftFiles={};previewDraft=null;
+    if(userRole==='shift_day')$('#drShift').value='day';else if(userRole==='shift_night')$('#drShift').value='night';\n    $('#drShift').disabled=!isAdmin&&!isReviewer;activeShift=$('#drShift').value;draftFiles={};previewDraft=null;
     const list=activeCats();
     $('#drChecklist').innerHTML=list.map((c,i)=>`<article class="dr-card dr-item"><div class="dr-item-head"><h4>${i+1}. ${esc(c.title)}</h4><span class="small">Фото</span></div><div class="dr-upload"><input type="file" accept="image/*" capture="environment" multiple data-dr-files="${esc(c.id)}" aria-label="Фото: ${esc(c.title)}"></div><div class="dr-photo-grid" data-dr-preview="${esc(c.id)}"></div></article>`).join('')||'<div class="dr-card">Нет активных категорий для этой смены.</div>';
     // File preview listener is attached once in ensureUI.
@@ -105,7 +105,7 @@
     $('#drPreviewBox').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   async function submitReport(){
-    if(!isEnabled&&!isAdmin&&!isReviewer){notice('Модуль отключён.',true);return;}
+    if(!canSubmit){notice('Для отправки отчёта нужна роль дневной или ночной смены.',true);return;}\n    if(!isEnabled&&!isAdmin&&!isReviewer){notice('Модуль отключён.',true);return;}\n    if(userRole==='shift_day'&&$('#drShift').value!=='day'||userRole==='shift_night'&&$('#drShift').value!=='night'){notice('У тебя нет доступа к этому типу смены.',true);return;}
     if(!window.cloudClient||!window.cloudUser){notice('Сначала войди в аккаунт.',true);return;}
     const button=$('#drSubmit');button.disabled=true;notice('Загружаю фотографии…');
     try{
