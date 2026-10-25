@@ -1112,8 +1112,9 @@ body.tile-rearrange-mode #addBtn{opacity:.35;pointer-events:none}
         <h3>Роли сотрудников</h3>
         <p class="settings-hint">Выбери пользователя и назначь ему роль. Изменения применяются сразу после сохранения.</p>
         <label class="admin-role-field">Сотрудник<select id="adminRoleUser"><option value="">Выбери аккаунт</option></select></label>
-        <label class="admin-role-field">Роль<select id="adminRoleSelect"><option value="employee">Сотрудник</option><option value="employee_knz">Сотрудник КНЗ</option><option value="shift_senior">СТ / Старший КНЗ</option><option value="shift_day">Дневная смена</option><option value="shift_night">Ночная смена</option></select></label>
-        <div class="admin-inline-actions"><button class="admin-primary" id="adminSaveRoleBtn" type="button">Сохранить роль</button></div>
+        <label class="admin-role-field">Основная роль<select id="adminRoleSelect"><option value="employee">Сотрудник</option><option value="employee_knz">Сотрудник КНЗ</option><option value="shift_senior">СТ / Старший КНЗ</option></select></label>
+        <label class="admin-role-field">Дополнительная роль сменных отчётов<select id="adminShiftRoleSelect"><option value="">Без сменной роли</option><option value="shift_day">Дневная смена</option><option value="shift_night">Ночная смена</option></select></label>
+        <div class="admin-inline-actions"><button class="admin-primary" id="adminSaveRoleBtn" type="button">Сохранить роли</button></div>
         <p id="adminRoleStatus" class="admin-status" role="status" aria-live="polite"></p>
       </div>
     </section><section id="adminFeaturesView" class="hidden"><div class="admin-card"><h3>Доступ к функциям по ролям</h3><p class="settings-hint">Выключи функцию, чтобы показать сотрудникам статус «Временно отключена».</p><label class="admin-feature-toggle"><span><strong>Панель Старший КНЗ</strong><small>Назначение задач КНЗ</small></span><input id="featureShiftEnabled" type="checkbox" checked></label><label class="admin-feature-toggle"><span><strong>Задачи сотрудников КНЗ</strong><small>Работа по задачам и скриншоты</small></span><input id="featureKnzEnabled" type="checkbox" checked></label><button class="admin-primary" id="saveRoleFeaturesBtn" type="button">Сохранить доступ</button><p id="adminFeaturesStatus" class="admin-status"></p></div></section>
@@ -2057,7 +2058,7 @@ function deactivateCloudUser(){
   stopCloudLiveSync();
   stopRejectedReportPolling();
   cloudLastUpdatedAt=null;cloudLastDataSignature=null;
-  currentUserRole='employee';applyRoleUI();
+  currentUserRole='employee';currentUserShiftRole=null;applyRoleUI();
   adminSetVisible(false); closeAdminPanel();closeShiftPanel();closeDataTools();closePurchaseHistory(); adminAccounts=[]; adminSelectedId=null; adminSelectedState=null;
   cloudUser=null;
   state={current:[],history:{}};
@@ -2292,20 +2293,24 @@ async function adminLoadRoles(){
   userSel.innerHTML='<option value="">Выбери аккаунт</option>'+adminAccounts.map(u=>'<option value="'+escapeHtml(u.user_id)+'">'+escapeHtml(adminAccountName(u))+' · '+escapeHtml(u.email||'без почты')+'</option>').join('');
   if([...userSel.options].some(o=>o.value===chosen))userSel.value=chosen;
   const selected=adminAccounts.find(u=>u.user_id===userSel.value);
-  document.querySelector('#adminRoleSelect').value=['employee','employee_knz','shift_senior','shift_day','shift_night'].includes(selected?.role)?selected.role:'employee';
+  document.querySelector('#adminRoleSelect').value=['employee','employee_knz','shift_senior'].includes(selected?.role)?selected.role:'employee';
+  document.querySelector('#adminShiftRoleSelect').value=['shift_day','shift_night'].includes(selected?.shift_role)?selected.shift_role:'';
 }
 async function adminSaveRole(){
   const userId=document.querySelector('#adminRoleUser').value;
   const role=document.querySelector('#adminRoleSelect').value;
+  const shiftRole=document.querySelector('#adminShiftRoleSelect').value||null;
   if(!userId){document.querySelector('#adminRoleStatus').textContent='Сначала выбери сотрудника.';return;}
   const btn=document.querySelector('#adminSaveRoleBtn');btn.disabled=true;
   try{
-    const {error}=await cloudClient.rpc('admin_set_user_role',{target_user_id:userId,new_role:role});
-    if(error)throw error;
-    const u=adminAccounts.find(x=>x.user_id===userId);if(u)u.role=role;
-    if(userId===cloudUser?.id){currentUserRole=role;applyRoleUI();}
-    adminRenderAccounts();document.querySelector('#adminRoleStatus').textContent='Роль сохранена: '+(({employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'Старший КНЗ'})[role]||'Сотрудник')+'.';
-  }catch(e){document.querySelector('#adminRoleStatus').textContent=e.message||'Не удалось сохранить роль.';}
+    const {error:mainError}=await cloudClient.rpc('admin_set_user_role',{target_user_id:userId,new_role:role});
+    if(mainError)throw mainError;
+    const {error:shiftError}=await cloudClient.rpc('admin_set_user_shift_role',{target_user_id:userId,new_shift_role:shiftRole});
+    if(shiftError)throw shiftError;
+    const u=adminAccounts.find(x=>x.user_id===userId);if(u){u.role=role;u.shift_role=shiftRole;}
+    if(userId===cloudUser?.id){currentUserRole=role;currentUserShiftRole=shiftRole;applyRoleUI();}
+    adminRenderAccounts();document.querySelector('#adminRoleStatus').textContent='Сохранено: основная роль и дополнительная роль смены.';
+  }catch(e){document.querySelector('#adminRoleStatus').textContent=e.message||'Не удалось сохранить роли.';}
   finally{btn.disabled=false;}
 }
 async function adminLoadKnzReports(){
@@ -2338,7 +2343,7 @@ function adminRenderAccounts(){
   const q=(document.querySelector('#adminUserSearch')?.value||'').trim().toLowerCase();
   const visible=adminAccounts.filter(u=>String(u.email||'').toLowerCase().includes(q)||adminAccountName(u).toLowerCase().includes(q)||String(u.user_id||'').toLowerCase().includes(q));
   const list=document.querySelector('#adminAccountsList');
-  list.innerHTML=visible.length?visible.map(u=>'<button type="button" class="admin-account '+(u.user_id===adminSelectedId?'active':'')+'" data-admin-user="'+escapeHtml(u.user_id)+'"><strong>'+escapeHtml(u.email||'Без почты')+'</strong><span>'+escapeHtml(adminAccountName(u))+' · '+escapeHtml(({employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'Старший КНЗ'})[u.role]||'Сотрудник')+' · создан '+escapeHtml(adminFormatDate(u.created_at))+'</span><span class="admin-account-total">'+fmt(adminTotalForAccount(u))+' · '+Number(u.expense_count||0)+' записей</span></button>').join(''):'<div class="admin-empty">Пользователи не найдены.</div>';
+  list.innerHTML=visible.length?visible.map(u=>'<button type="button" class="admin-account '+(u.user_id===adminSelectedId?'active':'')+'" data-admin-user="'+escapeHtml(u.user_id)+'"><strong>'+escapeHtml(u.email||'Без почты')+'</strong><span>'+escapeHtml(adminAccountName(u))+' · '+escapeHtml(({employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ'})[u.role]||'Сотрудник')+(u.shift_role?' · '+escapeHtml(({shift_day:'Дневная смена',shift_night:'Ночная смена'})[u.shift_role]||u.shift_role):'')+' · создан '+escapeHtml(adminFormatDate(u.created_at))+'</span><span class="admin-account-total">'+fmt(adminTotalForAccount(u))+' · '+Number(u.expense_count||0)+' записей</span></button>').join(''):'<div class="admin-empty">Пользователи не найдены.</div>';
   document.querySelector('#adminUsersCount').textContent=String(adminAccounts.length);
   document.querySelector('#adminGlobalTotal').textContent=fmt(adminAccounts.reduce((a,u)=>a+adminTotalForAccount(u),0));
   document.querySelector('#adminGlobalCount').textContent=String(adminAccounts.reduce((a,u)=>a+Number(u.expense_count||0),0));
@@ -2706,6 +2711,7 @@ function setAvatarImage(data){
   const remove=document.querySelector('#removeAvatarBtn'); if(remove) remove.classList.toggle('hidden',!data);
 }
 let currentUserRole='employee';
+let currentUserShiftRole=null;
 let requestedTeamViewHandled=false;
 async function openRequestedTeamView(){
   const view=new URLSearchParams(window.location.search).get('view');
@@ -2723,8 +2729,9 @@ async function openRequestedTeamView(){
 }
 async function refreshCurrentUserRole(){
   if(!cloudClient||!cloudUser){currentUserRole='employee';applyRoleUI();return;}
-  try{const {data,error}=await cloudClient.rpc('user_get_my_role');if(error)throw error;currentUserRole=['employee','employee_knz','shift_senior','shift_day','shift_night'].includes(data)?data:'employee';}
+  try{const {data,error}=await cloudClient.rpc('user_get_my_role');if(error)throw error;currentUserRole=['employee','employee_knz','shift_senior'].includes(data)?data:'employee';}
   catch(e){console.info('Role could not be loaded:',e?.message||e);}
+  try{const {data,error}=await cloudClient.rpc('user_get_my_shift_role');if(error)throw error;currentUserShiftRole=data||null;}catch{currentUserShiftRole=null;}
   applyRoleUI();
   if(currentUserRole==='employee_knz')refreshKnzRejectedBanner();
   openRequestedTeamView();
@@ -2735,7 +2742,7 @@ async function refreshKnzRejectedBanner(){
 }
 function applyRoleUI(){
   const labels={employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ / Старший КНЗ',shift_day:'Дневная смена',shift_night:'Ночная смена'};
-  const badge=document.querySelector('#profileRoleBadge');if(badge){badge.textContent=labels[currentUserRole]||labels.employee;badge.classList.remove('role-shift','role-knz','role-employee');badge.classList.add(currentUserRole==='shift_senior'?'role-shift':currentUserRole==='employee_knz'?'role-knz':(currentUserRole==='shift_day'||currentUserRole==='shift_night')?'role-shift':'role-employee');badge.classList.toggle('hidden',!cloudUser);}
+  const badge=document.querySelector('#profileRoleBadge');if(badge){badge.textContent=(labels[currentUserRole]||labels.employee)+(currentUserShiftRole?' · '+(labels[currentUserShiftRole]||'сменная роль'):'');badge.classList.remove('role-shift','role-knz','role-employee');badge.classList.add(currentUserRole==='shift_senior'?'role-shift':currentUserRole==='employee_knz'?'role-knz':(currentUserRole==='shift_day'||currentUserRole==='shift_night')?'role-shift':'role-employee');badge.classList.toggle('hidden',!cloudUser);}
   const shift=document.querySelector('#openShiftPanelBtn');if(shift)shift.classList.toggle('admin-visible',!!cloudUser&&currentUserRole==='shift_senior');
   const knz=document.querySelector('#openKnzTasksBtn');if(knz)knz.classList.toggle('admin-visible',!!cloudUser&&currentUserRole==='employee_knz');
 }
@@ -2956,7 +2963,24 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
-<script src="./daily-reports.js?v=3"></script>
+<script src="./daily-reports.js?v=4"></script>
 
+<script id="provoda-ui-protection">
+(function(){
+  let adminF12Enabled=false,menu=null;
+  const editable=e=>!!e.target?.closest?.('input,textarea,select,[contenteditable="true"],[data-allow-copy]');
+  const isAdmin=()=>typeof adminAllowed!=='undefined'&&!!adminAllowed;
+  function ensureMenu(){if(menu)return menu;menu=document.createElement('div');menu.id='provodaContextMenu';menu.setAttribute('role','menu');menu.style.cssText='position:fixed;z-index:20000;display:none;min-width:220px;padding:7px;border:1px solid rgba(148,163,184,.25);border-radius:15px;background:#151d2a;color:#eef4ff;box-shadow:0 18px 48px rgba(0,0,0,.45);font:13px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;backdrop-filter:blur(16px)';document.body.appendChild(menu);return menu;}
+  function closeMenu(){if(menu)menu.style.display='none';}
+  function showToast(msg){if(typeof toast==='function')toast(msg);else{const n=document.createElement('div');n.textContent=msg;n.style.cssText='position:fixed;z-index:20001;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 14px;border-radius:12px;background:#202938;color:#fff;box-shadow:0 8px 30px #0005';document.body.appendChild(n);setTimeout(()=>n.remove(),2600);}}
+  function item(label,action){const b=document.createElement('button');b.type='button';b.textContent=label;b.setAttribute('role','menuitem');b.style.cssText='display:block;width:100%;padding:10px 11px;text-align:left;border-radius:10px;background:transparent;color:inherit;border:0;cursor:pointer;font:inherit';b.addEventListener('mouseenter',()=>b.style.background='rgba(124,92,255,.18)');b.addEventListener('mouseleave',()=>b.style.background='transparent');b.addEventListener('click',()=>{closeMenu();action();});return b;}
+  function openMenu(x,y){const m=ensureMenu();m.replaceChildren();m.append(item('← Назад',()=>{if(history.length>1)history.back();}));m.append(item('→ Вперёд',()=>history.forward()));m.append(item('↻ Обновить страницу',()=>location.reload()));if(isAdmin()){const f=item(adminF12Enabled?'✓ F12 разрешён для администратора':'F12 · Разрешить инструменты разработчика',()=>{adminF12Enabled=!adminF12Enabled;showToast(adminF12Enabled?'F12 разрешён. Теперь нажми клавишу F12 на клавиатуре.':'Доступ к F12 снова заблокирован.');closeMenu();});f.style.marginTop='5px';f.style.borderTop='1px solid rgba(148,163,184,.16)';m.append(f);}m.style.display='block';const r=m.getBoundingClientRect();m.style.left=Math.max(8,Math.min(x,innerWidth-r.width-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-r.height-8))+'px';}
+  document.addEventListener('contextmenu',e=>{e.preventDefault();openMenu(e.clientX,e.clientY);});
+  document.addEventListener('click',e=>{if(menu&&!menu.contains(e.target))closeMenu();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();if(e.key==='F12'&&!(isAdmin()&&adminF12Enabled)){e.preventDefault();e.stopImmediatePropagation();showToast('Инструменты разработчика доступны только администратору через меню ПКМ.');}if((e.ctrlKey||e.metaKey)&&['u','s'].includes(e.key.toLowerCase())){e.preventDefault();e.stopImmediatePropagation();}if((e.ctrlKey||e.metaKey)&&e.shiftKey&&['i','j','c'].includes(e.key.toLowerCase())&&!(isAdmin()&&adminF12Enabled)){e.preventDefault();e.stopImmediatePropagation();}},true);
+  document.addEventListener('copy',e=>{if(!editable(e))e.preventDefault();},true);document.addEventListener('cut',e=>{if(!editable(e))e.preventDefault();},true);document.addEventListener('selectstart',e=>{if(!editable(e))e.preventDefault();},true);
+  const style=document.createElement('style');style.textContent='body,body *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}input,textarea,select,[contenteditable="true"],[data-allow-copy]{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default}#provodaContextMenu *{-webkit-user-select:none!important;user-select:none!important}';document.head.appendChild(style);
+})();
+</script>
 </body>
 </html>
