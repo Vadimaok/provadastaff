@@ -139,3 +139,28 @@ begin
 end; $$;
 revoke all on function public.daily_report_admin_set_enabled(boolean) from public,anon;
 grant execute on function public.daily_report_admin_set_enabled(boolean) to authenticated;
+
+-- Extend the existing role selector with dedicated report submitter roles.
+alter table public.user_roles drop constraint if exists user_roles_role_check;
+alter table public.user_roles add constraint user_roles_role_check
+  check (role in ('employee','employee_knz','shift_senior','shift_day','shift_night'));
+
+create or replace function public.admin_set_user_role(target_user_id uuid, new_role text)
+returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if not public.is_current_admin() then
+    raise exception 'Доступ запрещён: нужны права администратора' using errcode = '42501';
+  end if;
+  if new_role not in ('employee','employee_knz','shift_senior','shift_day','shift_night') then
+    raise exception 'Недопустимая роль';
+  end if;
+  if not exists(select 1 from auth.users where id=target_user_id) then
+    raise exception 'Аккаунт не найден';
+  end if;
+  insert into public.user_roles(user_id,role,updated_by,updated_at)
+  values(target_user_id,new_role,(select auth.uid()),now())
+  on conflict(user_id) do update set role=excluded.role,updated_by=excluded.updated_by,updated_at=now();
+  return true;
+end; $$;
+revoke all on function public.admin_set_user_role(uuid,text) from public,anon;
+grant execute on function public.admin_set_user_role(uuid,text) to authenticated;
