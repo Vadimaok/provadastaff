@@ -30,6 +30,21 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Stamp Android app version into remote URL
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          python - "$VERSION" <<'PY'
+          import json, pathlib, sys
+          version = sys.argv[1]
+          path = pathlib.Path('capacitor.config.json')
+          config = json.loads(path.read_text())
+          server = config.setdefault('server', {})
+          base = server.get('url', 'https://vadimaok.github.io/provadastaff/')
+          base = base.split('?')[0]
+          server['url'] = base + '?androidVersion=' + version
+          path.write_text(json.dumps(config, indent=2) + '\\n')
+          PY
+
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
