@@ -81,7 +81,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Provoda Staff $VERSION" --notes "Provoda Staff installers for version $VERSION."
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Provoda Staff $VERSION" --notes "Provoda Staff installers for version $VERSION." || gh release view "$TAG" >/dev/null
           cp android/app/build/outputs/apk/debug/app-debug.apk Provoda-Staff-Android.apk
           gh release upload "$TAG" Provoda-Staff-Android.apk --clobber
 
