@@ -56,7 +56,7 @@
   function close(){const s=$('#dailyReportsSheet');if(s){s.classList.remove('open');s.setAttribute('aria-hidden','true');}}
   function open(){ensureUI();if(!cloudClient||!cloudUser){notice('Сначала войди в аккаунт.',true);return;}closeProfile();$('#dailyReportsSheet').classList.add('open');$('#dailyReportsSheet').setAttribute('aria-hidden','false');$('#drDate').value=new Date().toISOString().slice(0,10);load();}
   function closeProfile(){try{if(typeof closeProfileMenu==='function')closeProfileMenu();}catch{}}
-  async function getAdmin(){try{const {data,error}=await cloudClient.rpc('is_current_admin');if(error)throw error;isAdmin=!!data;}catch{isAdmin=false;}isReviewer=isAdmin||currentUserRole==='shift_senior';}
+  async function getAdmin(){try{const {data,error}=await cloudClient.rpc('is_current_admin');if(error)throw error;isAdmin=!!data;}catch{isAdmin=false;}userRole=(typeof currentUserRole!=='undefined'&&currentUserRole)||'employee';isReviewer=isAdmin||userRole==='shift_senior';canSubmit=isAdmin||isReviewer||userRole==='shift_day'||userRole==='shift_night';}
   async function load(){
     notice('Загружаю отчёты…');await getAdmin();
     try{
@@ -67,9 +67,10 @@
       ]);
       if(se)throw se;if(ce)throw ce;if(re)throw re;
       isEnabled=setting?.enabled!==false;cats=categoryRows||[];reports=rows||[];
-      $('#drDisabled').classList.toggle('dr-hidden',isEnabled||isAdmin||isReviewer);
-      $('#drNewView').classList.toggle('dr-hidden',!isEnabled&&!isAdmin&&!isReviewer);
+      $('#drDisabled').classList.toggle('dr-hidden',(isEnabled&&canSubmit)||isAdmin||isReviewer);
+      $('#drNewView').classList.toggle('dr-hidden',(!isEnabled&&!isAdmin&&!isReviewer)||!canSubmit);
       $('#drSettingsTab').classList.toggle('dr-hidden',!isAdmin);
+      if(!canSubmit&&!isAdmin&&!isReviewer)notice('Для заполнения отчётов Админ должен назначить роль «Дневная смена» или «Ночная смена».',true);
       $('#drEnabled').checked=isEnabled;
       renderChecklist();renderHistory();renderCategories();
       if(!isEnabled&&!isAdmin&&!isReviewer)notice('Модуль временно отключён администратором.');
@@ -105,7 +106,9 @@
     $('#drPreviewBox').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   async function submitReport(){
-    if(!canSubmit){notice('Для отправки отчёта нужна роль дневной или ночной смены.',true);return;}\n    if(!canSubmit){notice('Для отправки отчёта нужна роль дневной или ночной смены.',true);return;}\n    if(!isEnabled&&!isAdmin&&!isReviewer){notice('Модуль отключён.',true);return;}\n    if(userRole==='shift_day'&&$('#drShift').value!=='day'||userRole==='shift_night'&&$('#drShift').value!=='night'){notice('У тебя нет доступа к этому типу смены.',true);return;}\n    if(userRole==='shift_day'&&$('#drShift').value!=='day'||userRole==='shift_night'&&$('#drShift').value!=='night'){notice('У тебя нет доступа к этому типу смены.',true);return;}
+    if(!canSubmit){notice('Для отправки отчёта нужна роль дневной или ночной смены.',true);return;}\n    if(!canSubmit){notice('Для отправки отчёта нужна роль дневной или ночной смены.',true);return;}\n    if(!canSubmit){notice('Для отправки отчёта нужна роль дневной или ночной смены.',true);return;}
+    if(!isEnabled&&!isAdmin&&!isReviewer){notice('Модуль отключён.',true);return;}
+    if((userRole==='shift_day'&&$('#drShift').value!=='day')||(userRole==='shift_night'&&$('#drShift').value!=='night')){notice('У тебя нет доступа к этому типу смены.',true);return;}\n    if(userRole==='shift_day'&&$('#drShift').value!=='day'||userRole==='shift_night'&&$('#drShift').value!=='night'){notice('У тебя нет доступа к этому типу смены.',true);return;}\n    if(userRole==='shift_day'&&$('#drShift').value!=='day'||userRole==='shift_night'&&$('#drShift').value!=='night'){notice('У тебя нет доступа к этому типу смены.',true);return;}
     if(!window.cloudClient||!window.cloudUser){notice('Сначала войди в аккаунт.',true);return;}
     const button=$('#drSubmit');button.disabled=true;notice('Загружаю фотографии…');
     try{
