@@ -2529,7 +2529,7 @@ function animateDashboardReorder(){
     });
     Promise.all(animations.map(a=>a.finished.catch(()=>{}))).finally(()=>{
       dashboardReorderAnimating=false;
-      if(dashboardPendingTarget){const target=dashboardPendingTarget;dashboardPendingTarget=null;reorderDashboardToward(target);}
+      if(dashboardPendingTarget){dashboardPendingTarget=null;const hit=dashboardDragState&&document.elementFromPoint(dashboardDragState.lastX,dashboardDragState.lastY)?.closest?.('[data-dashboard-tile]');if(hit&&hit.dataset.dashboardTile!==dashboardDragState.id)reorderDashboardToward(hit.dataset.dashboardTile);}
     });
   });
 }
@@ -2545,7 +2545,7 @@ function reorderDashboardToward(targetId){
   const [moving]=dashboardTileOrder.splice(from,1);dashboardTileOrder.splice(to,0,moving);
   applyDashboardTileOrder(true);
 }
-function moveDashboardTile(e){if(!dashboardDragState)return;e.preventDefault();const tile=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('[data-dashboard-tile]');if(!tile||!DASHBOARD_TILE_DEFAULTS.includes(tile.dataset.dashboardTile)||tile.dataset.dashboardTile===dashboardDragState.id)return;const rect=tile.getBoundingClientRect();const horizontal=e.clientX>=rect.left&&e.clientX<=rect.right;const vertical=e.clientY>=rect.top&&e.clientY<=rect.bottom;if(!horizontal||!vertical)return;reorderDashboardToward(tile.dataset.dashboardTile);}
+function moveDashboardTile(e){if(!dashboardDragState)return;e.preventDefault();dashboardDragState.lastX=e.clientX;dashboardDragState.lastY=e.clientY;const tile=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('[data-dashboard-tile]');if(!tile||!DASHBOARD_TILE_DEFAULTS.includes(tile.dataset.dashboardTile)||tile.dataset.dashboardTile===dashboardDragState.id)return;const rect=tile.getBoundingClientRect();const horizontal=e.clientX>=rect.left&&e.clientX<=rect.right;const vertical=e.clientY>=rect.top&&e.clientY<=rect.bottom;if(!horizontal||!vertical)return;reorderDashboardToward(tile.dataset.dashboardTile);}
 function endDashboardTileDrag(){document.removeEventListener('pointermove',moveDashboardTile);document.removeEventListener('pointercancel',endDashboardTileDrag);document.querySelectorAll('.tile-dragging').forEach(el=>el.classList.remove('tile-dragging'));if(dashboardDragState?.moved){persistDashboardTileOrder();toast('Порядок плиток сохранён');}dashboardDragState=null;dashboardPendingTarget=null;}
 function setDashboardRearrangeMode(enabled){document.body.classList.toggle('tile-rearrange-mode',enabled);if(!enabled)endDashboardTileDrag();const bar=document.querySelector('#tileArrangeBar');if(bar)bar.setAttribute('aria-hidden',String(!enabled));if(enabled)toast('Зажми ↕ на плитке и перетащи её');}
 function setupDashboardTileReordering(){readDashboardTileOrder();applyDashboardTileOrder(false);document.querySelector('#configureTileOrderBtn')?.addEventListener('click',()=>{closeSettings();setDashboardRearrangeMode(true);});document.querySelector('#finishTileArrangeBtn')?.addEventListener('click',()=>setDashboardRearrangeMode(false));document.querySelector('#resetTileOrderBtn')?.addEventListener('click',()=>{dashboardTileOrder=[...DASHBOARD_TILE_DEFAULTS];persistDashboardTileOrder();applyDashboardTileOrder(true);settingsStatus('Исходный порядок плиток восстановлен.');});}
