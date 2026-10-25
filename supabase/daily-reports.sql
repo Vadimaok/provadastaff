@@ -237,7 +237,7 @@ returns integer
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare deleted_count integer;
 begin
   if not public.daily_report_is_reviewer() then
@@ -256,7 +256,7 @@ begin
   get diagnostics deleted_count = row_count;
   return deleted_count;
 end;
-$;
+$$;
 revoke all on function public.daily_report_delete_excel(uuid[],boolean) from public, anon;
 grant execute on function public.daily_report_delete_excel(uuid[],boolean) to authenticated;
 
