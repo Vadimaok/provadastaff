@@ -71,7 +71,7 @@
       $('#drNewView').classList.toggle('dr-hidden',(!isEnabled&&!isAdmin&&!isReviewer)||!canSubmit);
       $('#drSettingsTab').classList.toggle('dr-hidden',!isReviewer);
       if(!canSubmit&&!isAdmin&&!isReviewer)notice('Для заполнения отчётов Админ должен назначить роль «Дневная смена» или «Ночная смена».',true);
-      $('#drEnabled').checked=isEnabled;
+      $('#drEnabled').checked=isEnabled;$('#drEnabled').closest('.dr-card').classList.toggle('dr-hidden',!isAdmin);
       renderChecklist();renderHistory();renderCategories();
       if(!isEnabled&&!isAdmin&&!isReviewer)notice('Модуль временно отключён администратором.');
       else notice('');
