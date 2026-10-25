@@ -5,10 +5,11 @@ on:
   push:
     paths:
       - "desktop/**"
+      - "package.json"
       - ".github/workflows/build-windows.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -37,6 +38,17 @@ jobs:
       - name: Build portable EXE
         working-directory: desktop
         run: npm run dist
+
+      - name: Publish EXE to GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content -Raw package.json | ConvertFrom-Json).version
+          $tag = "v$version"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --title "Provoda Staff $version" --notes "Provoda Staff installers for version $version." }
+          gh release upload $tag "desktop/dist/Provoda-Staff-$version.exe" --clobber
 
       - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
