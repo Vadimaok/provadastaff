@@ -69,7 +69,7 @@
       isEnabled=setting?.enabled!==false;cats=categoryRows||[];reports=rows||[];
       $('#drDisabled').classList.toggle('dr-hidden',(isEnabled&&canSubmit)||isAdmin||isReviewer);
       $('#drNewView').classList.toggle('dr-hidden',(!isEnabled&&!isAdmin&&!isReviewer)||!canSubmit);
-      $('#drSettingsTab').classList.toggle('dr-hidden',!isAdmin);
+      $('#drSettingsTab').classList.toggle('dr-hidden',!isReviewer);
       if(!canSubmit&&!isAdmin&&!isReviewer)notice('Для заполнения отчётов Админ должен назначить роль «Дневная смена» или «Ночная смена».',true);
       $('#drEnabled').checked=isEnabled;
       renderChecklist();renderHistory();renderCategories();
