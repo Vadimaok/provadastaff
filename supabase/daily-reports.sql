@@ -164,3 +164,5 @@ begin
 end; $$;
 revoke all on function public.admin_set_user_role(uuid,text) from public,anon;
 grant execute on function public.admin_set_user_role(uuid,text) to authenticated;
+
+alter table public.daily_reports add column if not exists author_name text not null default '';
