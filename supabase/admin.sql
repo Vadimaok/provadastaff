@@ -15,8 +15,12 @@ create table if not exists public.user_roles (
   updated_by uuid references auth.users(id) on delete set null,
   updated_at timestamptz not null default now()
 );
+alter table public.user_roles add column if not exists shift_role text;
+update public.user_roles set shift_role=role, role='employee' where role in ('shift_day','shift_night') and (shift_role is null or shift_role='');
 alter table public.user_roles drop constraint if exists user_roles_role_check;
 alter table public.user_roles add constraint user_roles_role_check check (role in ('employee','employee_knz','shift_senior'));
+alter table public.user_roles drop constraint if exists user_roles_shift_role_check;
+alter table public.user_roles add constraint user_roles_shift_role_check check (shift_role is null or shift_role in ('shift_day','shift_night'));
 alter table public.user_roles enable row level security;
 revoke all on public.user_roles from anon, authenticated;
 
@@ -94,6 +98,7 @@ begin
     'last_sign_in_at', u.last_sign_in_at,
     'user_metadata', coalesce(u.raw_user_meta_data, '{}'::jsonb),
     'role', coalesce((select r.role from public.user_roles r where r.user_id = u.id), 'employee'),
+    'shift_role', (select r.shift_role from public.user_roles r where r.user_id = u.id),
     'display_name', coalesce(u.raw_user_meta_data->>'username', u.raw_user_meta_data->>'name', ''),
     'total_spent', coalesce(cur.total,0) + coalesce(hist.total,0),
     'expense_count', coalesce(cur.cnt,0) + coalesce(hist.cnt,0),
