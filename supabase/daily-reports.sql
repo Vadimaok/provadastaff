@@ -116,7 +116,7 @@ create or replace function public.daily_report_admin_save_category(category_id u
 returns uuid language plpgsql security definer set search_path = '' as $$
 declare saved_id uuid;
 begin
-  if not public.is_current_admin() then raise exception 'Только Админ может редактировать категории' using errcode='42501'; end if;
+  if not public.is_current_admin() and not exists (select 1 from public.user_roles r where r.user_id=(select auth.uid()) and r.role='shift_senior') then raise exception 'Редактировать категории может только Админ или СТ' using errcode='42501'; end if;
   if new_shift_type not in ('day','night') or length(trim(coalesce(new_title,''))) not between 1 and 180 then raise exception 'Проверь категорию'; end if;
   if category_id is null then
     insert into public.daily_report_categories(shift_type,title,position,enabled) values(new_shift_type,trim(new_title),coalesce(new_position,0),coalesce(is_enabled,true)) returning id into saved_id;
