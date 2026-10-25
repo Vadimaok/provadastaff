@@ -19,7 +19,8 @@
       "output": "dist"
     },
     "files": [
-      "main.cjs"
+      "main.cjs",
+      "provoda-icon.ico"
     ],
     "win": {
       "target": [
@@ -29,7 +30,8 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "icon": "provoda-icon.ico"
     },
     "artifactName": "Provoda-Staff-${version}.${ext}"
   }
