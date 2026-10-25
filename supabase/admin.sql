@@ -99,7 +99,7 @@ begin
     'user_metadata', coalesce(u.raw_user_meta_data, '{}'::jsonb),
     'role', coalesce((select r.role from public.user_roles r where r.user_id = u.id), 'employee'),
     'shift_role', (select r.shift_role from public.user_roles r where r.user_id = u.id),
-    'display_name', coalesce(u.raw_user_meta_data->>'username', u.raw_user_meta_data->>'name', ''),
+    'display_name', coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'), ''), nullif(trim(u.raw_user_meta_data->>'username'), ''), nullif(trim(u.raw_user_meta_data->>'name'), ''), ''),
     'total_spent', coalesce(cur.total,0) + coalesce(hist.total,0),
     'expense_count', coalesce(cur.cnt,0) + coalesce(hist.cnt,0),
     'data_updated_at', d.updated_at
@@ -197,7 +197,11 @@ begin
   end if;
   update auth.users
      set raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb)
-           || jsonb_build_object('username', trim(coalesce(display_name,''))),
+           || jsonb_build_object(
+                'display_name', trim(coalesce(display_name,'')),
+                'username', trim(coalesce(display_name,'')),
+                'name', trim(coalesce(display_name,''))
+              ),
          updated_at = now()
    where id = target_user_id;
   if not found then raise exception 'Аккаунт не найден'; end if;
