@@ -3,6 +3,7 @@
   const $ = (s, root=document) => root.querySelector(s);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let cats=[], reports=[], isAdmin=false, isReviewer=false, isEnabled=true, canSubmit=false, userRole='employee', activeShift='day', users=[];
+  let liveChannel=null, livePollTimer=null, liveRefreshTimer=null, liveRefreshBusy=false, liveRefreshQueued=false;
   function ensureUI(){
     if(!$('#openDailyReportsBtn')){
       const anchor=$('#openKnzTasksBtn')||$('#openShiftPanelBtn')||$('#openSettingsBtn');
@@ -55,16 +56,17 @@
     $('#drCategoryList').addEventListener('click',categoryAction);
   }
   function notice(msg,bad=false){const el=$('#drNotice');if(el){el.textContent=msg;el.style.color=bad?'var(--bad)':'var(--muted)';}}
-  function close(){const s=$('#dailyReportsSheet');if(s){s.classList.remove('open');s.setAttribute('aria-hidden','true');}}
-  function open(){ensureUI();if(!cloudClient||!cloudUser){notice('Сначала войди в аккаунт.',true);return;}try{closeProfileMenu()}catch{}$('#dailyReportsSheet').classList.add('open');$('#dailyReportsSheet').setAttribute('aria-hidden','false');$('#drDate').value=new Date().toISOString().slice(0,10);load();}
+  function close(){const s=$('#dailyReportsSheet');if(s){s.classList.remove('open');s.setAttribute('aria-hidden','true');}stopLiveUpdates();}
+  function open(){ensureUI();if(!cloudClient||!cloudUser){notice('Сначала войди в аккаунт.',true);return;}try{closeProfileMenu()}catch{}$('#dailyReportsSheet').classList.add('open');$('#dailyReportsSheet').setAttribute('aria-hidden','false');$('#drDate').value=new Date().toISOString().slice(0,10);load();startLiveUpdates();}
   async function getRole(){
     try{const {data,error}=await cloudClient.rpc('is_current_admin');if(error)throw error;isAdmin=!!data;}catch{isAdmin=false;}
     try{const {data,error}=await cloudClient.rpc('daily_report_my_role');if(error)throw error;userRole=data||currentUserRole||'employee';}catch{userRole=(typeof currentUserRole!=='undefined'&&currentUserRole)||'employee';}
     isReviewer=isAdmin||userRole==='shift_senior';canSubmit=isAdmin||isReviewer||userRole==='shift_day'||userRole==='shift_night';
     const menuButton=$('#openDailyReportsBtn');if(menuButton)menuButton.classList.toggle('hidden',!canSubmit&&!isReviewer);
   }
-  async function load(){
-    notice('Загружаю отчёты…');await getRole();
+  async function load(options={}){
+    const silent=options.silent===true;
+    if(!silent)notice('Загружаю отчёты…');await getRole();
     try{
       const [{data:setting,error:se},{data:categoryRows,error:ce},{data:rows,error:re}]=await Promise.all([
         cloudClient.from('daily_report_settings').select('*').eq('key','daily_reports').maybeSingle(),
@@ -81,8 +83,8 @@
       if(!canSubmit&&!isReviewer)notice('Для заполнения отчёта Админ или СТ должен назначить роль дневной или ночной смены.',true);
       renderChecklist();renderHistory();renderCategories();
       if(isReviewer)await loadUsers();
-      if(!isEnabled&&!isReviewer)notice('Модуль временно отключён администратором.');
-      else if(canSubmit||isReviewer)notice('');
+      if(!silent){if(!isEnabled&&!isReviewer)notice('Модуль временно отключён администратором.');
+      else if(canSubmit||isReviewer)notice('');}
     }catch(e){notice('Ошибка загрузки сменных отчётов: '+(e.message||'проверь SQL-файл supabase/daily-reports.sql'),true);}
   }
   function showView(view){
@@ -177,6 +179,48 @@
     const rows=excelRows(),csv=[['Ф.И.','Ссылка на Яндекс Диск','Замечания'],...rows.map(r=>[r.fio,r.url,r.comment])].map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
     const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Provoda-Staff-report.xlsx.csv';a.click();URL.revokeObjectURL(url);notice('CSV для Excel скачан.');
   }
+  function scheduleLiveRefresh(){
+    if(!$('#dailyReportsSheet')?.classList.contains('open'))return;
+    if(liveRefreshTimer)clearTimeout(liveRefreshTimer);
+    liveRefreshTimer=setTimeout(async()=>{
+      liveRefreshTimer=null;
+      if(liveRefreshBusy){liveRefreshQueued=true;return;}
+      liveRefreshBusy=true;
+      try{await load({silent:true});}
+      finally{
+        liveRefreshBusy=false;
+        if(liveRefreshQueued){liveRefreshQueued=false;scheduleLiveRefresh();}
+      }
+    },220);
+  }
+  function stopLiveUpdates(){
+    if(livePollTimer){clearInterval(livePollTimer);livePollTimer=null;}
+    if(liveRefreshTimer){clearTimeout(liveRefreshTimer);liveRefreshTimer=null;}
+    if(liveChannel&&cloudClient){try{cloudClient.removeChannel(liveChannel);}catch{}}
+    liveChannel=null;
+  }
+  function startLiveUpdates(){
+    stopLiveUpdates();
+    if(!cloudClient||!cloudUser)return;
+    try{
+      const channel=cloudClient.channel('daily-reports-live-'+cloudUser.id+'-'+Math.random().toString(36).slice(2,8));
+      ['daily_reports','daily_report_categories','daily_report_settings'].forEach(table=>{
+        channel.on('postgres_changes',{event:'*',schema:'public',table},()=>scheduleLiveRefresh());
+      });
+      channel.on('postgres_changes',{event:'*',schema:'public',table:'user_roles',filter:'user_id=eq.'+cloudUser.id},()=>scheduleLiveRefresh());
+      liveChannel=channel.subscribe(status=>{
+        if(status==='SUBSCRIBED')scheduleLiveRefresh();
+        if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.info('Daily reports realtime connection unavailable; polling remains active.');
+      });
+    }catch(error){console.info('Daily reports realtime setup failed; polling remains active.',error?.message||error);}
+    // Fallback for mobile browsers, sleep/wake and networks that temporarily drop Realtime.
+    livePollTimer=setInterval(()=>scheduleLiveRefresh(),15000);
+  }
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible'&&$('#dailyReportsSheet')?.classList.contains('open')){
+      startLiveUpdates();scheduleLiveRefresh();
+    }
+  });
   document.addEventListener('click',e=>{if(e.target.closest('#openDailyReportsBtn'))open();});
   document.addEventListener('DOMContentLoaded',ensureUI);
   if(document.readyState!=='loading')ensureUI();
