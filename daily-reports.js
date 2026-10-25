@@ -27,8 +27,8 @@
       .dr-manage summary{cursor:pointer;padding:13px 15px;font-weight:700;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}
       .dr-manage summary::-webkit-details-marker{display:none}.dr-manage summary:after{content:'+';font-size:20px;color:var(--muted)}.dr-manage[open] summary:after{content:'−'}
       .dr-manage-body{padding:0 13px 13px}.dr-select-list{display:grid;gap:7px;max-height:260px;overflow:auto;margin:10px 0}
-      .dr-select-row{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px}
-      .dr-select-row input{width:18px;height:18px;flex:0 0 auto;margin-top:2px}.dr-danger{border-color:rgba(248,113,113,.45);color:#fca5a5}
+      .dr-select-row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px;border:1px solid var(--line);border-radius:10px}
+      .dr-select-row label{display:flex;gap:10px;align-items:flex-start;min-width:0;flex:1}.dr-select-row input{width:18px;height:18px;flex:0 0 auto;margin-top:2px}.dr-danger{border-color:rgba(248,113,113,.45);color:#fca5a5}
       @media(max-width:600px){.dr-grid{grid-template-columns:1fr}.dr-shell{padding:13px}}
     `;
     document.head.appendChild(style);
@@ -60,6 +60,7 @@
     $('#drDeleteSelectedExcel').addEventListener('click',deleteSelectedExcel);
     $('#drDeleteAllExcel').addEventListener('click',deleteAllExcel);
     $('#drExcelSelectionList').addEventListener('change',e=>{const cb=e.target.closest('[data-dr-select-excel]');if(!cb)return;if(cb.checked)selectedExcelIds.add(cb.dataset.drSelectExcel);else selectedExcelIds.delete(cb.dataset.drSelectExcel);updateExcelDeleteButton();});
+    $('#drExcelSelectionList').addEventListener('click',e=>{const btn=e.target.closest('[data-dr-delete-one]');if(btn){e.preventDefault();deleteExcelRecords([btn.dataset.drDeleteOne],false);}});
     $('#drSaveEnabled').addEventListener('click',saveEnabled);
     $('#drAddCategory').addEventListener('click',addCategory);
     $('#drSaveUserRole').addEventListener('click',saveUserRole);
@@ -195,7 +196,7 @@
     else list.innerHTML=eligible.map(r=>{
       const fio=r.author_name||(r.submitted_by===cloudUser.id?(cloudUser.user_metadata?.display_name||cloudUser.email||'Вы'):'Сотрудник');
       const date=esc(r.report_date||'Без даты'),shift=r.shift_type==='day'?'Дневная':'Ночная';
-      return '<label class="dr-select-row"><input type="checkbox" data-dr-select-excel="'+esc(r.id)+'" '+(selectedExcelIds.has(r.id)?'checked':'')+'><span><strong>'+esc(fio)+'</strong><div class="small">'+shift+' смена · '+date+' · '+(r.status==='approved'?'Одобрен':'Отклонён')+'</div></span></label>';
+      return '<div class="dr-select-row"><label><input type="checkbox" data-dr-select-excel="'+esc(r.id)+'" '+(selectedExcelIds.has(r.id)?'checked':'')+'><span><strong>'+esc(fio)+'</strong><div class="small">'+shift+' смена · '+date+' · '+(r.status==='approved'?'Одобрен':'Отклонён')+'</div></span></label><button class="dr-btn dr-danger" type="button" data-dr-delete-one="'+esc(r.id)+'">Удалить одну</button></div>';
     }).join('');
     updateExcelDeleteButton();
   }
@@ -205,7 +206,7 @@
     const count=deleteAll?eligibleExcelReports().length:ids.length;
     if(!count){notice('Нет записей для удаления.',true);return;}
     const message=deleteAll
-      ? 'ВНИМАНИЕ! Будут безвозвратно удалены ВСЕ '+count+' одобренные/отклонённые записи из Excel. Отчёты на проверке останутся. Продолжить?'
+      ? 'ВНИМАНИЕ! Будут безвозвратно удалены ВСЕ одобренные и отклонённые отчёты из Excel, в том числе записи за пределами отображаемого списка. Отчёты на проверке останутся. Продолжить?'
       : 'ВНИМАНИЕ! Будет безвозвратно удалено записей: '+count+'. Продолжить?';
     if(!window.confirm(message))return;
     try{
