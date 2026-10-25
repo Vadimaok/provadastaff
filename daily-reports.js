@@ -207,7 +207,7 @@
       ['daily_reports','daily_report_categories','daily_report_settings'].forEach(table=>{
         channel.on('postgres_changes',{event:'*',schema:'public',table},()=>scheduleLiveRefresh());
       });
-      channel.on('postgres_changes',{event:'*',schema:'public',table:'user_roles',filter:'user_id=eq.'+cloudUser.id},()=>scheduleLiveRefresh());
+      // Role changes are picked up by the 15-second fallback; avoid requiring direct SELECT on user_roles.
       liveChannel=channel.subscribe(status=>{
         if(status==='SUBSCRIBED')scheduleLiveRefresh();
         if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.info('Daily reports realtime connection unavailable; polling remains active.');
