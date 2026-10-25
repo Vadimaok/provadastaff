@@ -42,7 +42,7 @@ jobs:
           base = server.get('url', 'https://vadimaok.github.io/provadastaff/')
           base = base.split('?')[0]
           server['url'] = base + '?androidVersion=' + version
-          path.write_text(json.dumps(config, indent=2) + '\\n')
+          path.write_text(json.dumps(config, indent=2) + '\n')
           PY
 
       - name: Install dependencies
