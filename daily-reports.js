@@ -107,9 +107,9 @@
     $('#drPreviewBox').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   async function submitReport(){
-    if(!canSubmit){notice('Для отправки отчёта нужна роль дневной или ночной смены.',true);return;}\n    if(!canSubmit){notice('Для отправки отчёта нужна роль дневной или ночной смены.',true);return;}
+    if(!canSubmit){notice('Для отправки отчёта нужна роль дневной или ночной смены.',true);return;}
     if(!isEnabled&&!isAdmin&&!isReviewer){notice('Модуль отключён.',true);return;}
-    if((userRole==='shift_day'&&$('#drShift').value!=='day')||(userRole==='shift_night'&&$('#drShift').value!=='night')){notice('У тебя нет доступа к этому типу смены.',true);return;}\n    if(userRole==='shift_day'&&$('#drShift').value!=='day'||userRole==='shift_night'&&$('#drShift').value!=='night'){notice('У тебя нет доступа к этому типу смены.',true);return;}\n    if(userRole==='shift_day'&&$('#drShift').value!=='day'||userRole==='shift_night'&&$('#drShift').value!=='night'){notice('У тебя нет доступа к этому типу смены.',true);return;}
+    if((userRole==='shift_day'&&$('#drShift').value!=='day')||(userRole==='shift_night'&&$('#drShift').value!=='night')){notice('У тебя нет доступа к этому типу смены.',true);return;}
     if(!cloudClient||!cloudUser){notice('Сначала войди в аккаунт.',true);return;}
     const button=$('#drSubmit');button.disabled=true;notice('Загружаю фотографии…');
     try{
