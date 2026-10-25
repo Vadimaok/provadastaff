@@ -1,9 +1,9 @@
 {
   "appId": "com.vadimaok.minitrati",
-  "appName": "Provoda staff",
+  "appName": "Provoda Staff",
   "webDir": "www",
   "server": {
-    "url": "https://vadimaok.github.io/minitrati/",
+    "url": "https://vadimaok.github.io/provadastaff/",
     "cleartext": false,
     "allowNavigation": [
       "vadimaok.github.io"
