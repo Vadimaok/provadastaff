@@ -3001,8 +3001,10 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
   async function check(){
     try{
       let platform='',installed='';
-      const q=new URLSearchParams(location.search).get('desktopVersion');
+      const params=new URLSearchParams(location.search);
+      const q=params.get('desktopVersion'), androidQ=params.get('androidVersion');
       if(q){platform='windows';installed=q}
+      else if(androidQ){platform='android';installed=androidQ}
       else if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()){
         platform='android';
         const app=window.Capacitor.Plugins&&window.Capacitor.Plugins.App;
