@@ -47,7 +47,7 @@ jobs:
           $version = (Get-Content -Raw package.json | ConvertFrom-Json).version
           $tag = "v$version"
           gh release view $tag 2>$null
-          if ($LASTEXITCODE -ne 0) { gh release create $tag --title "Provoda Staff $version" --notes "Provoda Staff installers for version $version." }
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --title "Provoda Staff $version" --notes "Provoda Staff installers for version $version."; if ($LASTEXITCODE -ne 0) { gh release view $tag; if ($LASTEXITCODE -ne 0) { throw "Could not create or find GitHub release $tag" } } }
           gh release upload $tag "desktop/dist/Provoda-Staff-$version.exe" --clobber
 
       - name: Upload Windows EXE
