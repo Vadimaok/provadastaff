@@ -87,7 +87,8 @@
   }
   function activeCats(){return cats.filter(c=>c.shift_type===activeShift&&c.enabled).sort((a,b)=>a.position-b.position);}
   function renderChecklist(){
-    if(userRole==='shift_day')$('#drShift').value='day';else if(userRole==='shift_night')$('#drShift').value='night';\n    $('#drShift').disabled=!isAdmin&&!isReviewer;activeShift=$('#drShift').value;draftFiles={};previewDraft=null;
+    if(userRole==='shift_day')$('#drShift').value='day';else if(userRole==='shift_night')$('#drShift').value='night';
+    $('#drShift').disabled=!isAdmin&&!isReviewer;activeShift=$('#drShift').value;draftFiles={};previewDraft=null;
     const list=activeCats();
     $('#drChecklist').innerHTML=list.map((c,i)=>`<article class="dr-card dr-item"><div class="dr-item-head"><h4>${i+1}. ${esc(c.title)}</h4><span class="small">Фото</span></div><div class="dr-upload"><input type="file" accept="image/*" capture="environment" multiple data-dr-files="${esc(c.id)}" aria-label="Фото: ${esc(c.title)}"></div><div class="dr-photo-grid" data-dr-preview="${esc(c.id)}"></div></article>`).join('')||'<div class="dr-card">Нет активных категорий для этой смены.</div>';
     // File preview listener is attached once in ensureUI.
@@ -127,7 +128,7 @@
         }
         items.push({category_id:c.id,title:c.title,photos});
       }
-      const {error}=await cloudClient.from('daily_reports').insert({submitted_by:cloudUser.id,shift_type:shift,report_date:date,status:'pending',items,sender_comment:$('#drSenderComment').value.trim()});
+      const {error}=await cloudClient.from('daily_reports').insert({submitted_by:cloudUser.id,author_name:(cloudUser.user_metadata?.username||cloudUser.user_metadata?.name||cloudUser.email||'Сотрудник'),shift_type:shift,report_date:date,status:'pending',items,sender_comment:$('#drSenderComment').value.trim()});
       if(error)throw error;
       notice('Отчёт отправлен на проверку.');draftFiles={};$('#drSenderComment').value='';$('#drPreviewBox').classList.add('dr-hidden');await load();showView('history');
     }catch(e){notice(e.message||'Не удалось отправить отчёт.',true);}finally{button.disabled=false;}
@@ -139,7 +140,7 @@
     list.innerHTML=reports.map(r=>{
       const status={pending:'На проверке',approved:'Одобрен',rejected:'Отклонён'}[r.status]||r.status;
       const date=new Date(r.submitted_at).toLocaleString('ru-RU');
-      return '<article class="dr-card"><div class="dr-item-head"><div><strong>'+(r.shift_type==='day'?'Дневная':'Ночная')+' смена</strong><div class="small">'+esc(date)+' · '+esc(r.report_date)+'</div></div><span class="dr-status '+esc(r.status)+'">'+status+'</span></div><p class="small">Автор: '+esc(r.submitted_by===cloudUser.id?(cloudUser.user_metadata?.username||cloudUser.email||'Вы'):'Сотрудник')+'</p><p>'+esc(r.sender_comment||'Без комментария')+'</p>'+(r.reviewer_comment?'<div class="dr-card"><strong>Замечание проверяющего</strong><p>'+esc(r.reviewer_comment)+'</p></div>':'')+'<div class="dr-actions"><button class="dr-btn" data-dr-open="'+esc(r.id)+'">Открыть историю</button>'+(isReviewer&&r.status==='pending'?'<button class="dr-btn primary" data-dr-approve="'+esc(r.id)+'">Одобрить</button><button class="dr-btn" data-dr-reject="'+esc(r.id)+'">Отклонить с замечанием</button>':'')+'</div><div class="dr-detail dr-hidden" id="drDetail-'+esc(r.id)+'">'+(r.items||[]).map(it=>'<div class="dr-card"><strong>'+esc(it.title)+'</strong><div class="dr-photo-grid">'+(it.photos||[]).map(p=>'<span data-dr-photo="'+esc(p.path)+'"></span>').join('')+'</div></div>').join('')+'</div></article>';
+      return '<article class="dr-card"><div class="dr-item-head"><div><strong>'+(r.shift_type==='day'?'Дневная':'Ночная')+' смена</strong><div class="small">'+esc(date)+' · '+esc(r.report_date)+'</div></div><span class="dr-status '+esc(r.status)+'">'+status+'</span></div><p class="small">Автор: '+esc(r.author_name||(r.submitted_by===cloudUser.id?(cloudUser.user_metadata?.username||cloudUser.email||'Вы'):'Сотрудник'))+'</p><p>'+esc(r.sender_comment||'Без комментария')+'</p>'+(r.reviewer_comment?'<div class="dr-card"><strong>Замечание проверяющего</strong><p>'+esc(r.reviewer_comment)+'</p></div>':'')+'<div class="dr-actions"><button class="dr-btn" data-dr-open="'+esc(r.id)+'">Открыть историю</button>'+(isReviewer&&r.status==='pending'?'<button class="dr-btn primary" data-dr-approve="'+esc(r.id)+'">Одобрить</button><button class="dr-btn" data-dr-reject="'+esc(r.id)+'">Отклонить с замечанием</button>':'')+'</div><div class="dr-detail dr-hidden" id="drDetail-'+esc(r.id)+'">'+(r.items||[]).map(it=>'<div class="dr-card"><strong>'+esc(it.title)+'</strong><div class="dr-photo-grid">'+(it.photos||[]).map(p=>'<span data-dr-photo="'+esc(p.path)+'"></span>').join('')+'</div></div>').join('')+'</div></article>';
     }).join('');
     for(const el of list.querySelectorAll('[data-dr-photo]')){const url=await signedPhoto(el.dataset.drPhoto);if(url){const img=document.createElement('img');img.src=url;img.alt='Фото отчёта';el.appendChild(img);}}
   }
