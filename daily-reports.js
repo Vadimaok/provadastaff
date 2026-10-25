@@ -61,6 +61,7 @@
     try{const {data,error}=await cloudClient.rpc('is_current_admin');if(error)throw error;isAdmin=!!data;}catch{isAdmin=false;}
     try{const {data,error}=await cloudClient.rpc('daily_report_my_role');if(error)throw error;userRole=data||currentUserRole||'employee';}catch{userRole=(typeof currentUserRole!=='undefined'&&currentUserRole)||'employee';}
     isReviewer=isAdmin||userRole==='shift_senior';canSubmit=isAdmin||isReviewer||userRole==='shift_day'||userRole==='shift_night';
+    const menuButton=$('#openDailyReportsBtn');if(menuButton)menuButton.classList.toggle('hidden',!canSubmit&&!isReviewer);
   }
   async function load(){
     notice('Загружаю отчёты…');await getRole();
