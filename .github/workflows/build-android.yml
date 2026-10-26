@@ -36,20 +36,13 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Stamp Android app version into remote URL
+      - name: Bundle the current Provoda Staff web app for Android
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          python - "$VERSION" <<'PY'
-          import json, pathlib, sys
-          version = sys.argv[1]
-          path = pathlib.Path('capacitor.config.json')
-          config = json.loads(path.read_text())
-          server = config.setdefault('server', {})
-          base = server.get('url', 'https://vadimaok.github.io/provadastaff/')
-          base = base.split('?')[0]
-          server['url'] = base + '?androidVersion=' + version
-          path.write_text(json.dumps(config, indent=2) + '\n')
-          PY
+          mkdir -p www
+          cp index.html www/index.html
+          cp supabase-config.js daily-reports.js provoda-logo.svg manifest.webmanifest app-version.json www/
+          echo "Bundled web assets:"
+          ls -lh www
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
