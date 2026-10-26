@@ -2369,7 +2369,7 @@ async function adminPublishUpdateNotice(mode){
  const target=mode==='all'||mode==='force'?null:picked;
  const version=document.querySelector('#adminUpdateTargetVersion').value.trim();
  const message=document.querySelector('#adminUpdateMessage').value.trim()||'Доступна новая версия Provoda Staff.';
- if(!/^\\d+\\.\\d+\\.\\d+$/.test(version)){document.querySelector('#adminUpdateStatus').textContent='Укажи версию в формате 1.0.2.';return;}
+ if(!/^[0-9]+[.][0-9]+[.][0-9]+$/.test(version)){document.querySelector('#adminUpdateStatus').textContent='Укажи версию в формате 1.0.2.';return;}
  const force=mode==='force'||mode==='force-selected';
  if(mode==='force-selected'&&picked==='all'){document.querySelector('#adminUpdateStatus').textContent='Выбери конкретного пользователя для принудительного обновления.';return;}
  if(!confirm(force?'Включить принудительное обновление '+(target?'для выбранного пользователя':'для всех пользователей')+' до версии '+version+'?':'Отправить уведомление '+(target?'выбранному пользователю':'всем пользователям')+' о версии '+version+'?'))return;
