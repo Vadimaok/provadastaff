@@ -54,21 +54,44 @@ jobs:
       - name: Sync Android project
         run: npx cap sync android
 
-      - name: Apply Provoda staff launcher icon
+      - name: Apply Provoda Staff launcher icon
         run: |
           python -m pip install --quiet cairosvg pillow
           python - <<'PY'
-          import cairosvg, os, glob, shutil
-          source = 'provoda-logo.svg'
-          output = '/tmp/provoda-icon.png'
-          cairosvg.svg2png(url=source, write_to=output, output_width=512, output_height=512)
-          for path in glob.glob('android/app/src/main/res/mipmap-*/*'):
-              if os.path.basename(path) in ('ic_launcher.png', 'ic_launcher_round.png'):
-                  shutil.copyfile(output, path)
-          for path in glob.glob('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher*.xml'):
-              xml = '''<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@android:color/black"/><foreground android:drawable="@mipmap/ic_launcher"/></adaptive-icon>\n'''
-              open(path, 'w', encoding='utf-8').write(xml)
-          PY
+          import cairosvg, pathlib, re
+          from PIL import Image
+          svg = pathlib.Path('provoda-logo.svg').read_text(encoding='utf-8')
+          transparent_svg = re.sub(r'<rect[^>]*/>', '', svg, count=1)
+          pathlib.Path('/tmp/provoda-foreground.svg').write_text(transparent_svg, encoding='utf-8')
+          full_png = '/tmp/provoda-full.png'
+          fg_png = '/tmp/provoda-fg-large.png'
+          cairosvg.svg2png(url='provoda-logo.svg', write_to=full_png, output_width=512, output_height=512)
+          cairosvg.svg2png(url='/tmp/provoda-foreground.svg', write_to=fg_png, output_width=432, output_height=432)
+          density = {'mdpi':48,'hdpi':72,'xhdpi':96,'xxhdpi':144,'xxxhdpi':192}
+          for name,size in density.items():
+              folder=pathlib.Path('android/app/src/main/res')/('mipmap-'+name)
+              folder.mkdir(parents=True,exist_ok=True)
+              with Image.open(full_png).convert('RGBA') as im:
+                  im.resize((size,size),Image.Resampling.LANCZOS).save(folder/'ic_launcher.png')
+                  im.resize((size,size),Image.Resampling.LANCZOS).save(folder/'ic_launcher_round.png')
+              fg_size=size*3
+              with Image.open(fg_png).convert('RGBA') as im:
+                  im.resize((fg_size,fg_size),Image.Resampling.LANCZOS).save(folder/'ic_launcher_foreground.png')
+          xml='''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_launcher_background"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>
+          '''
+          folder=pathlib.Path('android/app/src/main/res/mipmap-anydpi-v26')
+          folder.mkdir(parents=True,exist_ok=True)
+          for name in ('ic_launcher.xml','ic_launcher_round.xml'):
+              (folder/name).write_text(xml,encoding='utf-8')
+          colors=pathlib.Path('android/app/src/main/res/values')
+          colors.mkdir(parents=True,exist_ok=True)
+          (colors/'ic_launcher_background.xml').write_text('''<?xml version="1.0" encoding="utf-8"?>
+          <resources><color name="ic_launcher_background">#1d202b</color></resources>
+          ''',encoding='utf-8')
 
       - name: Set app version
         shell: bash
