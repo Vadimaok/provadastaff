@@ -3058,6 +3058,8 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
    if(!outdated&&!notice)return;
    if(document.getElementById('provodaUpdateDialog'))return;
    const forced=!!notice?.force_update&&outdated;
+   const noticeKey=String(notice?.created_at||target);
+   try{if(!forced&&sessionStorage.getItem('provoda-update-dismissed')===noticeKey)return}catch{}
    const href=platform==='windows'?(data.windowsInstaller||assets+'Provoda-Staff-'+target+'.exe'):(data.androidInstaller||assets+'Provoda-Staff-Android.apk');
    const overlay=document.createElement('div');overlay.id='provodaUpdateDialog';
    overlay.style.cssText='position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:18px;background:rgba(3,7,18,.86);backdrop-filter:blur(14px)';
@@ -3068,7 +3070,7 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
    const safeMessage=message.replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
    box.innerHTML='<div style="display:flex;gap:14px;align-items:center"><img class="update-dialog-logo" src="./provoda-logo.svg?v=3" alt=""><div><div style="font-size:11px;letter-spacing:.14em;color:#a5b4fc;font-weight:850">PROVODA STAFF</div><h2 style="margin:4px 0 0;font-size:23px;line-height:1.2">'+title+'</h2></div></div><div style="height:4px;border-radius:99px;background:linear-gradient(90deg,#7c5cff,#22d3ee);margin:18px 0"></div><p style="color:#cbd5e1;margin:0">'+safeMessage+'</p><div class="update-dialog-version"><span class="update-dialog-chip">Установлена: '+installed+'</span><span class="update-dialog-chip">Нужна: '+target+'</span></div><p style="font-size:12px;color:#94a3b8;margin:0">'+(forced?'Это обязательное обновление. Окно нельзя закрыть до установки требуемой версии.':'После скачивания открой APK/установщик и заверши установку.')+'</p><div class="update-dialog-buttons"><a class="update-download" href="'+href+'">Скачать обновление</a>'+(forced?'':'<button class="update-later" id="provodaUpdateLater" type="button">Позже</button>')+'</div><p style="margin:14px 0 0"><a href="'+releases+'" style="color:#a5b4fc;font-size:12px">Все версии и история изменений</a></p>';
    overlay.appendChild(box);document.body.appendChild(overlay);
-   if(!forced)box.querySelector('#provodaUpdateLater')?.addEventListener('click',()=>overlay.remove());
+   if(!forced)box.querySelector('#provodaUpdateLater')?.addEventListener('click',()=>{try{sessionStorage.setItem('provoda-update-dismissed',noticeKey)}catch{}overlay.remove()});
   }catch(e){}
  }
  function checkSettingsVersion(){
@@ -3083,7 +3085,7 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
  }
  document.addEventListener('DOMContentLoaded',()=>{setTimeout(checkSettingsVersion,500);setTimeout(check,1600);});
  window.addEventListener('load',()=>setTimeout(check,2500),{once:true});
- let n=0;const timer=setInterval(()=>{check();if(++n>=8)clearInterval(timer)},5000);
+ setInterval(check,15000);
  document.querySelector('#settingsCheckUpdatesBtn')?.addEventListener('click',()=>{checkSettingsVersion();check()});
  document.querySelector('#settingsOpenReleasesBtn')?.addEventListener('click',()=>window.open(releases,'_blank','noopener'));
 })();
