@@ -624,3 +624,79 @@ begin
 end; $admin_approve_knz$;
 revoke all on function public.admin_approve_knz_task(uuid) from public,anon;
 grant execute on function public.admin_approve_knz_task(uuid) to authenticated;
+
+
+-- Центр обновлений приложения Provoda Staff.
+-- target_user_id IS NULL означает рассылку всем пользователям.
+create table if not exists public.app_update_notices (
+  id uuid primary key default gen_random_uuid(),
+  target_user_id uuid references auth.users(id) on delete cascade,
+  target_version text not null check (target_version ~ '^[0-9]+\\.[0-9]+\\.[0-9]+$'),
+  notice_message text not null default 'Доступна новая версия Provoda Staff.',
+  force_update boolean not null default false,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists app_update_notices_target_created_idx
+  on public.app_update_notices(target_user_id, created_at desc);
+alter table public.app_update_notices enable row level security;
+revoke all on public.app_update_notices from anon, authenticated;
+
+create or replace function public.admin_publish_update_notice(
+  target_user_id uuid,
+  target_version text,
+  notice_message text default 'Доступна новая версия Provoda Staff.',
+  force_update boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $publish_update$
+#variable_conflict use_variable
+declare new_id uuid;
+begin
+  if not public.is_current_admin() then
+    raise exception 'Доступ запрещён: нужны права администратора' using errcode = '42501';
+  end if;
+  if target_version !~ '^[0-9]+\\.[0-9]+\\.[0-9]+$' then
+    raise exception 'Версия должна быть в формате 1.0.2';
+  end if;
+  if target_user_id is not null and not exists(select 1 from auth.users u where u.id=target_user_id) then
+    raise exception 'Пользователь не найден';
+  end if;
+  insert into public.app_update_notices(target_user_id,target_version,notice_message,force_update,created_by)
+  values(target_user_id,target_version,left(coalesce(nullif(trim(notice_message),''),'Доступна новая версия Provoda Staff.'),500),coalesce(force_update,false),(select auth.uid()))
+  returning id into new_id;
+  return jsonb_build_object('ok',true,'id',new_id,'target_user_id',target_user_id,'target_version',target_version,'force_update',coalesce(force_update,false));
+end;
+$publish_update$;
+revoke all on function public.admin_publish_update_notice(uuid,text,text,boolean) from public, anon;
+grant execute on function public.admin_publish_update_notice(uuid,text,text,boolean) to authenticated;
+
+create or replace function public.user_get_update_notice()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $get_update_notice$
+declare result jsonb;
+declare uid uuid := (select auth.uid());
+begin
+  if uid is null then return '{}'::jsonb; end if;
+  select jsonb_build_object(
+    'target_version',n.target_version,
+    'message',n.notice_message,
+    'force_update',n.force_update,
+    'created_at',n.created_at
+  ) into result
+  from public.app_update_notices n
+  where n.target_user_id is null or n.target_user_id=uid
+  order by n.created_at desc
+  limit 1;
+  return coalesce(result,'{}'::jsonb);
+end;
+$get_update_notice$;
+revoke all on function public.user_get_update_notice() from public, anon;
+grant execute on function public.user_get_update_notice() to authenticated;
