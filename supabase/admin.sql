@@ -631,7 +631,7 @@ grant execute on function public.admin_approve_knz_task(uuid) to authenticated;
 create table if not exists public.app_update_notices (
   id uuid primary key default gen_random_uuid(),
   target_user_id uuid references auth.users(id) on delete cascade,
-  target_version text not null check (target_version ~ '^[0-9]+\\.[0-9]+\\.[0-9]+$'),
+  target_version text not null check (target_version ~ '^[0-9]+[.][0-9]+[.][0-9]+$'),
   notice_message text not null default 'Доступна новая версия Provoda Staff.',
   force_update boolean not null default false,
   created_by uuid references auth.users(id) on delete set null,
@@ -659,7 +659,7 @@ begin
   if not public.is_current_admin() then
     raise exception 'Доступ запрещён: нужны права администратора' using errcode = '42501';
   end if;
-  if target_version !~ '^[0-9]+\\.[0-9]+\\.[0-9]+$' then
+  if target_version !~ '^[0-9]+[.][0-9]+[.][0-9]+$' then
     raise exception 'Версия должна быть в формате 1.0.2';
   end if;
   if target_user_id is not null and not exists(select 1 from auth.users u where u.id=target_user_id) then
@@ -682,7 +682,7 @@ security definer
 set search_path = ''
 as $get_update_notice$
 declare result jsonb;
-declare uid uuid := (select auth.uid());
+        uid uuid := (select auth.uid());
 begin
   if uid is null then return '{}'::jsonb; end if;
   select jsonb_build_object(
