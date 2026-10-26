@@ -74,7 +74,7 @@ jobs:
               with Image.open(full_png).convert('RGBA') as im:
                   im.resize((size,size),Image.Resampling.LANCZOS).save(folder/'ic_launcher.png')
                   im.resize((size,size),Image.Resampling.LANCZOS).save(folder/'ic_launcher_round.png')
-              fg_size=size*3
+              fg_size=round(size*2.25)
               with Image.open(fg_png).convert('RGBA') as im:
                   im.resize((fg_size,fg_size),Image.Resampling.LANCZOS).save(folder/'ic_launcher_foreground.png')
           xml='''<?xml version="1.0" encoding="utf-8"?>
