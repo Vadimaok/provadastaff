@@ -2300,6 +2300,7 @@ async function adminLoadRoles(){
       adminRenderAccounts();
     }
   }catch{}
+  adminPopulateUpdateRecipients();
   const chosen=userSel.value;
   userSel.innerHTML='<option value="">Выбери аккаунт</option>'+adminAccounts.map(u=>'<option value="'+escapeHtml(u.user_id)+'">'+escapeHtml(adminAccountName(u))+' · '+escapeHtml(u.email||'без почты')+'</option>').join('');
   if([...userSel.options].some(o=>o.value===chosen))userSel.value=chosen;
@@ -2347,7 +2348,38 @@ async function adminApproveKnzTask(id){
     await adminLoadKnzReports();
   }catch(e){if(status)status.textContent=e.message||'Не удалось одобрить отчёт.';}
 }
-function adminSwitchTab(tab){const dev=tab==='development',reports=tab==='reports',roles=tab==='roles',features=tab==='features';document.querySelector('#adminAccountsView').classList.toggle('hidden',dev||reports||roles||features);document.querySelector('#adminDevelopmentView').classList.toggle('hidden',!dev);document.querySelector('#adminReportsView').classList.toggle('hidden',!reports);document.querySelector('#adminRolesView').classList.toggle('hidden',!roles);document.querySelector('#adminFeaturesView').classList.toggle('hidden',!features);document.querySelectorAll('[data-admin-tab]').forEach(b=>{const active=b.dataset.adminTab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});if(dev)adminLoadDevData();if(reports)adminLoadKnzReports();if(roles)adminLoadRoles();if(features)adminLoadRoleFeatures();}
+function adminSwitchTab(tab){const dev=tab==='development',reports=tab==='reports',roles=tab==='roles',features=tab==='features',other=tab==='other';document.querySelector('#adminAccountsView').classList.toggle('hidden',dev||reports||roles||features||other);document.querySelector('#adminDevelopmentView').classList.toggle('hidden',!dev);document.querySelector('#adminReportsView').classList.toggle('hidden',!reports);document.querySelector('#adminRolesView').classList.toggle('hidden',!roles);document.querySelector('#adminFeaturesView').classList.toggle('hidden',!features);document.querySelector('#adminOtherView').classList.toggle('hidden',!other);document.querySelectorAll('[data-admin-tab]').forEach(b=>{const active=b.dataset.adminTab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});if(dev)adminLoadDevData();if(reports)adminLoadKnzReports();if(roles)adminLoadRoles();if(features)adminLoadRoleFeatures();if(other)adminLoadUpdateControls();}
+
+
+function adminPopulateUpdateRecipients(){
+ const el=document.querySelector('#adminUpdateRecipient');if(!el)return;
+ const old=el.value||'all';
+ el.innerHTML='<option value="all">Все пользователи</option>'+adminAccounts.map(u=>'<option value="'+escapeHtml(u.user_id)+'">'+escapeHtml(adminAccountName(u))+' · '+escapeHtml(u.email||'без почты')+'</option>').join('');
+ if([...el.options].some(o=>o.value===old))el.value=old;
+}
+async function adminLoadUpdateControls(){
+ adminPopulateUpdateRecipients();
+ try{const r=await fetch('./app-version.json?fresh='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('Не удалось получить app-version.json');const d=await r.json();const v=document.querySelector('#adminUpdateTargetVersion');if(v&&!v.value)v.value=d.latestVersion||'';const info=document.querySelector('#adminUpdateLatestInfo');if(info)info.textContent='Последняя версия: '+(d.latestVersion||'—')+'. APK и Windows-инсталлятор: ссылки в app-version.json.';}
+ catch(e){const info=document.querySelector('#adminUpdateLatestInfo');if(info)info.textContent='Не удалось проверить app-version.json.';}
+}
+async function adminPublishUpdateNotice(mode){
+ if(!adminAllowed||!cloudClient)return;
+ const picked=document.querySelector('#adminUpdateRecipient')?.value||'all';
+ if(mode==='selected'&&picked==='all'){document.querySelector('#adminUpdateStatus').textContent='Сначала выбери конкретного пользователя.';return;}
+ const target=mode==='all'||mode==='force'?null:picked;
+ const version=document.querySelector('#adminUpdateTargetVersion').value.trim();
+ const message=document.querySelector('#adminUpdateMessage').value.trim()||'Доступна новая версия Provoda Staff.';
+ if(!/^\\d+\\.\\d+\\.\\d+$/.test(version)){document.querySelector('#adminUpdateStatus').textContent='Укажи версию в формате 1.0.2.';return;}
+ const force=mode==='force';
+ if(!confirm(force?'Включить принудительное обновление для всех пользователей до версии '+version+'?':'Отправить уведомление '+(target?'выбранному пользователю':'всем пользователям')+' о версии '+version+'?'))return;
+ const status=document.querySelector('#adminUpdateStatus');status.textContent='Отправляю…';
+ try{const {error}=await cloudClient.rpc('admin_publish_update_notice',{target_user_id:target,target_version:version,notice_message:message,force_update:force});if(error)throw error;status.textContent=force?'Принудительное обновление опубликовано для всех.':target?'Уведомление отправлено выбранному пользователю.':'Уведомление разослано всем пользователям.';toast(force?'Принудительное обновление включено':'Уведомление об обновлении отправлено');}
+ catch(e){status.textContent=(e.message||'Не удалось отправить уведомление')+'. Проверь, что выполнен обновлённый supabase/admin.sql.';}
+}
+document.querySelector('#adminUpdateSelectedBtn')?.addEventListener('click',()=>adminPublishUpdateNotice('selected'));
+document.querySelector('#adminUpdateAllBtn')?.addEventListener('click',()=>adminPublishUpdateNotice('all'));
+document.querySelector('#adminForceUpdateAllBtn')?.addEventListener('click',()=>adminPublishUpdateNotice('force'));
+document.querySelector('#adminUpdateRefreshVersionBtn')?.addEventListener('click',adminLoadUpdateControls);
 
 function adminTotalForAccount(u){return Number(u?.total_spent||0);}
 function adminRenderAccounts(){
@@ -2565,6 +2597,14 @@ function moveDashboardTile(e){if(!dashboardDragState)return;e.preventDefault();d
 function endDashboardTileDrag(){document.removeEventListener('pointermove',moveDashboardTile);document.removeEventListener('pointercancel',endDashboardTileDrag);document.querySelectorAll('.tile-dragging').forEach(el=>el.classList.remove('tile-dragging'));if(dashboardDragState?.moved){persistDashboardTileOrder();toast('Порядок плиток сохранён');}dashboardDragState=null;dashboardPendingTarget=null;}
 function setDashboardRearrangeMode(enabled){document.body.classList.toggle('tile-rearrange-mode',enabled);if(!enabled)endDashboardTileDrag();const bar=document.querySelector('#tileArrangeBar');if(bar)bar.setAttribute('aria-hidden',String(!enabled));if(enabled)toast('Зажми ↕ на плитке и перетащи её');}
 function setupDashboardTileReordering(){readDashboardTileOrder();applyDashboardTileOrder(false);document.querySelector('#configureTileOrderBtn')?.addEventListener('click',()=>{closeSettings();setDashboardRearrangeMode(true);});document.querySelector('#finishTileArrangeBtn')?.addEventListener('click',()=>setDashboardRearrangeMode(false));document.querySelector('#resetTileOrderBtn')?.addEventListener('click',()=>{dashboardTileOrder=[...DASHBOARD_TILE_DEFAULTS];persistDashboardTileOrder();applyDashboardTileOrder(true);settingsStatus('Исходный порядок плиток восстановлен.');});}
+
+const PROVODA_RELEASES_URL='https://github.com/Vadimaok/provadastaff/releases/latest';
+function provodaInstalledVersion(){const p=new URLSearchParams(location.search);if(p.get('androidVersion'))return {version:p.get('androidVersion'),platform:'android'};if(p.get('desktopVersion'))return {version:p.get('desktopVersion'),platform:'windows'};return {version:'Веб-версия',platform:'web'};}
+function provodaVersionOlder(a,b){const x=String(a||'0').split('.').map(n=>parseInt(n,10)||0),y=String(b||'0').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){if((x[i]||0)<(y[i]||0))return true;if((x[i]||0)>(y[i]||0))return false;}return false;}
+async function refreshSettingsVersion(){const inst=provodaInstalledVersion(),a=document.querySelector('#settingsInstalledVersion'),b=document.querySelector('#settingsLatestVersion'),badge=document.querySelector('#settingsVersionBadge');if(a)a.textContent='Установленная версия: '+inst.version;const r=await fetch('./app-version.json?fresh='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('Не удалось проверить версию');const d=await r.json();if(b)b.textContent='Последняя версия: '+(d.latestVersion||'—');const old=inst.platform!=='web'&&provodaVersionOlder(inst.version,d.latestVersion);if(badge){badge.textContent=old?'Доступно обновление':'Версия актуальна';badge.classList.toggle('outdated',old);}return d;}
+document.querySelector('#settingsCheckUpdatesBtn')?.addEventListener('click',async()=>{try{await refreshSettingsVersion();toast('Проверка версии завершена');}catch{toast('Не удалось проверить обновление');}});
+document.querySelector('#settingsOpenReleasesBtn')?.addEventListener('click',()=>window.open(PROVODA_RELEASES_URL,'_blank','noopener'));
+
 function updateVisualChoiceStates(a=readAppearance()){document.querySelectorAll('[data-wallpaper-choice]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.wallpaperChoice===a.wallpaper)));document.querySelectorAll('[data-accent-choice]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.accentChoice===a.accent)));}
 
 const PROFILE_THEME_KEY='minitrati.theme.v1';
