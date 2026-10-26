@@ -1051,7 +1051,7 @@ body.tile-rearrange-mode #addBtn{opacity:.35;pointer-events:none}
       <button class="admin-tab active" type="button" data-admin-tab="accounts">Аккаунты</button>
       <button class="admin-tab" type="button" data-admin-tab="development">Задачи</button>
       <button class="admin-tab" type="button" data-admin-tab="reports">Отчёты КНЗ</button>
-      <button class="admin-tab" type="button" data-admin-tab="roles">Роли</button><button class="admin-tab" type="button" data-admin-tab="features">Доступ функций</button>
+      <button class="admin-tab" type="button" data-admin-tab="roles">Роли</button><button class="admin-tab" type="button" data-admin-tab="features">Доступ функций</button><button class="admin-tab" type="button" data-admin-tab="other">Другое</button>
     </nav>
     <div id="adminAccountsView">
     <section class="admin-stats">
@@ -1222,6 +1222,7 @@ body.tile-rearrange-mode #addBtn{opacity:.35;pointer-events:none}
         <button class="settings-danger-button" id="clearExpenseDataBtn" type="button">Удалить все покупки и историю</button>
       </section>
     </section>
+    <section class="settings-group-card" aria-labelledby="settingsAppVersionTitle"><div class="settings-group-heading"><span class="settings-group-icon">↻</span><div><h3 id="settingsAppVersionTitle">Версия и обновления</h3><p>Версия Provoda Staff и актуальные исправления.</p></div></div><div class="settings-subsection update-settings-card"><div class="update-version-head"><img class="update-version-logo" src="./provoda-logo.svg?v=3" alt=""><div class="update-version-copy"><strong>Provoda Staff</strong><span id="settingsInstalledVersion">Установленная версия: проверяем…</span><span id="settingsLatestVersion">Последняя версия: проверяем…</span></div></div><span id="settingsVersionBadge" class="update-version-badge">Проверка версии…</span><div class="update-settings-actions"><button type="button" class="ghost" id="settingsCheckUpdatesBtn">Проверить обновления</button><button type="button" class="save" id="settingsOpenReleasesBtn">Все версии</button></div><p class="settings-hint">На Android и Windows появится предложение обновиться, если версия устарела.</p></div></section>
     <div id="settingsStatus" class="settings-status" role="status" aria-live="polite"></div>
   </div>
 </div>
