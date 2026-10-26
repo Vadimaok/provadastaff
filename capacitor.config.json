@@ -2,13 +2,6 @@
   "appId": "com.vadimaok.minitrati",
   "appName": "Provoda Staff",
   "webDir": "www",
-  "server": {
-    "url": "https://vadimaok.github.io/provadastaff/",
-    "cleartext": false,
-    "allowNavigation": [
-      "vadimaok.github.io"
-    ]
-  },
   "android": {
     "allowMixedContent": false
   }
