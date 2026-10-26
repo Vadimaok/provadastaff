@@ -1662,12 +1662,12 @@ function setupFeaturePanels(){
   applyFeaturePreferences();
 }
 function notifyPurchase(purchase){
-  if(!state.notifications||!('Notification' in window)||Notification.permission!=='granted')return;
+  if(!state.notifications)return;
   const amount=(Number(purchase.price)||0)*(Number(purchase.qty)||1);
   const spent=sum(state.current),budget=Number(state.budgetMonthly)||0,remaining=budget-spent;
   let body='Покупка: '+purchase.name+' — '+fmt(amount)+'. За месяц потрачено '+fmt(spent)+'. ';
   body+=budget>0?(remaining>=0?'Осталось в бюджете '+fmt(remaining)+'.':'Бюджет превышен на '+fmt(Math.abs(remaining))+'.'):'Месячный бюджет пока не задан.';
-  try{new Notification('Provoda staff · расход записан',{body:body,tag:'minitrati-expense-'+purchase.id});}catch{}
+  showSystemNotification('Provoda Staff · расход записан',body,Math.abs(String(purchase.id||Date.now()).split('').reduce((a,c)=>a+c.charCodeAt(0),0))||Date.now());
 }
 
 function renderFinanceFeatures(items=state.current,total=sum(state.current),cats=Object.entries(byCat(state.current)).sort((a,b)=>b[1]-a[1])){
@@ -1731,16 +1731,77 @@ function restoreBackup(){
   }catch{toast('Файл не похож на резервную копию Provoda staff')}finally{$('#restoreBackupFile').value=''}};
   reader.readAsText(file);
 }
+let nativePushToken=null;
+let nativePushListenersReady=false;
+function nativePlugin(name){return window.Capacitor?.Plugins?.[name]||null}
+async function showSystemNotification(title,body,id=Date.now()){
+  try{
+    if(window.Capacitor?.isNativePlatform?.()){
+      const Local=nativePlugin('LocalNotifications');
+      if(Local){
+        try{const p=await Local.checkPermissions();if(p.display!=='granted'){const q=await Local.requestPermissions();if(q.display!=='granted')return false}}catch{}
+        await Local.schedule({notifications:[{id:Math.max(1,Number(id)||Date.now()),title:String(title||'Provoda Staff'),body:String(body||''),smallIcon:'ic_launcher',channelId:'provoda_updates',schedule:{at:new Date(Date.now()+800)}}]});
+        return true;
+      }
+    }
+    if('Notification' in window&&Notification.permission==='granted'){new Notification(title,{body,tag:'provoda-'+id});return true}
+  }catch(e){console.warn('System notification failed',e)}
+  return false;
+}
+async function setupNativePushNotifications(requestPermission=false){
+  if(!window.Capacitor?.isNativePlatform?.()||!cloudClient||!cloudUser)return false;
+  const Push=nativePlugin('PushNotifications');
+  const Local=nativePlugin('LocalNotifications');
+  if(!Push)return false;
+  try{
+    if(Local){
+      try{await Local.createChannel({id:'provoda_updates',name:'Уведомления Provoda Staff',description:'Задачи, обновления и важные события',importance:5,visibility:1,sound:'default',vibration:true})}catch{}
+    }
+    if(!nativePushListenersReady){
+      nativePushListenersReady=true;
+      await Push.addListener('registration',async token=>{
+        nativePushToken=token?.value||null;
+        if(nativePushToken&&cloudClient&&cloudUser){
+          const {error}=await cloudClient.rpc('register_push_token',{p_token:nativePushToken,p_platform:'android'});
+          if(error)console.warn('Push token registration failed:',error.message);
+        }
+      });
+      await Push.addListener('registrationError',err=>console.warn('Android push registration error:',err));
+      await Push.addListener('pushNotificationReceived',async n=>{
+        const title=n?.title||'Provoda Staff';
+        const body=n?.body||'Новое уведомление';
+        await showSystemNotification(title,body,Date.now());
+      });
+      await Push.addListener('pushNotificationActionPerformed',n=>{
+        try{window.dispatchEvent(new CustomEvent('provoda:push-opened',{detail:n?.notification||{}}))}catch{}
+      });
+    }
+    let perm=await Push.checkPermissions();
+    if(perm.receive!=='granted'&&requestPermission)perm=await Push.requestPermissions();
+    if(perm.receive==='granted'){await Push.register();return true}
+    const status=document.querySelector('#notificationsStatus');
+    if(status)status.textContent='Чтобы получать уведомления даже при закрытом приложении, разреши уведомления Android в настройках приложения.';
+    return false;
+  }catch(e){console.warn('Native push setup failed:',e);return false}
+}
 async function enableNotifications(){
   const status=$('#notificationsStatus');
-  if(!('Notification' in window)){if(status)status.textContent='Этот браузер не поддерживает уведомления.';return}
   try{
+    if(window.Capacitor?.isNativePlatform?.()){
+      const ok=await setupNativePushNotifications(true);
+      if(!ok){if(status)status.textContent='Разреши уведомления для Provoda Staff в настройках Android и попробуй снова.';return}
+      state.notifications=true;save();
+      if(status)status.textContent='Системные уведомления Android включены. Разрешение и push-регистрация проверены.';
+      await showSystemNotification('Provoda Staff','Уведомления включены.');
+      return;
+    }
+    if(!('Notification' in window)){if(status)status.textContent='Этот браузер не поддерживает уведомления.';return}
     const permission=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;
-    if(permission!=='granted'){if(status)status.textContent='Разрешение не выдано. Проверь настройки Safari.';return}
+    if(permission!=='granted'){if(status)status.textContent='Разрешение не выдано. Проверь настройки браузера.';return}
     state.notifications=true;save();
     if(status)status.textContent='Уведомления включены: после каждой покупки покажем сумму, траты за месяц и остаток бюджета.';
-    try{new Notification('Provoda staff',{body:'Уведомления включены. После покупки покажем расход и остаток бюджета.'})}catch{}
-  }catch{if(status)status.textContent='Не удалось включить уведомления в этом браузере.'}
+    await showSystemNotification('Provoda Staff','Уведомления включены.');
+  }catch{if(status)status.textContent='Не удалось включить уведомления. Проверь разрешения системы.'}
 }
 function bindFinanceFeatures(){
   $('#saveBudgetBtn').addEventListener('click',saveBudget);
@@ -2021,6 +2082,7 @@ async function activateCloudUser(user,forceReload=false){
       showCloudConnectionBanner('Нет ответа от облака. Показываю сохранённые на этом устройстве данные; попробую подключиться снова.',user);
       startCloudLiveSync();
       startTaskNotificationPolling();
+      setupNativePushNotifications(true);
       startRejectedReportPolling();
       startDeviceSession();
       return;
@@ -2044,6 +2106,7 @@ async function activateCloudUser(user,forceReload=false){
     refreshAdminAccess();
     refreshCurrentUserRole();
     startTaskNotificationPolling();
+    setupNativePushNotifications(true);
     startCloudLiveSync();
     startRejectedReportPolling();
     startDeviceSession();
