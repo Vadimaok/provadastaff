@@ -3049,6 +3049,7 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
    if(params.get('desktopVersion')){platform='windows';installed=params.get('desktopVersion')}
    else if(params.get('androidVersion')){platform='android';installed=params.get('androidVersion')}
    else if(window.Capacitor?.isNativePlatform?.()){platform='android';try{const info=await window.Capacitor?.Plugins?.App?.getInfo?.();installed=info?.version||'0.0.0'}catch{installed='0.0.0'}}
+   if(!platform)return;
    let data={latestVersion:'1.0.2'};
    try{const r=await fetch('./app-version.json?fresh='+Date.now(),{cache:'no-store'});if(r.ok)data=await r.json()}catch{}
    let notice=null;
