@@ -879,6 +879,17 @@ body.tile-rearrange-mode #addBtn{opacity:.35;pointer-events:none}
 <style id="data-tools-redesign">
 .top .actions #pasteBtn,.top .actions #newMonthBtn{display:none!important}.data-tools-panel{width:min(100%,760px);max-width:760px}.data-tools-panel>.sheet-heading{align-items:flex-start;gap:14px}.data-tools-content{display:block}.data-tools-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:stretch}.data-tool-card{min-width:0;padding:19px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.018));box-shadow:0 10px 28px rgba(0,0,0,.08);display:flex;flex-direction:column;align-items:flex-start;gap:10px}.data-tool-card h3{font-size:17px;line-height:1.25;margin:0}.data-tool-card p{font-size:13px;line-height:1.55;color:var(--muted);margin:0;flex:1}.data-tool-icon{width:46px;height:46px;display:grid;place-items:center;border-radius:15px;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);font-size:24px;font-weight:700}.data-tool-action-slot{width:100%;margin-top:5px}.data-tool-action-slot button{display:flex!important;width:100%;justify-content:center;align-items:center;min-height:44px;padding:10px 14px;border-radius:13px;font-weight:700}.data-tool-export-slot{grid-column:1/-1;min-width:0}.data-tool-export-slot>.feature-card{display:block!important;width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.015));box-shadow:0 10px 28px rgba(0,0,0,.07)}.data-tool-export-slot .feature-heading{padding:19px 19px 10px}.data-tool-export-slot .feature-heading h2{font-size:18px}.data-tool-export-slot .feature-card-body{padding:0 19px 18px}.data-tool-export-slot .feature-actions{display:flex;flex-wrap:wrap;gap:9px}.data-tool-export-slot .feature-actions button{min-height:42px;border-radius:12px}.data-tool-export-slot .notification-box{align-items:center}.data-tool-export-slot .feature-note{line-height:1.5}@media(max-width:540px){.data-tools-grid{grid-template-columns:1fr;gap:11px}.data-tool-card{padding:16px;border-radius:17px}.data-tool-export-slot{grid-column:auto}.data-tools-panel{padding-left:14px;padding-right:14px}.data-tool-export-slot .feature-actions{display:grid;grid-template-columns:1fr}.data-tool-export-slot .feature-actions button{width:100%}}
 </style>
+<script type="module">
+try {
+  const [push, local] = await Promise.all([
+    import('https://esm.sh/@capacitor/push-notifications@7.0.2'),
+    import('https://esm.sh/@capacitor/local-notifications@7.0.2')
+  ]);
+  window.__ProvodaNativePlugins = { PushNotifications: push.PushNotifications, LocalNotifications: local.LocalNotifications };
+} catch (error) {
+  console.warn('Native notification plugins could not be loaded:', error);
+}
+</script>
 </head>
 <body>
 <div id="authGate" role="dialog" aria-modal="true" aria-labelledby="authTitle">
@@ -1733,7 +1744,7 @@ function restoreBackup(){
 }
 let nativePushToken=null;
 let nativePushListenersReady=false;
-function nativePlugin(name){return window.Capacitor?.Plugins?.[name]||null}
+function nativePlugin(name){return window.__ProvodaNativePlugins?.[name]||window.Capacitor?.Plugins?.[name]||null}
 async function showSystemNotification(title,body,id=Date.now()){
   try{
     if(window.Capacitor?.isNativePlatform?.()){
