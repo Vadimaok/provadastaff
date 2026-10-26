@@ -886,6 +886,7 @@ try {
     import('https://esm.sh/@capacitor/local-notifications@7.0.2')
   ]);
   window.__ProvodaNativePlugins = { PushNotifications: push.PushNotifications, LocalNotifications: local.LocalNotifications };
+  window.dispatchEvent(new Event('provoda-native-notification-plugins-ready'));
 } catch (error) {
   console.warn('Native notification plugins could not be loaded:', error);
 }
@@ -1795,6 +1796,7 @@ async function setupNativePushNotifications(requestPermission=false){
     return false;
   }catch(e){console.warn('Native push setup failed:',e);return false}
 }
+window.addEventListener('provoda-native-notification-plugins-ready',()=>{if(cloudUser&&window.Capacitor?.isNativePlatform?.())setupNativePushNotifications(false)});
 async function enableNotifications(){
   const status=$('#notificationsStatus');
   try{
