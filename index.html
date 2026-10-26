@@ -3036,35 +3036,54 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
 
 <script>
 (function(){
-  const releases='https://github.com/Vadimaok/provadastaff/releases/latest';
-  const assets='https://github.com/Vadimaok/provadastaff/releases/latest/download/';
-  function parts(v){return String(v||'0').split('.').map(n=>parseInt(n,10)||0)}
-  function older(a,b){a=parts(a);b=parts(b);for(let i=0;i<3;i++){if((a[i]||0)<(b[i]||0))return true;if((a[i]||0)>(b[i]||0))return false}return false}
-  async function check(){
-    try{
-      let platform='',installed='';
-      const params=new URLSearchParams(location.search);
-      const q=params.get('desktopVersion'), androidQ=params.get('androidVersion');
-      if(q){platform='windows';installed=q}
-      else if(androidQ){platform='android';installed=androidQ}
-      else if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()){
-        platform='android';
-        const app=window.Capacitor.Plugins&&window.Capacitor.Plugins.App;
-        if(app&&app.getInfo){const info=await app.getInfo();installed=info.version||'0.0.0'}else installed='0.0.0';
-      }else return;
-      const r=await fetch('./app-version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;
-      const data=await r.json();if(!data.latestVersion||!older(installed,data.latestVersion))return;
-      if(document.getElementById('provodaUpdateDialog'))return;
-      const href=platform==='windows'?assets+'Provoda-Staff-'+data.latestVersion+'.exe':assets+'Provoda-Staff-Android.apk';
-      const overlay=document.createElement('div');overlay.id='provodaUpdateDialog';
-      overlay.style.cssText='position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:20px;background:rgba(3,7,18,.8);backdrop-filter:blur(10px)';
-      const box=document.createElement('div');box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');
-      box.style.cssText='width:min(440px,100%);padding:24px;border:1px solid #5145a9;border-radius:22px;background:#111827;color:#eef4ff;box-shadow:0 24px 80px #0008;font:15px/1.5 system-ui,sans-serif';
-      box.innerHTML='<div style="font-size:12px;letter-spacing:.12em;color:#a5b4fc;font-weight:800">PROVODA STAFF</div><h2 style="margin:8px 0">Доступно обновление</h2><p style="color:#cbd5e1">Установлена версия '+installed+', новая версия — '+data.latestVersion+'. Скачай файл и запусти его, чтобы обновить приложение.</p><div style="display:flex;gap:10px;flex-wrap:wrap"><a href="'+href+'" style="flex:1;text-align:center;text-decoration:none;background:#7c5cff;color:white;padding:12px;border-radius:12px;font-weight:800">Скачать обновление</a><button id="provodaUpdateLater" style="padding:12px;border-radius:12px;border:1px solid #374151;background:#1f2937;color:#e5e7eb">Позже</button></div><p style="font-size:12px;color:#94a3b8">Если файл ещё не опубликован, открой страницу релизов.</p><a href="'+releases+'" style="color:#a5b4fc;font-size:12px">Страница релизов GitHub</a>';
-      overlay.appendChild(box);document.body.appendChild(overlay);box.querySelector('#provodaUpdateLater').onclick=()=>overlay.remove();
-    }catch(e){}
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(check,1200),{once:true});else setTimeout(check,1200);
+ const releases='https://github.com/Vadimaok/provadastaff/releases/latest';
+ const assets='https://github.com/Vadimaok/provadastaff/releases/latest/download/';
+ function parts(v){return String(v||'0').split('.').map(n=>parseInt(n,10)||0)}
+ function older(a,b){a=parts(a);b=parts(b);for(let i=0;i<3;i++){if((a[i]||0)<(b[i]||0))return true;if((a[i]||0)>(b[i]||0))return false}return false}
+ async function check(){
+  try{
+   const params=new URLSearchParams(location.search);
+   let platform='',installed='';
+   if(params.get('desktopVersion')){platform='windows';installed=params.get('desktopVersion')}
+   else if(params.get('androidVersion')){platform='android';installed=params.get('androidVersion')}
+   else if(window.Capacitor?.isNativePlatform?.()){platform='android';try{const info=await window.Capacitor?.Plugins?.App?.getInfo?.();installed=info?.version||'0.0.0'}catch{installed='0.0.0'}}
+   let data={latestVersion:'1.0.2'};
+   try{const r=await fetch('./app-version.json?fresh='+Date.now(),{cache:'no-store'});if(r.ok)data=await r.json()}catch{}
+   let notice=null;
+   try{if(typeof cloudClient!=='undefined'&&cloudClient&&typeof cloudUser!=='undefined'&&cloudUser){const r=await cloudClient.rpc('user_get_update_notice');if(!r.error&&r.data&&Object.keys(r.data).length)notice=r.data;}}catch{}
+   const target=notice?.target_version||data.latestVersion;
+   const outdated=!!platform&&older(installed,target);
+   if(!outdated&&!notice)return;
+   if(document.getElementById('provodaUpdateDialog'))return;
+   const forced=!!notice?.force_update&&outdated;
+   const href=platform==='windows'?(data.windowsInstaller||assets+'Provoda-Staff-'+target+'.exe'):(data.androidInstaller||assets+'Provoda-Staff-Android.apk');
+   const overlay=document.createElement('div');overlay.id='provodaUpdateDialog';
+   overlay.style.cssText='position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:18px;background:rgba(3,7,18,.86);backdrop-filter:blur(14px)';
+   const box=document.createElement('div');box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');
+   box.style.cssText='width:min(460px,100%);padding:24px;border:1px solid #5145a966;border-radius:26px;background:linear-gradient(160deg,#172033,#0d1320);color:#eef4ff;box-shadow:0 28px 90px #0009;font:15px/1.5 system-ui,sans-serif';
+   const title=forced?'Требуется обновление':(outdated?'Доступна новая версия':'Сообщение от администратора');
+   const message=String(notice?.message||(outdated?'Вышла новая версия Provoda Staff. Установи обновление, чтобы получить последние исправления.':'Администратор отправил уведомление об обновлении.'));
+   const safeMessage=message.replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+   box.innerHTML='<div style="display:flex;gap:14px;align-items:center"><img class="update-dialog-logo" src="./provoda-logo.svg?v=3" alt=""><div><div style="font-size:11px;letter-spacing:.14em;color:#a5b4fc;font-weight:850">PROVODA STAFF</div><h2 style="margin:4px 0 0;font-size:23px;line-height:1.2">'+title+'</h2></div></div><div style="height:4px;border-radius:99px;background:linear-gradient(90deg,#7c5cff,#22d3ee);margin:18px 0"></div><p style="color:#cbd5e1;margin:0">'+safeMessage+'</p><div class="update-dialog-version"><span class="update-dialog-chip">Установлена: '+installed+'</span><span class="update-dialog-chip">Нужна: '+target+'</span></div><p style="font-size:12px;color:#94a3b8;margin:0">'+(forced?'Это обязательное обновление. Окно нельзя закрыть до установки требуемой версии.':'После скачивания открой APK/установщик и заверши установку.')+'</p><div class="update-dialog-buttons"><a class="update-download" href="'+href+'">Скачать обновление</a>'+(forced?'':'<button class="update-later" id="provodaUpdateLater" type="button">Позже</button>')+'</div><p style="margin:14px 0 0"><a href="'+releases+'" style="color:#a5b4fc;font-size:12px">Все версии и история изменений</a></p>';
+   overlay.appendChild(box);document.body.appendChild(overlay);
+   if(!forced)box.querySelector('#provodaUpdateLater')?.addEventListener('click',()=>overlay.remove());
+  }catch(e){}
+ }
+ function checkSettingsVersion(){
+  const p=new URLSearchParams(location.search),installed=p.get('androidVersion')||p.get('desktopVersion')||'Веб-версия';
+  const el=document.querySelector('#settingsInstalledVersion');if(el)el.textContent='Установленная версия: '+installed;
+  fetch('./app-version.json?fresh='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{
+   const latest=document.querySelector('#settingsLatestVersion'),badge=document.querySelector('#settingsVersionBadge');
+   if(latest)latest.textContent='Последняя версия: '+d.latestVersion;
+   const isOld=installed!=='Веб-версия'&&older(installed,d.latestVersion);
+   if(badge){badge.textContent=isOld?'Доступно обновление':'Версия актуальна';badge.classList.toggle('outdated',isOld)}
+  }).catch(()=>{const el=document.querySelector('#settingsLatestVersion');if(el)el.textContent='Последняя версия: недоступна'});
+ }
+ document.addEventListener('DOMContentLoaded',()=>{setTimeout(checkSettingsVersion,500);setTimeout(check,1600);});
+ window.addEventListener('load',()=>setTimeout(check,2500),{once:true});
+ let n=0;const timer=setInterval(()=>{check();if(++n>=8)clearInterval(timer)},5000);
+ document.querySelector('#settingsCheckUpdatesBtn')?.addEventListener('click',()=>{checkSettingsVersion();check()});
+ document.querySelector('#settingsOpenReleasesBtn')?.addEventListener('click',()=>window.open(releases,'_blank','noopener'));
 })();
 </script>
 
