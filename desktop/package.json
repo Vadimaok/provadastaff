@@ -1,6 +1,6 @@
 {
   "name": "provoda-staff-desktop",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Provoda Staff desktop app for Windows",
   "private": true,
   "main": "main.cjs",
