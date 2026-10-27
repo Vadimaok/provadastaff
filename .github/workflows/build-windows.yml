@@ -40,9 +40,8 @@ jobs:
           $encoded = (Get-Content -Raw desktop/provoda-icon.ico.base64).Trim()
           [IO.File]::WriteAllBytes("desktop/provoda-icon.ico", [Convert]::FromBase64String($encoded))
           python -m pip install --disable-pip-version-check Pillow
-          python -c "from PIL import Image; im=Image.open('desktop/provoda-icon.ico').convert('RGBA'); im.resize((256,256), Image.Resampling.LANCZOS).save('desktop/provoda-icon-256.png')"
-          npm install --no-save --no-package-lock png-to-ico
-          node -e "const fs=require('fs'); const pngToIco=require('png-to-ico'); pngToIco(['desktop/provoda-icon-256.png']).then(buf=>fs.writeFileSync('desktop/provoda-icon.ico',buf)).catch(err=>{console.error(err);process.exit(1)})"
+          python -c "from PIL import Image; im=Image.open('desktop/provoda-icon.ico').convert('RGBA'); im.resize((256,256), Image.Resampling.LANCZOS).save('desktop/provoda-icon.ico', format='ICO', sizes=[(256,256)])"
+          python -c "from PIL import Image; im=Image.open('desktop/provoda-icon.ico'); print('Prepared ICO size:', im.size); assert max(im.size) >= 256, 'ICO must be at least 256x256'"
           if (!(Test-Path "desktop/provoda-icon.ico")) { throw "Windows icon was not created" }
 
       - name: Build portable EXE
