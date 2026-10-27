@@ -1796,12 +1796,12 @@ async function setupNativePushNotifications(requestPermission=false){
     return false;
   }catch(e){console.warn('Native push setup failed:',e);return false}
 }
-window.addEventListener('provoda-native-notification-plugins-ready',()=>{if(cloudUser&&window.Capacitor?.isNativePlatform?.())setupNativePushNotifications(true)});
+window.addEventListener('provoda-native-notification-plugins-ready',()=>{if(cloudUser&&window.Capacitor?.isNativePlatform?.())setupNativePushNotifications(false)});
 async function enableNotifications(){
   const status=$('#notificationsStatus');
   try{
     if(window.Capacitor?.isNativePlatform?.()){
-      const ok=await setupNativePushNotifications(true);
+      const ok=await // Push permission is requested only when the user explicitly enables notifications in Settings.
       if(!ok){if(status)status.textContent='Разреши уведомления для Provoda Staff в настройках Android и попробуй снова.';return}
       state.notifications=true;save();
       if(status)status.textContent='Системные уведомления Android включены. Разрешение и push-регистрация проверены.';
@@ -2089,7 +2089,7 @@ async function activateCloudUser(user,forceReload=false){
       showCloudConnectionBanner('Нет ответа от облака. Показываю сохранённые на этом устройстве данные; попробую подключиться снова.',user);
       startCloudLiveSync();
       startTaskNotificationPolling();
-      setupNativePushNotifications(true);
+      // Push permission is requested only when the user explicitly enables notifications in Settings.
       startRejectedReportPolling();
       startDeviceSession();
       return;
@@ -2113,7 +2113,7 @@ async function activateCloudUser(user,forceReload=false){
     refreshAdminAccess();
     refreshCurrentUserRole();
     startTaskNotificationPolling();
-    setupNativePushNotifications(true);
+    // Push permission is requested only when the user explicitly enables notifications in Settings.
     startCloudLiveSync();
     startRejectedReportPolling();
     startDeviceSession();
