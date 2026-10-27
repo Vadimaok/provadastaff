@@ -29,12 +29,12 @@ jobs:
         working-directory: desktop
         run: npm install
 
-      - name: Render high-resolution Windows icon
+      - name: Prepare Windows application icon
         shell: pwsh
         run: |
-          python -m pip install --quiet cairosvg pillow
-          python -c "import cairosvg; from PIL import Image; cairosvg.svg2png(url='provoda-logo.svg', write_to='provoda-icon-temp.png', output_width=512, output_height=512); Image.open('provoda-icon-temp.png').convert('RGBA').save('desktop/provoda-icon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])"
-          Remove-Item -Force provoda-icon-temp.png
+          $encoded = (Get-Content -Raw desktop/provoda-icon.ico.base64).Trim()
+          [IO.File]::WriteAllBytes("desktop/provoda-icon.ico", [Convert]::FromBase64String($encoded))
+          if (!(Test-Path "desktop/provoda-icon.ico")) { throw "Windows icon was not created" }
 
       - name: Build portable EXE
         working-directory: desktop
