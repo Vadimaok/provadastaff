@@ -1801,7 +1801,7 @@ async function enableNotifications(){
   const status=$('#notificationsStatus');
   try{
     if(window.Capacitor?.isNativePlatform?.()){
-      const ok=await // Push permission is requested only when the user explicitly enables notifications in Settings.
+      const ok=await setupNativePushNotifications(true);
       if(!ok){if(status)status.textContent='Разреши уведомления для Provoda Staff в настройках Android и попробуй снова.';return}
       state.notifications=true;save();
       if(status)status.textContent='Системные уведомления Android включены. Разрешение и push-регистрация проверены.';
