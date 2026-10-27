@@ -2131,55 +2131,56 @@ async function activateCloudUser(user,forceReload=false){
   }
   if(activationInProgress) return activationInProgress;
   activationInProgress=(async()=>{
-    authMessage('Загружаю твои расходы из облака…');
-    let result;
+    // Cache-first: show the signed-in user's own local data immediately while Supabase loads.
+    // This avoids making the whole interface wait through multiple slow network retries.
+    let cachedState=null;
     try{
-      result=await fetchCloudUserData(user.id);
-    }catch(error){
-      console.error('Cloud data load failed after retries:',error);
-      // Valid session: show only this user's locally cached data while the cloud is unavailable.
-      let cachedState=null;
-      try{const raw=localStorage.getItem(LS+'.'+user.id);if(raw)cachedState=validState(JSON.parse(raw));}catch{}
-      cloudUser=user;
-      if(cachedState)state=cachedState;
-      cloudLastUpdatedAt=null;
-      cloudLastDataSignature=JSON.stringify(state);
-      document.querySelector('#authGate').classList.add('hidden');
-      if(typeof syncProfileUI==='function')syncProfileUI();
-      render();
-      showCloudConnectionBanner('Нет ответа от облака. Показываю сохранённые на этом устройстве данные; попробую подключиться снова.',user);
-      startCloudLiveSync();
-      startTaskNotificationPolling();
-      // Push permission is requested only when the user explicitly enables notifications in Settings.
-      startRejectedReportPolling();
-      startDeviceSession();
-      return;
-    }
-    const {data,error}=result||{};
-    if(error){
-      console.error('Cloud data query failed:',error);
-      authMessage('Не удалось прочитать базу. Проверь настройки доступа к данным (RLS) в Supabase.',true);
-      return;
-    }
-    document.querySelector('#cloudRetryBtn')?.remove();
-    hideCloudConnectionBanner();
+      const raw=localStorage.getItem(LS+'.'+user.id);
+      if(raw)cachedState=validState(JSON.parse(raw));
+    }catch{}
     cloudUser=user;
-    state=validState(data ? data.data : null);
+    if(cachedState)state=cachedState;
     cloudLastUpdatedAt=null;
     cloudLastDataSignature=JSON.stringify(state);
-    try{ localStorage.setItem(LS+'.'+user.id,JSON.stringify(state)); }catch{}
     document.querySelector('#accountEmail').textContent=user.email || 'Аккаунт';
     document.querySelector('#authGate').classList.add('hidden');
     if(typeof syncProfileUI==='function')syncProfileUI();
-    refreshAdminAccess();
-    refreshCurrentUserRole();
+    render();
+
+    // Permissions remain server-verified; these checks must not block the first render.
+    void refreshAdminAccess();
+    void refreshCurrentUserRole();
     startTaskNotificationPolling();
-    // Push permission is requested only when the user explicitly enables notifications in Settings.
-    startCloudLiveSync();
     startRejectedReportPolling();
     startDeviceSession();
-    authMessage('Вход выполнен.');
-    render();
+
+    try{
+      const result=await fetchCloudUserData(user.id);
+      if(!cloudUser||cloudUser.id!==user.id)return;
+      const {data,error}=result||{};
+      if(error)throw error;
+      document.querySelector('#cloudRetryBtn')?.remove();
+      hideCloudConnectionBanner();
+      state=validState(data ? data.data : null);
+      cloudLastUpdatedAt=null;
+      cloudLastDataSignature=JSON.stringify(state);
+      try{localStorage.setItem(LS+'.'+user.id,JSON.stringify(state));}catch{}
+      if(typeof syncProfileUI==='function')syncProfileUI();
+      render();
+      startCloudLiveSync();
+      authMessage('Вход выполнен.');
+    }catch(error){
+      if(!cloudUser||cloudUser.id!==user.id)return;
+      console.error('Cloud data load failed after retries:',error);
+      // Keep the app usable with this user's cached data and continue retrying in the background.
+      showCloudConnectionBanner(
+        cachedState
+          ? 'Облако отвечает медленно. Пока показываю сохранённые данные и продолжу синхронизацию.'
+          : 'Не удалось загрузить данные из облака. Проверь подключение; повторю синхронизацию.',
+        user
+      );
+      startCloudLiveSync();
+    }
   })().catch(error=>{
     console.error('Account activation failed:',error);
     authMessage('Не удалось завершить загрузку аккаунта. Обнови страницу и попробуй ещё раз.',true);
