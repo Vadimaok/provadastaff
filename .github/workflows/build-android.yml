@@ -69,13 +69,17 @@ jobs:
           if 'com.google.gms:google-services' not in text:
               if 'dependencies {' not in text:
                   raise SystemExit('Could not locate dependencies block in android/build.gradle')
-              text = text.replace('dependencies {', "dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'", 1)
+              text = text.replace('dependencies {', "dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'\n        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.2'", 1)
               root.write_text(text)
           app = Path('android/app/build.gradle')
           text = app.read_text()
           if "com.google.gms.google-services" not in text:
               text += "\napply plugin: 'com.google.gms.google-services'\n"
-              app.write_text(text)
+          if "com.google.firebase.crashlytics" not in text:
+              text += "\napply plugin: 'com.google.firebase.crashlytics'\n"
+          if "firebase-crashlytics" not in text:
+              text += "\ndependencies {\n    implementation platform('com.google.firebase:firebase-bom:34.4.0')\n    implementation 'com.google.firebase:firebase-crashlytics'\n}\n"
+          app.write_text(text)
           PY
 
 
