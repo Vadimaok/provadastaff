@@ -868,6 +868,63 @@ body.tile-rearrange-mode #addBtn{opacity:.35;pointer-events:none}
 .update-settings-card{display:grid;gap:14px}.update-version-head{display:flex;align-items:center;gap:13px}.update-version-logo{width:48px;height:48px;border-radius:15px;object-fit:cover}.update-version-copy{min-width:0;flex:1}.update-version-copy strong{display:block}.update-version-copy span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.update-version-badge{display:inline-flex;width:max-content;border:1px solid rgba(52,211,153,.2);background:rgba(52,211,153,.08);color:#6ee7b7;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.update-version-badge.outdated{border-color:rgba(251,191,36,.25);background:rgba(251,191,36,.08);color:#fcd34d}.update-settings-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.update-settings-actions button{min-height:43px;border-radius:13px}.admin-update-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:16px}.admin-update-hero{padding:18px;border:1px solid rgba(124,92,255,.22);border-radius:18px;background:linear-gradient(135deg,rgba(124,92,255,.12),rgba(34,211,238,.06))}.admin-update-hero h3{margin:0 0 7px}.admin-update-hero p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}.admin-update-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.admin-update-actions button{min-height:46px;border-radius:14px}.admin-update-status{min-height:20px;color:var(--muted);font-size:12px;margin-top:12px}.admin-update-danger{background:linear-gradient(135deg,#fb7185,#e11d48)!important;color:white!important;border:0!important}#provodaUpdateDialog .update-dialog-logo{width:64px;height:64px;border-radius:20px;object-fit:cover;border:1px solid #ffffff1a}#provodaUpdateDialog .update-dialog-version{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}#provodaUpdateDialog .update-dialog-chip{font-size:11px;border:1px solid #ffffff18;background:#ffffff08;border-radius:999px;padding:6px 9px;color:#cbd5e1}#provodaUpdateDialog .update-dialog-buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}#provodaUpdateDialog .update-dialog-buttons a,#provodaUpdateDialog .update-dialog-buttons button{flex:1;min-width:135px;text-align:center;text-decoration:none;padding:13px 14px;border-radius:13px;font:inherit;font-size:13px;font-weight:800;border:1px solid #ffffff1a}#provodaUpdateDialog .update-download{background:linear-gradient(135deg,#7c5cff,#4f46e5);color:white}#provodaUpdateDialog .update-later{background:#ffffff08;color:#e5e7eb}@media(max-width:420px){.update-settings-actions,.admin-update-actions{grid-template-columns:1fr}}
 .catalog-heading-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}.catalog-heading-actions .ghost{padding:9px 11px;font-size:12px}.catalog-card{cursor:pointer}.catalog-card.is-unavailable{opacity:.62}.catalog-stock{display:inline-flex;align-items:center;gap:5px;font-size:10px!important;color:var(--good)!important;text-transform:none!important}.catalog-stock.out{color:var(--bad)!important}.catalog-card-tools{position:absolute;left:8px;top:8px;display:flex;gap:5px;z-index:2}.catalog-tool{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;background:rgba(15,20,30,.82);color:#fff;border:1px solid rgba(255,255,255,.12);font-size:14px}.catalog-card .catalog-favorite{position:absolute;right:8px;top:8px;z-index:2;width:29px;height:29px;display:grid;place-items:center;border-radius:50%;background:rgba(15,20,30,.82);color:#cbd5e1;border:1px solid rgba(255,255,255,.12);font-size:17px}.catalog-card .catalog-favorite.active{color:#fbbf24}.catalog-card .catalog-favorite[data-catalog-favorite]+.catalog-qty-badge{top:42px}
 .catalog-qty-badge{position:absolute;right:8px;top:8px;min-width:29px;height:29px;padding:0 7px;border-radius:99px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#5e9cff);color:#fff;font-size:12px;font-weight:800}.catalog-cartbar{position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0 calc(8px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,var(--card) 18%);border-top:1px solid var(--line);margin-top:4px}.catalog-cart-summary{display:flex;flex-direction:column;gap:2px;min-width:0}.catalog-cart-summary strong{font-size:14px}.catalog-cart-summary span{font-size:12px;color:var(--muted)}.catalog-cartbar .save{width:auto;white-space:nowrap;padding:12px 16px}.catalog-cartbar .save:disabled{opacity:.45;cursor:not-allowed}.catalog-edit-panel{max-width:520px}.catalog-edit-panel h2{margin:0 0 4px}.catalog-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.catalog-edit-grid .wide{grid-column:1/-1}.catalog-edit-actions{display:flex;gap:8px;margin-top:14px}.catalog-edit-actions>*{flex:1}.catalog-remove-btn{background:rgba(251,113,133,.1);border:1px solid rgba(251,113,133,.28);color:#fda4af;border-radius:14px;padding:12px}@media(max-width:420px){.catalog-heading-actions .ghost{padding:8px;font-size:11px}.catalog-photo{height:112px}.catalog-edit-grid{grid-template-columns:1fr}.catalog-edit-grid .wide{grid-column:auto}.catalog-cartbar .save{padding:11px 12px}}
+
+/* Device-aware layout: keep every action reachable and close controls visible. */
+:root{--tap-target:44px}
+button,.icon,.ghost,.save,.profile-menu-action{touch-action:manipulation}
+button:not(.icon){min-height:var(--tap-target)}
+.wrap,.top,.accountbar,.profilebar,.actions,.brand,.profile-summary{min-width:0}
+.top{gap:12px;flex-wrap:wrap}
+.top .actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;min-width:0}
+.sheet{overscroll-behavior:contain}
+.sheet .panel{max-height:calc(100dvh - 20px);max-height:calc(100vh - 20px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:calc(18px + env(safe-area-inset-bottom));scrollbar-gutter:stable}
+.sheet .panel h2{overflow-wrap:anywhere}
+.sheet .panel .grab{position:sticky;top:-2px;z-index:7}
+.sheet .panel .icon[id*="close"],.sheet .panel button[id*="Close"],.sheet .panel button[id*="close"]{min-width:42px;min-height:42px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+img,svg,video,canvas{max-width:100%}
+@media(min-width:900px){
+  .wrap{width:min(1200px,calc(100% - 40px))}
+  .sheet .panel{max-width:min(760px,calc(100vw - 40px));margin-inline:auto}
+}
+@media(max-width:760px){
+  .wrap{width:100%;padding-left:12px;padding-right:12px}
+  .top{align-items:center}
+  .top .actions{width:100%;justify-content:flex-start}
+  .top .actions .ghost{flex:1 1 auto}
+  .accountbar,.profilebar{gap:10px}
+  .profile-copy{min-width:0;overflow-wrap:anywhere}
+  .profile-copy strong,.profile-copy span{overflow-wrap:anywhere}
+  .sheet{padding:0!important;align-items:flex-end}
+  .sheet .panel{width:100%;max-width:none;max-height:calc(100dvh - env(safe-area-inset-top));max-height:calc(100vh - env(safe-area-inset-top));border-radius:22px 22px 0 0;padding:12px 14px calc(18px + env(safe-area-inset-bottom))}
+  .sheet .panel .grab{margin-inline:auto}
+  .two,.catalog-edit-grid{grid-template-columns:minmax(0,1fr)}
+  .catalog-edit-grid .wide{grid-column:auto}
+  .catalog-heading{align-items:flex-start;gap:8px}
+  .catalog-heading-actions{flex-shrink:0}
+  .catalog-results{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .catalog-cartbar{align-items:stretch;flex-direction:column}
+  .catalog-cartbar .save{width:100%}
+  .catalog-edit-actions{flex-direction:column}
+  .feature-heading{gap:8px!important;padding:12px!important}
+}
+@media(max-width:420px){
+  .wrap{padding-left:9px;padding-right:9px}
+  .brand-copy b{font-size:14px}
+  .top .actions{gap:6px}
+  .top .actions .ghost{font-size:11px;padding:9px}
+  .accountbar{align-items:center}
+  .profile-copy span{max-width:55vw}
+  .catalog-results{gap:8px}
+  .catalog-photo{height:108px}
+  .catalog-card-info{padding:9px}
+  .catalog-card-info strong{font-size:11px}
+  .catalog-cartbar{gap:8px}
+}
+@media(hover:none) and (pointer:coarse){
+  button,.icon,.ghost,.save,.profile-menu-action{min-height:44px}
+}
+
 </style>
 <base target="_blank">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
