@@ -1496,16 +1496,12 @@ function categoryImage(category){
 }
 function productCandidates(query){
   const q=normLine(query||'');
-  if(q.length<1) return [];
+  if(q.length<1)return [];
   const matches=[];
-  const add=(x)=>{
-    if(!x || !x.name) return;
-    if(!matches.some(y=>y.name.toLowerCase()===x.name.toLowerCase())) matches.push(x);
-  };
-  CATALOG.filter(x=>normLine(x.name).includes(q)).slice(0,10).forEach(add);
-  EXTRA_RULES.filter(x=>x.re.test(q) || normLine(x.name).includes(q) || (q.length>2 && normLine(x.name).includes(q))).forEach(x=>add({name:x.name,category:x.category,price:x.price}));
-  // If the user typed a product name that contains a search phrase, include it too.
-  if(q.length>2) CATALOG.filter(x=>normLine(q).includes(normLine(x.name).slice(0,Math.max(4,q.length)))).slice(0,5).forEach(add);
+  const add=x=>{if(!x||!x.name||x.available===false||x.active===false)return;if(!matches.some(y=>normLine(y.name)===normLine(x.name)))matches.push(x)};
+  allCatalogProducts().filter(x=>normLine(x.name).includes(q)).slice(0,12).forEach(add);
+  EXTRA_RULES.filter(x=>x.re.test(q)||normLine(x.name).includes(q)).forEach(x=>add({name:x.name,category:x.category,price:x.price}));
+  if(q.length>2)allCatalogProducts().filter(x=>normLine(q).includes(normLine(x.name).slice(0,Math.max(4,q.length)))).slice(0,5).forEach(add);
   return matches.slice(0,7);
 }
 function hideProductSuggestions(){
@@ -1535,7 +1531,7 @@ function autofill(){
   const v=$('#name').value.trim();
   if(!v) return;
   const n=normLine(v);
-  const hit=CATALOG.find(x=>normLine(x.name)===n) || EXTRA_RULES.find(x=>x.re.test(n) || normLine(x.name)===n);
+  const hit=allCatalogProducts().find(x=>x.available!==false&&normLine(x.name)===n) || EXTRA_RULES.find(x=>x.re.test(n) || normLine(x.name)===n);
   if(hit){
     $('#price').value=hit.price;
     if([...$('#category').options].some(o=>o.value===hit.category)) $('#category').value=hit.category;
