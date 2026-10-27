@@ -51,7 +51,8 @@ jobs:
       - name: Verify portable EXE
         shell: pwsh
         run: |
-          $exe = "desktop/dist/Provoda-Staff-1.0.6.exe"
+          $version = (Get-Content -Raw desktop/package.json | ConvertFrom-Json).version
+          $exe = "desktop/dist/Provoda-Staff-$version.exe"
           if (!(Test-Path $exe)) { Get-ChildItem desktop/dist -Recurse; throw "Portable EXE was not generated: $exe" }
           $item = Get-Item $exe
           if ($item.Length -lt 10000000) { throw "Portable EXE looks unexpectedly small ($($item.Length) bytes)" }
