@@ -1400,7 +1400,7 @@ function init(){
       if(first){e.preventDefault();first.focus();}
     }
   });
-  $('#addBtn').onclick=openSheet; $('#saveBtn').onclick=saveEntry;
+  $('#addBtn').onclick=openCatalog; $('#saveBtn').onclick=saveEntry;
   bindFinanceFeatures();
   $('#toggleRecentBtn').onclick=toggleRecentHistory;
   $('#closePurchaseHistoryBtn').onclick=closePurchaseHistory;
@@ -1461,21 +1461,25 @@ function closeCatalogEditor(){$('#catalogEditSheet').classList.remove('open');$(
 async function saveCatalogEditor(active=true){if(!adminAllowed)return;const name=$('#catalogEditName').value.trim(),price=Number(String($('#catalogEditPrice').value).replace(',','.'));if(!name){$('#catalogEditName').focus();toast('Укажи название товара');return}if(!Number.isFinite(price)||price<0){$('#catalogEditPrice').focus();toast('Проверь цену');return}const original=$('#catalogEditOriginalName').value.trim(),row={name,category:$('#catalogEditCategory').value.trim()||'другое',price,supplier:$('#catalogEditSupplier').value.trim(),volume:Number($('#catalogEditVolume').value)||null,image_url:$('#catalogEditImage').value.trim(),available:$('#catalogEditAvailable').checked,active,sort_order:0},status=$('#catalogEditStatus');status.textContent='Сохраняю…';try{if(original&&normLine(original)!==normLine(name)){const old=allCatalogProducts().find(x=>normLine(x.name)===normLine(original));if(old)await persistCatalogRow({...old,active:false})}await persistCatalogRow(row);status.textContent=catalogTableAvailable?'Сохранено и синхронизировано.':'Сохранено локально. Для общего каталога примени supabase/product-catalog.sql в SQL Editor.';closeCatalogEditor();renderCatalog();toast(active?'Товар сохранён':'Товар убран из каталога')}catch(error){console.error('Catalog save failed:',error);status.textContent='Не удалось сохранить: '+String(error?.message||error);toast('Не удалось сохранить товар')}}
 function productImage(name){
   const n=String(name||'').toLowerCase();
+  // Брендовые фотографии ставим выше общих тематических изображений.
   if(/tornado|торнадо/.test(n)) return 'https://napitkiopt.ru/wa-data/public/shop/products/66/13/1366/images/601/601.580%402x.jpg';
-  if(/adrenaline|адреналин|адрик/.test(n)) return 'https://kalinbaza.ru/image/cache/catalog/products/energy/energy_0007-700x700.jpg';
+  if(/adrenaline|адреналин|адрик|breeze|бриз/.test(n)) return 'https://kalinbaza.ru/image/cache/catalog/products/energy/energy_0007-700x700.jpg';
   if(/lit energy|лит энерджи|\bлит\b/.test(n)) return 'https://simg.marwin.kz/media/catalog/product/l/i/napitok_energeticheskiy_lit_energy_original_045l_jb.jpg';
   if(/coca.?cola|кока.?кола|\bcola\b|добрый cola/.test(n)) return 'https://ameelcandyworld.be/product/image/large/52362_1.jpg';
   if(/sprite|спрайт/.test(n)) return 'https://www.coca-cola.com/content/dam/onexp/gr/el/sprite-2024/sprite.png';
   if(/bonaqua|бонаква/.test(n)) return 'https://am.coca-colahellenic.com/content/dam/cch/am/media-gallery/images/corporate/403213448_R_POS_BAS_500ml_PET_VIEW2_PRO_ARM_GEO_D_R1%20%281%29.png';
   if(/twix|твикс/.test(n)) return 'https://d2lnr5mha7bycj.cloudfront.net/product-image/file/large_fc4496c7-48be-4ec8-b627-88d989080fcf.jpg';
-  if(/gang|isok|joy stick|moji|паровой коктейль|премиум|кальян/.test(n)) return 'https://image.made-in-china.com/2f0j00OUekqbtwLirF/Silver-65cm-Stainless-Steel-Hookah-Shisha-Cachimba-Smoking-Set-Large-Hookah.jpg';
-  if(/snickers|mars|bounty|milky way|maltisers|maltesers|nuts|picnic|goodmix|чио рио/.test(n)) return 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=640&q=80';
-  if(/sandwich|сэндвич|сандвич/.test(n)) return 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=640&q=80';
-  if(/плов|греч|котлет|пюре|гуляш|рис с рыбой|готовое блюдо/.test(n)) return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=640&q=80';
-  if(/cappuccino|nescafe|кофе/.test(n)) return 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=640&q=80';
-  if(/red bull|monster|burn|flash|энергет|energy|экофрут/.test(n)) return 'https://images.unsplash.com/photo-1622543925917-763c34d1a86e?auto=format&fit=crop&w=640&q=80';
-  if(/напит|вода|cola|fanta|7up|mountain dew|sprite|сок|чай|лимонад|pulpy|rich|rero|есентук|ессентук|обуховск|милкис|slide/.test(n)) return 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=640&q=80';
-  if(/шоколад|twix|конфет|слад/.test(n)) return 'https://images.unsplash.com/photo-1548907040-4d42f3e7b4c4?auto=format&fit=crop&w=640&q=80';
+  if(/snickers|сникерс/.test(n)) return 'https://images.unsplash.com/photo-1621939514649-280e2aa9f2e4?auto=format&fit=crop&w=640&q=80';
+  if(/mars|марс|bounty|баунти|milky way|милки.?вей|maltisers|maltesers|мальтизерс|nuts|picnic|goodmix|чио рио/.test(n)) return 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=640&q=80';
+  if(/gang|isok|joy.?stick|moji|паровой коктейль|премиум|кальян/.test(n)) return 'https://image.made-in-china.com/2f0j00OUekqbtwLirF/Silver-65cm-Stainless-Steel-Hookah-Shisha-Cachimba-Smoking-Set-Large-Hookah.jpg';
+  if(/sandwich|сэндвич|сандвич|хот.?дог|хотдог|бургер/.test(n)) return 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=640&q=80';
+  if(/плов|греч|котлет|пюре|гуляш|рис с рыбой|готовое блюдо|суп|лапша|паста|макарон|салат|еда/.test(n)) return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=640&q=80';
+  if(/cappuccino|nescafe|кофе|латте|американо|капучино/.test(n)) return 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=640&q=80';
+  if(/red bull|ред.?булл/.test(n)) return 'https://images.unsplash.com/photo-1622543925917-763c34d1a86e?auto=format&fit=crop&w=640&q=80';
+  if(/monster|монстер|burn|flash|энергет|energy|экофрут/.test(n)) return 'https://images.unsplash.com/photo-1622543925917-763c34d1a86e?auto=format&fit=crop&w=640&q=80';
+  if(/чипс|lays|лейс|pringles|принглс|сухар|кириеш|ореш|арахис/.test(n)) return 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=640&q=80';
+  if(/печень|вафл|круассан|булоч|пирож|кекс|батончик|шоколад|конфет|слад|twix/.test(n)) return 'https://images.unsplash.com/photo-1548907040-4d42f3e7b4c4?auto=format&fit=crop&w=640&q=80';
+  if(/напит|вода|cola|fanta|7up|mountain dew|sprite|сок|чай|лимонад|pulpy|rich|rero|есентук|ессентук|обуховск|милкис|slide|газиров|морс/.test(n)) return 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=640&q=80';
   return '';
 }
 function productAvatar(name, category){
