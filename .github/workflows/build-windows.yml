@@ -25,27 +25,45 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package.json
 
+      - name: Set up Python for icon conversion
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install desktop dependencies
         working-directory: desktop
         run: npm install
 
-      - name: Prepare Windows application icon
+      - name: Prepare a valid 256px Windows icon
         shell: pwsh
         run: |
           $encoded = (Get-Content -Raw desktop/provoda-icon.ico.base64).Trim()
           [IO.File]::WriteAllBytes("desktop/provoda-icon.ico", [Convert]::FromBase64String($encoded))
+          python -m pip install --disable-pip-version-check Pillow
+          python -c "from PIL import Image; im=Image.open('desktop/provoda-icon.ico').convert('RGBA'); im.resize((256,256), Image.Resampling.LANCZOS).save('desktop/provoda-icon-256.png')"
+          npm install --no-save --no-package-lock png-to-ico
+          node -e "const fs=require('fs'); const pngToIco=require('png-to-ico'); pngToIco(['desktop/provoda-icon-256.png']).then(buf=>fs.writeFileSync('desktop/provoda-icon.ico',buf)).catch(err=>{console.error(err);process.exit(1)})"
           if (!(Test-Path "desktop/provoda-icon.ico")) { throw "Windows icon was not created" }
 
       - name: Build portable EXE
         working-directory: desktop
         run: npm run dist
 
+      - name: Verify portable EXE
+        shell: pwsh
+        run: |
+          $exe = "desktop/dist/Provoda-Staff-1.0.6.exe"
+          if (!(Test-Path $exe)) { Get-ChildItem desktop/dist -Recurse; throw "Portable EXE was not generated: $exe" }
+          $item = Get-Item $exe
+          if ($item.Length -lt 10000000) { throw "Portable EXE looks unexpectedly small ($($item.Length) bytes)" }
+          Write-Host "Verified EXE: $($item.FullName), $($item.Length) bytes"
+
       - name: Publish EXE to GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $version = (Get-Content -Raw package.json | ConvertFrom-Json).version
+          $version = (Get-Content -Raw desktop/package.json | ConvertFrom-Json).version
           $tag = "v$version"
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) { gh release create $tag --title "Provoda Staff $version" --notes "Provoda Staff installers for version $version."; if ($LASTEXITCODE -ne 0) { gh release view $tag; if ($LASTEXITCODE -ne 0) { throw "Could not create or find GitHub release $tag" } } }
