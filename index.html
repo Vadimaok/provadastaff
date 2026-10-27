@@ -3188,9 +3188,12 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
    box.querySelector('#provodaChangelogOpen')?.addEventListener('click',()=>{
      if(document.getElementById('provodaChangelogDialog'))return;
      const changes=[
-       ['1.0.4','Исправлена загрузка Android-приложения: веб-файлы упаковываются внутрь APK, чтобы старт не зависел от открытия удалённого сайта.'],
-       ['1.0.4','Подготовлена основа для более надёжной установки обновлений из релизов проекта Provoda Staff на GitHub.'],
-       ['1.0.4','Улучшено окно обновления: теперь историю изменений можно открыть прямо внутри приложения.']
+       ['1.0.5 Stable','Добавлен тёмный экран запуска Provoda Staff, чтобы уменьшить вероятность белого экрана при старте.'],
+       ['1.0.5 Stable','Добавлена безопасная инициализация: ошибки запуска записываются в локальный журнал вместо тихого зависания.'],
+       ['1.0.5 Stable','Расходы и история по-прежнему сохраняются локально, чтобы их можно было показать при временной потере облачного соединения.'],
+       ['1.0.5 Stable','Сохранена проверка новых версий через app-version.json и загрузка APK из GitHub Releases.'],
+       ['1.0.5 Stable','Фоновый FCM и Crashlytics подключаются при наличии конфигурации Firebase в секретах проекта.'],
+       ['1.0.4','Веб-файлы упаковываются внутрь APK, чтобы запуск не зависел от открытия удалённого сайта.']
      ];
      const shade=document.createElement('div');shade.id='provodaChangelogDialog';
      shade.style.cssText='position:fixed;inset:0;z-index:100002;display:grid;place-items:center;padding:18px;background:rgba(3,7,18,.88);backdrop-filter:blur(12px)';
