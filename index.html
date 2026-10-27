@@ -2161,26 +2161,58 @@ async function signIn(){
   }finally{authBusy(false);}
 }
 async function signUp(){
-  if(!cloudClient){authMessage('Не удалось подключиться к облаку. Обнови страницу и попробуй ещё раз.',true);return;}
+  if(!cloudClient){authMessage('Облако ещё не подключилось. Подожди пару секунд и попробуй снова.',true);return;}
   const email=document.querySelector('#authEmail').value.trim();
   const password=document.querySelector('#authPassword').value;
-  if(!email || !password){authMessage('Введи почту и пароль.',true);return;}
+  if(!email || !password){authMessage('Введи электронную почту и пароль.',true);return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){authMessage('Проверь адрес электронной почты.',true);return;}
   if(password.length<6){authMessage('Пароль должен содержать минимум 6 символов.',true);return;}
-  authBusy(true); authMessage('Создаю аккаунт…');
+  authBusy(true);
+  authMessage('Создаю аккаунт… Не закрывай страницу.');
+  let timeoutId;
   try{
-    const {data,error}=await Promise.race([
-      cloudClient.auth.signUp({email,password}),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Истекло время ожидания ответа сервера. Попробуй ещё раз.')),20000))
-    ]);
-    if(error){authMessage(error.message,true);return;}
-    if(!data.session) authMessage('Аккаунт создан. Проверь почту и подтверди адрес, затем войди.');
-    else authMessage('Аккаунт создан. Загружаю данные…');
+    const signupRequest=cloudClient.auth.signUp({email,password});
+    const timeoutRequest=new Promise((_,reject)=>{
+      timeoutId=setTimeout(()=>reject(new Error('SIGNUP_TIMEOUT')),35000);
+    });
+    const {data,error}=await Promise.race([signupRequest,timeoutRequest]);
+    if(error){
+      const raw=String(error.message||'');
+      const lower=raw.toLowerCase();
+      if(/already registered|user already exists|already been registered/.test(lower)){
+        authMessage('Аккаунт с этой почтой уже существует. Нажми «Войти».',true);
+      }else if(/rate limit|too many requests/.test(lower)){
+        authMessage('Слишком много попыток регистрации. Подожди немного и попробуй снова.',true);
+      }else if(/email.*(invalid|not authorized)|invalid.*email/.test(lower)){
+        authMessage('Проверь адрес электронной почты.',true);
+      }else if(/fetch|network|load failed|failed to fetch|abort/i.test(lower)){
+        authMessage('Не удалось связаться с сервером регистрации. Проверь интернет и попробуй ещё раз.',true);
+      }else{
+        authMessage(raw||'Не удалось создать аккаунт. Попробуй ещё раз.',true);
+      }
+      return;
+    }
+    if(!data?.user){
+      authMessage('Сервер не подтвердил создание аккаунта. Попробуй ещё раз через минуту.',true);
+    }else if(!data.session){
+      authMessage('Аккаунт создан. Проверь почту и подтверди адрес, затем войди.');
+    }else{
+      authMessage('Аккаунт создан. Загружаю данные…');
+    }
   }catch(error){
     console.error('Sign-up failed:',error);
-    authMessage(/fetch|network|load failed|failed to fetch|timeout|время ожидания/i.test(String(error?.message||''))
-      ? 'Не удаётся связаться с сервером входа. Попробуй ещё раз чуть позже.'
-      : (error?.message||'Не удалось создать аккаунт. Попробуй ещё раз.'),true);
-  }finally{authBusy(false);}
+    if(error?.message==='SIGNUP_TIMEOUT'){
+      authMessage('Сервер регистрации долго не отвечает. Подожди минуту и попробуй снова. Если письмо уже пришло, сначала попробуй войти.',true);
+    }else{
+      const raw=String(error?.message||'');
+      authMessage(/fetch|network|load failed|failed to fetch|abort/i.test(raw)
+        ? 'Не удалось связаться с сервером регистрации. Проверь интернет и попробуй ещё раз.'
+        : (raw||'Не удалось создать аккаунт. Попробуй ещё раз.'),true);
+    }
+  }finally{
+    clearTimeout(timeoutId);
+    authBusy(false);
+  }
 }
 async function signOut(){
   if(!cloudClient) return;
