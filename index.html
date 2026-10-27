@@ -2653,7 +2653,7 @@ async function bootCloudAuthWithFallback(){
         setTimeout(resolve,10000);
       });
     }
-    initCloudAuth();
+    await initCloudAuth();
   }catch(error){
     console.error('Safe boot failed:',error);
     window.__provodaCrashLog?.('boot',error?.message||error,error?.stack);
