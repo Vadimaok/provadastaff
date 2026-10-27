@@ -9,6 +9,7 @@ on:
       - "www/**"
       - "index.html"
       - "supabase/**"
+      - "app-version.json"
       - ".github/workflows/build-android.yml"
 
 permissions:
