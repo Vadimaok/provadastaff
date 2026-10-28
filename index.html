@@ -2766,6 +2766,8 @@ async function adminApproveKnzTask(id){
 async function adminLoadOverview(){
  const status=document.querySelector('#adminOverviewStatus'),recent=document.querySelector('#adminOverviewRecent');
  if(status)status.textContent='Обновляю данные…';
+ // Refresh the account cache first so overview metrics and task assignees use current cloud data.
+ const accountsOk=await adminRefreshAccounts();
  const results=await Promise.allSettled([adminLoadDevData(),adminLoadKnzReports(),adminLoadAuditLog()]);
  const tasks=Array.isArray(adminDevData.tasks)?adminDevData.tasks:[];
  const reports=Array.isArray(adminReportRows)?adminReportRows:[];
@@ -2779,7 +2781,7 @@ async function adminLoadOverview(){
   const rows=(Array.isArray(adminAuditRows)?adminAuditRows:[]).slice().sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).slice(0,5);
   recent.innerHTML=rows.length?rows.map(x=>'<article class="admin-overview-event"><strong>'+escapeHtml(ADMIN_AUDIT_LABELS[x.action_type]||x.action_type||'Действие')+'</strong><p>'+escapeHtml(x.actor_email||'Администратор')+' · '+escapeHtml(x.target_name||x.target_email||'Сотрудник')+'<br>'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleString('ru-RU'):'Дата неизвестна')+'</p></article>').join(''):'<div class="admin-empty">Пока нет доступных записей журнала.</div>';
  }
- if(status)status.textContent=results.some(x=>x.status==='rejected')?'Сводка загружена частично: проверь доступность задач, отчётов и журнала действий.':'Сводка обновлена · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+ if(status)status.textContent=(!accountsOk||results.some(x=>x.status==='rejected'))?'Сводка загружена частично: проверь подключение и доступность разделов.':'Сводка обновлена · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 }
 function adminSwitchTab(tab){const overview=tab==='overview',dev=tab==='development',reports=tab==='reports',roles=tab==='roles',features=tab==='features',other=tab==='other',audit=tab==='audit';document.querySelector('#adminAccountsView').classList.toggle('hidden',overview||dev||reports||roles||features||other||audit);document.querySelector('#adminOverviewView')?.classList.toggle('hidden',!overview);document.querySelector('#adminAuditView')?.classList.toggle('hidden',!audit);document.querySelector('#adminDevelopmentView').classList.toggle('hidden',!dev);document.querySelector('#adminReportsView').classList.toggle('hidden',!reports);document.querySelector('#adminRolesView').classList.toggle('hidden',!roles);document.querySelector('#adminFeaturesView').classList.toggle('hidden',!features);document.querySelector('#adminOtherView').classList.toggle('hidden',!other);document.querySelectorAll('[data-admin-tab]').forEach(b=>{const active=b.dataset.adminTab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});if(overview)adminLoadOverview();if(dev)adminLoadDevData();if(reports)adminLoadKnzReports();if(roles)adminLoadRoles();if(features)adminLoadRoleFeatures();if(other)adminLoadUpdateControls();if(audit)adminLoadAuditLog();}
 
@@ -2912,8 +2914,9 @@ async function adminRefreshAccounts(){
   adminRenderAccounts();adminPopulateAssignees();adminPopulateAuditFilters();
   if(adminSelectedId&&adminAccounts.some(u=>u.user_id===adminSelectedId))await adminSelectAccount(adminSelectedId);
   if(label)label.textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
- }catch(e){if(label)label.textContent='Не удалось обновить: '+(e.message||'ошибка');adminStatus('Не удалось обновить статусы. Проверь подключение и SQL-миграцию.',true);}
+ }catch(e){if(label)label.textContent='Не удалось обновить: '+(e.message||'ошибка');adminStatus('Не удалось обновить статусы. Проверь подключение и SQL-миграцию.',true);return false;}
  finally{if(btn){btn.disabled=false;btn.textContent='↻ Обновить';}}
+ return true;
 }
 function closeAdminPanel(){document.querySelector('#adminPanelSheet').classList.remove('open');document.querySelector('#adminPanelSheet').setAttribute('aria-hidden','true');}
 function adminFlattenState(data){
