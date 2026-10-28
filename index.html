@@ -2393,8 +2393,8 @@ function notificationTarget(n){
 }
 function openNotificationTarget(target){
  closeSettings();
- if(target==='tasks'){const b=document.querySelector('#openTasksBtn,[data-open-tasks],#myTasksBtn');if(b){b.click();return;}toast('Открой раздел «Мои задачи» из главного меню.');return;}
- if(target==='shift'||target==='reports'){const b=document.querySelector('#openShiftReportsBtn,[data-open-shift-reports],#shiftReportsBtn');if(b){b.click();return;}toast('Открой раздел «Сменные отчёты» из меню приложения.');return;}
+ if(target==='tasks'){const b=document.querySelector('#openKnzTasksBtn');if(b){b.click();return;}toast('Открой раздел «Мои задачи» из главного меню.');return;}
+ if(target==='shift'||target==='reports'){const b=document.querySelector('#openDailyReportsBtn');if(b){b.click();return;}toast('Открой раздел «Сменные отчёты» из меню приложения.');return;}
  openSettings();
 }
 function renderNotificationCenter(){
@@ -2658,7 +2658,7 @@ function adminRenderAuditLog(){
  const rows=adminAuditRows.filter(x=>{
   if(target!=='all'&&String(x.target_user_id||'')!==target)return false;
   if(type!=='all'&&x.action_type!==type)return false;
-  const day=x.created_at?new Date(x.created_at).toISOString().slice(0,10):'';
+  const d=x.created_at?new Date(x.created_at):null;const day=d?d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'):'';
   if(from&&day<from)return false;if(to&&day>to)return false;return true;
  });
  box.innerHTML=rows.length?rows.map(x=>'<article class="admin-task"><div class="admin-task-head"><strong>'+escapeHtml(ADMIN_AUDIT_LABELS[x.action_type]||x.action_type||'Действие')+'</strong><span class="recent-count">'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleString('ru-RU'):'—')+'</span></div><div class="admin-task-meta"><span>Исполнитель: '+escapeHtml(x.actor_email||'Неизвестно')+'</span><span>Сотрудник: '+escapeHtml(x.target_name||x.target_email||'—')+'</span></div>'+(x.details&&Object.keys(x.details).length?'<p>'+escapeHtml(Object.entries(x.details).map(([k,v])=>k+': '+String(v)).join(' · '))+'</p>':'')+'</article>').join(''):'<div class="admin-empty">По выбранным фильтрам записей нет.</div>';
@@ -2732,9 +2732,9 @@ async function adminRefreshAccounts(){
  if(btn){btn.disabled=true;btn.textContent='Обновляю…';}
  if(label)label.textContent='Запрашиваю свежие статусы…';
  try{
-  const {data,error}=await cloudClient.rpc('admin_list_accounts_summary');
-  if(error)throw error;
-  adminAccounts=(Array.isArray(data)?data:(data?.accounts||[])).map(u=>({...u,summary_only:true,total_spent:0,expense_count:0}));
+  let {data,error}=await cloudClient.rpc('admin_list_accounts_summary');
+  if(error){const fallback=await cloudClient.rpc('admin_list_accounts');if(fallback.error)throw fallback.error;data=fallback.data;adminAccounts=(Array.isArray(data)?data:(data?.accounts||[])).map(u=>({...u,summary_only:false}));}
+  else adminAccounts=(Array.isArray(data)?data:(data?.accounts||[])).map(u=>({...u,summary_only:true,total_spent:0,expense_count:0}));
   adminRenderAccounts();adminPopulateAssignees();adminPopulateAuditFilters();
   if(adminSelectedId&&adminAccounts.some(u=>u.user_id===adminSelectedId))await adminSelectAccount(adminSelectedId);
   if(label)label.textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
