@@ -116,7 +116,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   actor uuid := (select auth.uid());
   target uuid;
@@ -150,7 +150,7 @@ begin
   if TG_OP='DELETE' then return old; end if;
   return new;
 end;
-$;
+$$;
 drop trigger if exists provoda_audit_task_changes on public.admin_tasks;
 create trigger provoda_audit_task_changes
 after insert or update or delete on public.admin_tasks
@@ -161,7 +161,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare actor uuid; old_role text; old_shift text;
 begin
   actor := coalesce((select auth.uid()),new.updated_by);
@@ -176,7 +176,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 drop trigger if exists provoda_audit_role_changes on public.user_roles;
 create trigger provoda_audit_role_changes
 after insert or update on public.user_roles
