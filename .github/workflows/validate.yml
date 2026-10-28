@@ -1,0 +1,60 @@
+name: Validate Provoda Staff
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Frontend and configuration checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate JSON configuration
+        run: |
+          node -e "for (const file of ['app-version.json','manifest.webmanifest','capacitor.config.json','desktop/package.json']) { JSON.parse(require('fs').readFileSync(file, 'utf8')); console.log('Valid JSON:', file); }"
+
+      - name: Check inline JavaScript syntax
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+          const { spawnSync } = require('node:child_process');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const scriptTag = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+          let match;
+          let checked = 0;
+          while ((match = scriptTag.exec(html)) !== null) {
+            const attrs = match[1] || '';
+            const source = match[2] || '';
+            if (!source.trim() || /\bsrc\s*=/.test(attrs)) continue;
+            const isModule = /\btype\s*=\s*["']module["']/i.test(attrs);
+            const file = path.join(os.tmpdir(), `provoda-inline-${checked}.${isModule ? 'mjs' : 'cjs'}`);
+            fs.writeFileSync(file, source);
+            const result = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
+            if (result.status !== 0) {
+              console.error(`JavaScript syntax error in inline script #${checked + 1}:\n${result.stderr || result.stdout}`);
+              process.exit(result.status || 1);
+            }
+            checked++;
+          }
+          if (!checked) {
+            console.error('No inline JavaScript blocks found in index.html');
+            process.exit(1);
+          }
+          console.log(`Syntax check passed for ${checked} inline script block(s).`);
+          NODE
