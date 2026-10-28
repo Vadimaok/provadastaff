@@ -1091,6 +1091,25 @@ try {
 @media(max-width:360px) {#adminPanelSheet #adminAccountsList > .admin-account {padding:10px;gap:7px}#adminPanelSheet #adminAccountsList > .admin-account > .admin-account-live {padding:8px}}
 </style>
 
+<style id="admin-overview-dashboard">
+#adminPanelSheet .admin-overview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 16px}
+#adminPanelSheet .admin-overview-head h3{margin:0;font-size:20px;letter-spacing:-.025em}
+#adminPanelSheet .admin-overview-head p{margin:5px 0 0;color:var(--muted);font-size:13px}
+#adminPanelSheet .admin-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+#adminPanelSheet .admin-overview-metric{min-width:0;padding:18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,rgba(124,92,255,.10),rgba(255,255,255,.025))}
+#adminPanelSheet .admin-overview-metric span,#adminPanelSheet .admin-overview-metric small{display:block;color:var(--muted);font-size:12px}
+#adminPanelSheet .admin-overview-metric strong{display:block;font-size:clamp(24px,3vw,34px);line-height:1.15;letter-spacing:-.04em;margin:12px 0 8px;overflow-wrap:anywhere}
+#adminPanelSheet .admin-overview-columns{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr);gap:14px}
+#adminPanelSheet .admin-overview-actions{display:grid;gap:8px;margin-top:12px}
+#adminPanelSheet .admin-overview-actions button{width:100%;text-align:left;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card2);color:var(--text);font:inherit;font-weight:650;cursor:pointer}
+#adminPanelSheet .admin-overview-actions button:hover{border-color:var(--accent)}
+#adminPanelSheet .admin-overview-recent{display:grid;gap:8px;margin-top:12px}
+#adminPanelSheet .admin-overview-event{padding:11px 12px;border:1px solid var(--line);border-radius:12px;min-width:0}
+#adminPanelSheet .admin-overview-event strong{display:block;font-size:13px;overflow-wrap:anywhere}
+#adminPanelSheet .admin-overview-event p{margin:5px 0 0;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+@media(max-width:900px){#adminPanelSheet .admin-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){#adminPanelSheet .admin-overview-head{align-items:flex-start;flex-direction:column}#adminPanelSheet .admin-overview-head button{width:100%}#adminPanelSheet .admin-overview-grid{gap:8px}#adminPanelSheet .admin-overview-metric{padding:13px;border-radius:14px}#adminPanelSheet .admin-overview-columns{grid-template-columns:minmax(0,1fr)}#adminPanelSheet .admin-overview-metric strong{margin:8px 0 6px}}
+</style>
 </head>
 <body><div id="provodaBootSplash" role="status" aria-label="Загрузка Provoda Staff"><div class="pbs-card"><img src="./provoda-logo.svg" alt=""><div class="pbs-title">Provoda Staff</div><div class="pbs-sub">Безопасный запуск приложения</div><div class="pbs-spinner" aria-hidden="true"></div></div></div>
 <div id="authGate" role="dialog" aria-modal="true" aria-labelledby="authTitle">
@@ -1263,11 +1282,31 @@ try {
       <button class="icon" id="closeAdminPanelBtn" type="button" aria-label="Закрыть админ-панель">×</button>
     </header>
     <nav class="admin-tabs" aria-label="Разделы админ-панели">
+      <button class="admin-tab" type="button" data-admin-tab="overview">Обзор</button>
       <button class="admin-tab active" type="button" data-admin-tab="accounts">Аккаунты</button>
       <button class="admin-tab" type="button" data-admin-tab="development">Задачи</button>
       <button class="admin-tab" type="button" data-admin-tab="reports">Отчёты КНЗ</button>
       <button class="admin-tab" type="button" data-admin-tab="roles">Роли</button><button class="admin-tab" type="button" data-admin-tab="features">Доступ функций</button><button class="admin-tab" type="button" data-admin-tab="other">Другое</button><button class="admin-tab" type="button" data-admin-tab="audit">Журнал действий</button>
     </nav>
+    <section id="adminOverviewView" class="hidden">
+      <div class="admin-overview-head"><div><h3>Центр управления</h3><p>Краткая сводка по сотрудникам, задачам и сменным отчётам.</p></div><button class="ghost" id="adminOverviewRefreshBtn" type="button">Обновить сводку</button></div>
+      <div class="admin-overview-grid">
+        <article class="admin-overview-metric"><span>Всего аккаунтов</span><strong id="overviewUsersTotal">—</strong><small>Все сотрудники в системе</small></article>
+        <article class="admin-overview-metric"><span>Сейчас в сети</span><strong id="overviewUsersOnline">—</strong><small>По последнему статусу устройств</small></article>
+        <article class="admin-overview-metric"><span>Задачи на проверке</span><strong id="overviewTasksReview">—</strong><small>Ожидают решения руководителя</small></article>
+        <article class="admin-overview-metric"><span>Сменные отчёты на проверке</span><strong id="overviewReportsReview">—</strong><small>Отправлены сотрудниками</small></article>
+      </div>
+      <div class="admin-overview-columns">
+        <section class="admin-card"><div class="admin-detail-head"><h3 style="margin:0">Быстрые переходы</h3></div><div class="admin-overview-actions">
+          <button type="button" data-overview-tab="accounts">Аккаунты и роли</button>
+          <button type="button" data-overview-tab="development">Задачи сотрудников</button>
+          <button type="button" data-overview-tab="reports">Сменные отчёты</button>
+          <button type="button" data-overview-tab="audit">Журнал действий</button>
+        </div></section>
+        <section class="admin-card"><div class="admin-detail-head"><h3 style="margin:0">Последние действия</h3><button class="ghost" type="button" data-overview-tab="audit">Весь журнал</button></div><div id="adminOverviewRecent" class="admin-overview-recent"><div class="admin-empty">Загружаю события…</div></div></section>
+      </div>
+      <p id="adminOverviewStatus" class="admin-status" role="status" aria-live="polite"></p>
+    </section>
     <section id="adminAuditView" class="hidden"><div class="admin-card"><div class="admin-detail-head"><div><h3 style="margin:0">Журнал действий</h3><p class="settings-hint">История изменений, выполненных администраторами.</p></div><button class="ghost" id="adminAuditRefreshBtn" type="button">Обновить</button></div><div id="adminAuditStatus" class="admin-status" role="status" aria-live="polite"></div>
     <div class="admin-audit-filters">
       <label>Сотрудник<select id="adminAuditTargetFilter"><option value="all">Все сотрудники</option></select></label>
@@ -2724,7 +2763,25 @@ async function adminApproveKnzTask(id){
     await adminLoadKnzReports();
   }catch(e){if(status)status.textContent=e.message||'Не удалось одобрить отчёт.';}
 }
-function adminSwitchTab(tab){const dev=tab==='development',reports=tab==='reports',roles=tab==='roles',features=tab==='features',other=tab==='other',audit=tab==='audit';document.querySelector('#adminAccountsView').classList.toggle('hidden',dev||reports||roles||features||other||audit);document.querySelector('#adminAuditView')?.classList.toggle('hidden',!audit);document.querySelector('#adminDevelopmentView').classList.toggle('hidden',!dev);document.querySelector('#adminReportsView').classList.toggle('hidden',!reports);document.querySelector('#adminRolesView').classList.toggle('hidden',!roles);document.querySelector('#adminFeaturesView').classList.toggle('hidden',!features);document.querySelector('#adminOtherView').classList.toggle('hidden',!other);document.querySelectorAll('[data-admin-tab]').forEach(b=>{const active=b.dataset.adminTab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});if(dev)adminLoadDevData();if(reports)adminLoadKnzReports();if(roles)adminLoadRoles();if(features)adminLoadRoleFeatures();if(other)adminLoadUpdateControls();if(audit)adminLoadAuditLog();}
+async function adminLoadOverview(){
+ const status=document.querySelector('#adminOverviewStatus'),recent=document.querySelector('#adminOverviewRecent');
+ if(status)status.textContent='Обновляю данные…';
+ const results=await Promise.allSettled([adminLoadDevData(),adminLoadKnzReports(),adminLoadAuditLog()]);
+ const tasks=Array.isArray(adminDevData.tasks)?adminDevData.tasks:[];
+ const reports=Array.isArray(adminReportRows)?adminReportRows:[];
+ const accounts=Array.isArray(adminAccounts)?adminAccounts:[];
+ const set=(id,value)=>{const el=document.querySelector('#'+id);if(el)el.textContent=String(value);};
+ set('overviewUsersTotal',accounts.length);
+ set('overviewUsersOnline',accounts.filter(u=>u.is_online===true).length);
+ set('overviewTasksReview',tasks.filter(t=>['done','submitted','pending_review'].includes(String(t.status||'').toLowerCase())).length);
+ set('overviewReportsReview',reports.filter(t=>String(t.status||'').toLowerCase()==='done').length);
+ if(recent){
+  const rows=(Array.isArray(adminAuditRows)?adminAuditRows:[]).slice().sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).slice(0,5);
+  recent.innerHTML=rows.length?rows.map(x=>'<article class="admin-overview-event"><strong>'+escapeHtml(ADMIN_AUDIT_LABELS[x.action_type]||x.action_type||'Действие')+'</strong><p>'+escapeHtml(x.actor_email||'Администратор')+' · '+escapeHtml(x.target_name||x.target_email||'Сотрудник')+'<br>'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleString('ru-RU'):'Дата неизвестна')+'</p></article>').join(''):'<div class="admin-empty">Пока нет доступных записей журнала.</div>';
+ }
+ if(status)status.textContent=results.some(x=>x.status==='rejected')?'Сводка загружена частично: проверь доступность задач, отчётов и журнала действий.':'Сводка обновлена · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+}
+function adminSwitchTab(tab){const overview=tab==='overview',dev=tab==='development',reports=tab==='reports',roles=tab==='roles',features=tab==='features',other=tab==='other',audit=tab==='audit';document.querySelector('#adminAccountsView').classList.toggle('hidden',overview||dev||reports||roles||features||other||audit);document.querySelector('#adminOverviewView')?.classList.toggle('hidden',!overview);document.querySelector('#adminAuditView')?.classList.toggle('hidden',!audit);document.querySelector('#adminDevelopmentView').classList.toggle('hidden',!dev);document.querySelector('#adminReportsView').classList.toggle('hidden',!reports);document.querySelector('#adminRolesView').classList.toggle('hidden',!roles);document.querySelector('#adminFeaturesView').classList.toggle('hidden',!features);document.querySelector('#adminOtherView').classList.toggle('hidden',!other);document.querySelectorAll('[data-admin-tab]').forEach(b=>{const active=b.dataset.adminTab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});if(overview)adminLoadOverview();if(dev)adminLoadDevData();if(reports)adminLoadKnzReports();if(roles)adminLoadRoles();if(features)adminLoadRoleFeatures();if(other)adminLoadUpdateControls();if(audit)adminLoadAuditLog();}
 
 
 function adminPopulateUpdateRecipients(){
@@ -2963,6 +3020,8 @@ function adminDeleteExpense(index){
   adminCaptureRows();adminEditRows.splice(index,1);adminRenderExpenseRows();
 }
 document.querySelectorAll('[data-admin-tab]').forEach(b=>b.addEventListener('click',()=>adminSwitchTab(b.dataset.adminTab)));
+document.querySelectorAll('[data-overview-tab]').forEach(b=>b.addEventListener('click',()=>adminSwitchTab(b.dataset.overviewTab)));
+document.querySelector('#adminOverviewRefreshBtn')?.addEventListener('click',()=>adminLoadOverview());
 document.querySelectorAll('[data-task-filter]').forEach(b=>b.addEventListener('click',()=>{adminTaskFilter=b.dataset.taskFilter;adminRenderTasks();}));
 document.querySelector('#adminSaveNotebookBtn')?.addEventListener('click',adminSaveNotebook);
 document.querySelector('#adminSaveTaskBtn')?.addEventListener('click',adminSaveTask);
