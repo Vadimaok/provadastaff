@@ -29,15 +29,17 @@ function readWindowState() {
 }
 
 let saveBoundsTimer;
+function writeWindowState(win) {
+  if (!win || win.isDestroyed() || win.isMaximized() || win.isMinimized()) return;
+  try {
+    fs.mkdirSync(path.dirname(BOUNDS_FILE), { recursive: true });
+    fs.writeFileSync(BOUNDS_FILE, JSON.stringify(win.getBounds()), 'utf8');
+  } catch (error) { console.warn('Could not save window bounds:', error.message); }
+}
 function saveWindowState(win) {
   if (!win || win.isDestroyed() || win.isMaximized() || win.isMinimized()) return;
   clearTimeout(saveBoundsTimer);
-  saveBoundsTimer = setTimeout(() => {
-    try {
-      fs.mkdirSync(path.dirname(BOUNDS_FILE), { recursive: true });
-      fs.writeFileSync(BOUNDS_FILE, JSON.stringify(win.getBounds()), 'utf8');
-    } catch (error) { console.warn('Could not save window bounds:', error.message); }
-  }, 250);
+  saveBoundsTimer = setTimeout(() => writeWindowState(win), 250);
 }
 
 const DESKTOP_CSS = \`
@@ -168,7 +170,7 @@ function openMainWindow() {
       }
     } catch { event.preventDefault(); }
   });
-  mainWindow.on('close', () => saveWindowState(mainWindow));
+  mainWindow.on('close', () => { clearTimeout(saveBoundsTimer); writeWindowState(mainWindow); });
   mainWindow.on('closed', () => { mainWindow = null; });
   mainWindow.loadURL(APP_URL);
 }
