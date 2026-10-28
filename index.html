@@ -800,6 +800,7 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
 }
 
 
+.admin-account-live{display:block;font-size:11px;color:var(--muted);margin-top:4px}.admin-account-live.is-online{color:var(--good);font-weight:750}
 /* Provoda Staff live sync + strict report rejection notices */
 #toast,#toast2{max-width:min(440px,calc(100vw - 32px));width:max-content;min-width:220px;display:flex;align-items:center;gap:11px;padding:14px 17px;border:1px solid rgba(148,163,184,.34);border-radius:16px;background:linear-gradient(145deg,rgba(20,28,40,.97),rgba(10,15,24,.98));color:#f8fafc;box-shadow:0 18px 55px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.06);font-size:13px;font-weight:650;line-height:1.4;white-space:normal;text-align:left;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 #toast.show,#toast2.show{animation:provoda-toast-in .24s ease-out}
@@ -1129,6 +1130,7 @@ try {
       <button class="admin-tab" type="button" data-admin-tab="reports">Отчёты КНЗ</button>
       <button class="admin-tab" type="button" data-admin-tab="roles">Роли</button><button class="admin-tab" type="button" data-admin-tab="features">Доступ функций</button><button class="admin-tab" type="button" data-admin-tab="other">Другое</button><button class="admin-tab" type="button" data-admin-tab="audit">Журнал действий</button>
     </nav>
+    <section id="adminAuditView" class="hidden"><div class="admin-card"><div class="admin-detail-head"><div><h3 style="margin:0">Журнал действий</h3><p class="settings-hint">История изменений, выполненных администраторами.</p></div><button class="ghost" id="adminAuditRefreshBtn" type="button">Обновить</button></div><div id="adminAuditStatus" class="admin-status" role="status" aria-live="polite"></div><div id="adminAuditList"><div class="admin-empty">Открой раздел, чтобы загрузить журнал.</div></div></div></section>
     <div id="adminAccountsView">
     <section class="admin-stats">
       <div class="admin-stat"><span>Всего аккаунтов</span><strong id="adminUsersCount">—</strong></div>
@@ -2515,7 +2517,7 @@ async function adminApproveKnzTask(id){
     await adminLoadKnzReports();
   }catch(e){if(status)status.textContent=e.message||'Не удалось одобрить отчёт.';}
 }
-function adminSwitchTab(tab){const dev=tab==='development',reports=tab==='reports',roles=tab==='roles',features=tab==='features',other=tab==='other';document.querySelector('#adminAccountsView').classList.toggle('hidden',dev||reports||roles||features||other);document.querySelector('#adminDevelopmentView').classList.toggle('hidden',!dev);document.querySelector('#adminReportsView').classList.toggle('hidden',!reports);document.querySelector('#adminRolesView').classList.toggle('hidden',!roles);document.querySelector('#adminFeaturesView').classList.toggle('hidden',!features);document.querySelector('#adminOtherView').classList.toggle('hidden',!other);document.querySelectorAll('[data-admin-tab]').forEach(b=>{const active=b.dataset.adminTab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});if(dev)adminLoadDevData();if(reports)adminLoadKnzReports();if(roles)adminLoadRoles();if(features)adminLoadRoleFeatures();if(other)adminLoadUpdateControls();}
+function adminSwitchTab(tab){const dev=tab==='development',reports=tab==='reports',roles=tab==='roles',features=tab==='features',other=tab==='other',audit=tab==='audit';document.querySelector('#adminAccountsView').classList.toggle('hidden',dev||reports||roles||features||other||audit);document.querySelector('#adminAuditView')?.classList.toggle('hidden',!audit);document.querySelector('#adminDevelopmentView').classList.toggle('hidden',!dev);document.querySelector('#adminReportsView').classList.toggle('hidden',!reports);document.querySelector('#adminRolesView').classList.toggle('hidden',!roles);document.querySelector('#adminFeaturesView').classList.toggle('hidden',!features);document.querySelector('#adminOtherView').classList.toggle('hidden',!other);document.querySelectorAll('[data-admin-tab]').forEach(b=>{const active=b.dataset.adminTab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});if(dev)adminLoadDevData();if(reports)adminLoadKnzReports();if(roles)adminLoadRoles();if(features)adminLoadRoleFeatures();if(other)adminLoadUpdateControls();if(audit)adminLoadAuditLog();}
 
 
 function adminPopulateUpdateRecipients(){
@@ -2550,6 +2552,18 @@ document.querySelector('#adminForceUpdateSelectedBtn')?.addEventListener('click'
 document.querySelector('#adminForceUpdateAllBtn')?.addEventListener('click',()=>adminPublishUpdateNotice('force'));
 document.querySelector('#adminUpdateRefreshVersionBtn')?.addEventListener('click',adminLoadUpdateControls);
 
+const ADMIN_AUDIT_LABELS={role_changed:'Изменена роль',profile_updated:'Изменён профиль',task_created:'Создана задача',task_updated:'Изменена задача',task_deleted:'Удалена задача',report_approved:'Одобрен отчёт КНЗ',expenses_updated:'Изменены расходы пользователя'};
+async function adminWriteAudit(action,targetUserId=null,details={}){try{const {error}=await cloudClient.rpc('admin_log_action',{action_type:action,target_user_id:targetUserId,details});if(error)console.info('Admin audit log unavailable:',error.message);}catch(e){console.info('Admin audit log unavailable:',e?.message||e);}}
+async function adminLoadAuditLog(){
+ const box=document.querySelector('#adminAuditList'),status=document.querySelector('#adminAuditStatus');if(!box||!adminAllowed)return;
+ box.innerHTML='<div class="admin-empty">Загружаю журнал…</div>';
+ try{
+  const {data,error}=await cloudClient.rpc('admin_list_audit_log',{limit_rows:150});if(error)throw error;
+  const rows=Array.isArray(data)?data:[];
+  box.innerHTML=rows.length?rows.map(x=>'<article class="admin-task"><div class="admin-task-head"><strong>'+escapeHtml(ADMIN_AUDIT_LABELS[x.action_type]||x.action_type||'Действие')+'</strong><span class="recent-count">'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleString('ru-RU'):'—')+'</span></div><div class="admin-task-meta"><span>Администратор: '+escapeHtml(x.actor_email||'Неизвестно')+'</span><span>Пользователь: '+escapeHtml(x.target_name||x.target_email||'—')+'</span></div>'+(x.details&&Object.keys(x.details).length?'<p>'+escapeHtml(Object.entries(x.details).map(([k,v])=>k+': '+String(v)).join(' · '))+'</p>':'')+'</article>').join(''):'<div class="admin-empty">Записей пока нет. Новые действия будут фиксироваться после включения журнала.</div>';
+  if(status)status.textContent='Записей: '+rows.length+'. Показаны последние события.';
+ }catch(e){box.innerHTML='<div class="admin-empty">Не удалось загрузить журнал. Выполни supabase/admin-performance-audit.sql.</div>';if(status)status.textContent=e.message||'Ошибка журнала';}
+}
 function adminTotalForAccount(u){return Number(u?.total_spent||0);}
 function adminRenderAccounts(){
   const q=(document.querySelector('#adminUserSearch')?.value||'').trim().toLowerCase();
@@ -2708,6 +2722,7 @@ document.querySelector('#adminReportsList')?.addEventListener('click',e=>{const 
 document.querySelector('#adminUserSearch')?.addEventListener('input',adminRenderAccounts);
 document.querySelector('#adminUserRoleFilter')?.addEventListener('change',adminRenderAccounts);
 document.querySelector('#adminUserOnlineFilter')?.addEventListener('change',adminRenderAccounts);
+document.querySelector('#adminAuditRefreshBtn')?.addEventListener('click',adminLoadAuditLog);
 document.querySelector('#adminAccountsList')?.addEventListener('click',e=>{const b=e.target.closest('[data-admin-user]');if(b)adminSelectAccount(b.dataset.adminUser);});
 document.querySelector('#adminAccountDetail')?.addEventListener('input',e=>{if(e.target.id==='adminExpenseSearch')adminRenderExpenseRows();});
 document.querySelector('#adminAccountDetail')?.addEventListener('click',e=>{
