@@ -960,6 +960,90 @@ img,svg,video,canvas{max-width:100%}
 @media(max-width:760px){.admin-profile-main{grid-template-columns:44px minmax(0,1fr)}.admin-profile-avatar{width:44px;height:44px;border-radius:14px}.admin-profile-total{grid-column:1/-1;align-items:flex-start;padding:10px 0 0;border-left:0;border-top:1px solid var(--line)}.admin-profile-total span,.admin-profile-total small{text-align:left}.admin-profile-meta{grid-template-columns:1fr}.admin-meta-item{display:grid;grid-template-columns:minmax(100px,.65fr) minmax(0,1fr);align-items:center;gap:5px 10px}.admin-meta-item small{grid-column:2}.admin-profile-edit{align-items:stretch}.admin-profile-edit .field{min-width:100%}}
 @media(max-width:430px){.admin-profile-card{padding:12px;border-radius:16px}.admin-profile-identity h3{font-size:17px}.admin-profile-meta{gap:7px}.admin-meta-item{grid-template-columns:1fr;gap:5px}.admin-meta-item small{grid-column:1}.admin-profile-edit button{width:100%}}
 
+
+/* Desktop admin redesign: stronger hierarchy, fixed workspace proportions and consistent controls */
+@media(min-width:761px){
+ #adminPanelSheet{padding:22px 28px;scrollbar-gutter:stable}
+ #adminPanelSheet.open{display:block}
+ #adminPanelSheet .admin-shell{width:min(1500px,100%);min-height:calc(100vh - 44px);padding:28px 30px;margin:0 auto;border-radius:26px;background:linear-gradient(145deg,color-mix(in srgb,var(--card) 97%,var(--accent) 3%),var(--bg));border-color:color-mix(in srgb,var(--line) 75%,var(--accent) 25%);box-shadow:0 28px 90px rgba(0,0,0,.28)}
+ #adminPanelSheet .admin-top{align-items:center;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+ #adminPanelSheet .admin-top h2{font-size:32px;letter-spacing:-.045em}
+ #adminPanelSheet .admin-top p{font-size:13px;line-height:1.6;margin-top:5px}
+ #adminPanelSheet .admin-tabs{position:sticky;top:-1px;z-index:12;gap:7px;flex-wrap:nowrap;overflow-x:auto;margin:0 -2px 22px;padding:8px 2px 15px;background:linear-gradient(var(--card) 75%,transparent);scrollbar-width:thin}
+ #adminPanelSheet .admin-tab{flex:0 0 auto;padding:10px 14px;border-radius:11px;transition:background .16s,border-color .16s,color .16s}
+ #adminPanelSheet .admin-tab:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));color:var(--text)}
+ #adminPanelSheet .admin-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+ #adminPanelSheet .admin-stat{position:relative;overflow:hidden;padding:19px 21px;border-radius:18px;background:linear-gradient(135deg,color-mix(in srgb,var(--card2) 80%,var(--accent) 5%),var(--card));box-shadow:inset 0 1px rgba(255,255,255,.035)}
+ #adminPanelSheet .admin-stat:after{content:"";position:absolute;right:-20px;top:-28px;width:100px;height:100px;border-radius:50%;background:color-mix(in srgb,var(--accent) 7%,transparent);pointer-events:none}
+ #adminPanelSheet .admin-stat span{font-size:11px;text-transform:uppercase;letter-spacing:.07em}
+ #adminPanelSheet .admin-stat strong{font-size:clamp(24px,2vw,31px);margin-top:9px;position:relative;z-index:1}
+ #adminPanelSheet .admin-layout{grid-template-columns:minmax(300px,.78fr) minmax(0,1.55fr);gap:18px}
+ #adminPanelSheet .admin-card{padding:20px;border-radius:19px;background:color-mix(in srgb,var(--card) 88%,transparent);box-shadow:0 8px 26px rgba(0,0,0,.045)}
+ #adminPanelSheet .admin-card h3{font-size:16px;letter-spacing:-.015em}
+ #adminPanelSheet .admin-detail-head{align-items:center}
+ #adminPanelSheet .admin-account-list{max-height:calc(100vh - 490px);min-height:260px;gap:8px;padding:2px 5px 2px 0;scrollbar-width:thin}
+ #adminPanelSheet .admin-account{padding:13px 14px;border-radius:13px;gap:6px;transition:border-color .15s,background .15s,transform .15s}
+ #adminPanelSheet .admin-account:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line));transform:translateY(-1px)}
+ #adminPanelSheet .admin-account.active{box-shadow:inset 3px 0 var(--accent),0 5px 18px rgba(0,0,0,.06)}
+ #adminPanelSheet #adminUserSearch{width:100%;margin:4px 0 12px}
+ #adminPanelSheet #adminUserRoleFilter,#adminPanelSheet #adminUserOnlineFilter{width:100%}
+ #adminPanelSheet .admin-account-toolbar{align-items:flex-end}
+ #adminPanelSheet .admin-account-toolbar .field{max-width:260px}
+ #adminPanelSheet .admin-account-toolbar .admin-status{font-size:10px;text-align:right}
+ #adminPanelSheet .admin-table-wrap{max-height:calc(100vh - 440px);border-radius:13px}
+ #adminPanelSheet .admin-expense-table{font-size:12px}
+ #adminPanelSheet .admin-expense-table th{padding:12px 11px}
+ #adminPanelSheet .admin-expense-table td{padding:8px}
+ #adminPanelSheet .admin-expense-table input{max-width:100%}
+ #adminPanelSheet .admin-tools{align-items:flex-end;gap:10px;margin:14px 0}
+ #adminPanelSheet .admin-tools input,#adminPanelSheet .admin-tools select{min-width:0}
+ #adminPanelSheet .admin-inline-actions{gap:9px}
+ #adminPanelSheet button,#adminPanelSheet input,#adminPanelSheet select,#adminPanelSheet textarea{transition:border-color .15s,background-color .15s,box-shadow .15s}
+ #adminPanelSheet input:focus-visible,#adminPanelSheet select:focus-visible,#adminPanelSheet textarea:focus-visible,#adminPanelSheet button:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 80%,white);outline-offset:2px}
+ #adminPanelSheet #adminAuditView>.admin-card{max-width:1100px;margin:0 auto}
+ #adminPanelSheet #adminAuditList{display:grid;gap:9px}
+ #adminPanelSheet .admin-dev-layout{grid-template-columns:minmax(320px,.85fr) minmax(0,1.15fr);gap:18px}
+}
+@media(min-width:761px) and (max-width:1100px){
+ #adminPanelSheet{padding:14px}
+ #adminPanelSheet .admin-shell{padding:22px}
+ #adminPanelSheet .admin-layout{grid-template-columns:minmax(250px,.7fr) minmax(0,1.3fr);gap:12px}
+ #adminPanelSheet .admin-card{padding:14px}
+ #adminPanelSheet .admin-account-list{max-height:calc(100vh - 470px)}
+ #adminPanelSheet .admin-dev-layout{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+ #adminPanelSheet{padding:8px}
+ #adminPanelSheet .admin-shell{padding:14px;border-radius:18px}
+ #adminPanelSheet .admin-top{align-items:flex-start;margin-bottom:17px}
+ #adminPanelSheet .admin-tabs{gap:6px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;padding-bottom:12px;scrollbar-width:thin}
+ #adminPanelSheet .admin-tab{flex:0 0 auto;padding:9px 11px;font-size:12px}
+ #adminPanelSheet .admin-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+ #adminPanelSheet .admin-stat{padding:11px;border-radius:13px}
+ #adminPanelSheet .admin-stat span{font-size:10px;line-height:1.35}
+ #adminPanelSheet .admin-stat strong{font-size:18px;letter-spacing:-.03em}
+ #adminPanelSheet .admin-layout{grid-template-columns:minmax(0,1fr);gap:12px}
+ #adminPanelSheet .admin-card{padding:13px;border-radius:16px}
+ #adminPanelSheet .admin-account-list{max-height:260px;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #adminPanelSheet .admin-account{padding:10px}
+ #adminPanelSheet .admin-account-toolbar{align-items:stretch}
+ #adminPanelSheet .admin-account-toolbar .field{min-width:100%!important}
+ #adminPanelSheet .admin-account-toolbar .admin-status{text-align:left}
+ #adminPanelSheet .admin-profile-main{grid-template-columns:42px minmax(0,1fr)}
+ #adminPanelSheet .admin-profile-avatar{width:42px;height:42px}
+ #adminPanelSheet .admin-profile-meta{grid-template-columns:1fr}
+ #adminPanelSheet .admin-table-wrap{max-height:55vh}
+ #adminPanelSheet .admin-dev-layout{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:430px){
+ #adminPanelSheet .admin-stats{grid-template-columns:1fr}
+ #adminPanelSheet .admin-stat{display:flex;align-items:center;justify-content:space-between;gap:12px}
+ #adminPanelSheet .admin-stat strong{margin:0;text-align:right}
+ #adminPanelSheet .admin-account-list{grid-template-columns:1fr}
+}
+body.light-theme #adminPanelSheet .admin-shell{background:linear-gradient(145deg,#fff,#f5f7fb);border-color:rgba(100,116,139,.2)}
+body.light-theme #adminPanelSheet .admin-card{background:rgba(255,255,255,.88)}
+
 </style>
 <base target="_blank">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
