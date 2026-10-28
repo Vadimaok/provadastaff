@@ -1186,6 +1186,7 @@ try {
       <div class="admin-card">
         <div class="admin-detail-head"><div><h3 style="margin:0">Отчёты сотрудников КНЗ</h3><p class="settings-hint">Просмотр отправленных результатов, комментариев и скриншотов. Администратор может одобрить отчёт.</p></div><button class="ghost" id="adminReportsRefreshBtn" type="button">Обновить</button></div>
         <p id="adminReportsStatus" class="admin-status" role="status" aria-live="polite"></p>
+        <div class="admin-tools"><input id="adminReportsSearch" type="search" placeholder="Поиск по задаче, сотруднику или комментарию" aria-label="Поиск отчётов"><select id="adminReportsFilter" aria-label="Фильтр отчётов"><option value="all">Все статусы</option><option value="done">Ожидают решения</option><option value="approved">Одобрены</option><option value="rejected">Отклонены</option></select></div>
         <div id="adminReportsList" class="admin-task-list"><div class="admin-empty">Загрузка отчётов…</div></div>
       </div>
     </section>
@@ -2494,18 +2495,22 @@ async function adminSaveRole(){
   }catch(e){document.querySelector('#adminRoleStatus').textContent=e.message||'Не удалось сохранить роли.';}
   finally{btn.disabled=false;}
 }
+let adminReportRows=[];
+function adminRenderKnzReports(){
+  const box=document.querySelector('#adminReportsList'),status=document.querySelector('#adminReportsStatus');if(!box)return;
+  const q=(document.querySelector('#adminReportsSearch')?.value||'').trim().toLowerCase();
+  const filter=document.querySelector('#adminReportsFilter')?.value||'all';
+  const rows=adminReportRows.filter(t=>(filter==='all'||t.status===filter)&&[t.title,t.assignee_name,t.assignee_email,t.description,t.completion_note,t.rejection_reason].some(v=>String(v||'').toLowerCase().includes(q)));
+  const names={done:'Ожидает решения',rejected:'Отклонён',approved:'Одобрен'};
+  box.innerHTML=rows.length?rows.map(t=>'<article class="admin-task knz-task-card '+(t.status==='rejected'?'knz-task-rejected':'')+'"><div class="admin-task-head"><strong>'+escapeHtml(t.title||'Без названия')+'</strong><span class="recent-count">'+escapeHtml(names[t.status]||t.status)+'</span></div><div class="admin-task-meta"><span>КНЗ: '+escapeHtml(t.assignee_name||t.assignee_email||'Сотрудник')+'</span><span>Обновлено: '+escapeHtml(t.updated_at?new Date(t.updated_at).toLocaleString('ru-RU'):'—')+'</span></div>'+(t.description?'<p>'+escapeHtml(t.description)+'</p>':'')+(t.completion_note?'<div class="knz-result-note"><strong>Комментарий к результату</strong><p>'+escapeHtml(t.completion_note)+'</p></div>':'<p class="settings-hint">Комментарий к результату не добавлен.</p>')+(t.rejection_reason?'<div class="knz-rejected-inline"><strong>Причина отклонения</strong><p>'+escapeHtml(t.rejection_reason)+'</p></div>':'')+knzProofMarkup(t)+(t.status==='done'?'<div class="admin-task-actions"><button class="admin-primary" type="button" data-admin-approve-knz="'+escapeHtml(t.id)+'">Одобрить отчёт</button></div>':'')+'</article>').join(''):'<div class="admin-empty">'+(adminReportRows.length?'По фильтру отчётов ничего не найдено.':'Отправленных отчётов пока нет.')+'</div>';
+  if(status)status.textContent='Найдено отчётов: '+rows.length+' из '+adminReportRows.length+'.';
+}
 async function adminLoadKnzReports(){
   const box=document.querySelector('#adminReportsList'),status=document.querySelector('#adminReportsStatus');
   if(!box||!cloudClient||!adminAllowed)return;
   box.innerHTML='<div class="admin-empty">Загружаю отчёты…</div>';
-  try{
-    const {data,error}=await cloudClient.rpc('admin_list_knz_reports');
-    if(error)throw error;
-    const reports=Array.isArray(data)?data:[];
-    const names={done:'Ожидает решения',rejected:'Отклонён',approved:'Одобрен'};
-    box.innerHTML=reports.length?reports.map(t=>'<article class="admin-task knz-task-card '+(t.status==='rejected'?'knz-task-rejected':'')+'"><div class="admin-task-head"><strong>'+escapeHtml(t.title||'Без названия')+'</strong><span class="recent-count">'+escapeHtml(names[t.status]||t.status)+'</span></div><div class="admin-task-meta"><span>КНЗ: '+escapeHtml(t.assignee_name||t.assignee_email||'Сотрудник')+'</span><span>Обновлено: '+escapeHtml(t.updated_at?new Date(t.updated_at).toLocaleString('ru-RU'):'—')+'</span></div>'+(t.description?'<p>'+escapeHtml(t.description)+'</p>':'')+(t.completion_note?'<div class="knz-result-note"><strong>Комментарий к результату</strong><p>'+escapeHtml(t.completion_note)+'</p></div>':'<p class="settings-hint">Комментарий к результату не добавлен.</p>')+(t.rejection_reason?'<div class="knz-rejected-inline"><strong>Причина отклонения</strong><p>'+escapeHtml(t.rejection_reason)+'</p></div>':'')+knzProofMarkup(t)+(t.status==='done'?'<div class="admin-task-actions"><button class="admin-primary" type="button" data-admin-approve-knz="'+escapeHtml(t.id)+'">Одобрить отчёт</button></div>':'')+'</article>').join(''):'<div class="admin-empty">Отправленных отчётов пока нет.</div>';
-    if(status)status.textContent='Отчётов: '+reports.length+'. Данные загружены из облака.';
-  }catch(e){box.innerHTML='<div class="admin-empty">Не удалось загрузить отчёты.</div>';if(status)status.textContent=(e.message||'Ошибка загрузки')+'. Если функция не найдена, выполни обновлённый supabase/admin.sql.';}
+  try{const {data,error}=await cloudClient.rpc('admin_list_knz_reports');if(error)throw error;adminReportRows=Array.isArray(data)?data:[];adminRenderKnzReports();}
+  catch(e){box.innerHTML='<div class="admin-empty">Не удалось загрузить отчёты.</div>';if(status)status.textContent=(e.message||'Ошибка загрузки')+'. Если функция не найдена, выполни обновлённый supabase/admin.sql.';}
 }
 async function adminApproveKnzTask(id){
   const status=document.querySelector('#adminReportsStatus');
@@ -2577,8 +2582,9 @@ function adminRenderAccounts(){
   const list=document.querySelector('#adminAccountsList');
   list.innerHTML=visible.length?visible.map(u=>{const roleLabels={employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ / Старший КНЗ',shift_day:'Дневная смена',shift_night:'Ночная смена'};const roles=[roleLabels[u.role]||u.role||'Сотрудник',u.shift_role?roleLabels[u.shift_role]||u.shift_role:null].filter(Boolean);return '<button type="button" class="admin-account '+(u.user_id===adminSelectedId?'active':'')+'" data-admin-user="'+escapeHtml(u.user_id)+'"><strong>'+escapeHtml(u.email||'Без почты')+'</strong><span>'+escapeHtml(adminAccountName(u))+'</span><span class="admin-account-roles">'+roles.map(r=>'<span class="admin-role-chip">'+escapeHtml(r)+'</span>').join('')+'</span><span class="settings-hint">Создан '+escapeHtml(adminFormatDate(u.created_at))+'</span><span class="admin-account-live '+(u.is_online?'is-online':'')+'">'+(u.is_online?'● В сети':'○ Не в сети')+' · синхр. '+escapeHtml(u.last_seen_at?new Date(u.last_seen_at).toLocaleString('ru-RU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'нет данных')+'</span><span class="admin-account-total">'+(u.summary_only?'Расходы загрузятся при открытии':fmt(adminTotalForAccount(u))+' · '+Number(u.expense_count||0)+' записей')+'</span></button>';}).join(''):'<div class="admin-empty">Пользователи не найдены.</div>';
   document.querySelector('#adminUsersCount').textContent=String(adminAccounts.length);
-  document.querySelector('#adminGlobalTotal').textContent=fmt(adminAccounts.reduce((a,u)=>a+adminTotalForAccount(u),0));
-  document.querySelector('#adminGlobalCount').textContent=String(adminAccounts.reduce((a,u)=>a+Number(u.expense_count||0),0));
+  const summaryOnly=adminAccounts.some(u=>u.summary_only);
+  document.querySelector('#adminGlobalTotal').textContent=summaryOnly?'По запросу':fmt(adminAccounts.reduce((a,u)=>a+adminTotalForAccount(u),0));
+  document.querySelector('#adminGlobalCount').textContent=summaryOnly?'По запросу':String(adminAccounts.reduce((a,u)=>a+Number(u.expense_count||0),0));
 }
 async function openAdminPanel(){
   closeProfileMenu();closeSettings();
@@ -2688,8 +2694,8 @@ async function adminSaveAccount(){
     const {error}=await cloudClient.rpc('admin_save_account_data',{target_user_id:adminSelectedId,new_data:adminRebuildState()});
     if(error)throw error;
     adminStatus('Изменения сохранены.');await adminWriteAudit('expenses_updated',adminSelectedId,{record_count:adminEditRows.length});toast('Расходы пользователя обновлены');
-    const {data:accountsError,error:reloadError}=await cloudClient.rpc('admin_list_accounts');
-    if(!reloadError){adminAccounts=Array.isArray(accountsError)?accountsError:(accountsError?.accounts||[]);adminRenderAccounts();const u=adminAccounts.find(x=>x.user_id===adminSelectedId);if(u)adminRenderSelected(u);}
+    const {data:accountsData,error:reloadError}=await cloudClient.rpc('admin_list_accounts_summary');
+    if(!reloadError){adminAccounts=(Array.isArray(accountsData)?accountsData:(accountsData?.accounts||[])).map(u=>({...u,summary_only:true,total_spent:0,expense_count:0}));adminRenderAccounts();const u=adminAccounts.find(x=>x.user_id===adminSelectedId);if(u)adminRenderSelected(u);}
   }catch(e){adminStatus(e.message||'Не удалось сохранить изменения.',true);}
   finally{const b=document.querySelector('#adminSaveAccountBtn');if(b)b.disabled=false;}
 }
@@ -2718,6 +2724,8 @@ document.querySelector('#openAdminPanelBtn')?.addEventListener('click',openAdmin
 document.querySelector('#closeAdminPanelBtn')?.addEventListener('click',closeAdminPanel);
 document.querySelector('#adminPanelSheet')?.addEventListener('click',e=>{if(e.target.id==='adminPanelSheet')closeAdminPanel();});
 document.querySelector('#adminReportsRefreshBtn')?.addEventListener('click',adminLoadKnzReports);
+document.querySelector('#adminReportsSearch')?.addEventListener('input',adminRenderKnzReports);
+document.querySelector('#adminReportsFilter')?.addEventListener('change',adminRenderKnzReports);
 document.querySelector('#adminReportsList')?.addEventListener('click',e=>{const b=e.target.closest('[data-admin-approve-knz]');if(b)adminApproveKnzTask(b.dataset.adminApproveKnz);});
 document.querySelector('#adminUserSearch')?.addEventListener('input',adminRenderAccounts);
 document.querySelector('#adminUserRoleFilter')?.addEventListener('change',adminRenderAccounts);
