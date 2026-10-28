@@ -10,6 +10,8 @@ on:
       - "index.html"
       - "supabase/**"
       - "app-version.json"
+      - "package.json"
+      - "android-updater/**"
       - ".github/workflows/build-android.yml"
 
 permissions:
@@ -53,6 +55,39 @@ jobs:
 
       - name: Sync Android project
         run: npx cap sync android
+
+      - name: Install native in-app APK updater
+        run: |
+          MAIN_ACTIVITY=$(find android/app/src/main/java -name MainActivity.java -print -quit)
+          if [ -z "$MAIN_ACTIVITY" ]; then echo "MainActivity.java was not generated"; exit 1; fi
+          PACKAGE_DIR=$(dirname "$MAIN_ACTIVITY")
+          cp android-updater/AppUpdaterPlugin.java "$PACKAGE_DIR/AppUpdaterPlugin.java"
+          python - "$MAIN_ACTIVITY" android/app/src/main/AndroidManifest.xml <<'PY'
+          from pathlib import Path
+          import re, sys
+          main_path, manifest_path = map(Path, sys.argv[1:])
+          main = main_path.read_text()
+          if 'registerPlugin(AppUpdaterPlugin.class)' not in main:
+              main = main.replace('import com.getcapacitor.BridgeActivity;', 'import com.getcapacitor.BridgeActivity;\nimport android.os.Bundle;')
+              pattern = r'public class MainActivity extends BridgeActivity\s*\{'
+              replacement = '''public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  registerPlugin(AppUpdaterPlugin.class);
+                  super.onCreate(savedInstanceState);
+              }
+          '''
+              main, count = re.subn(pattern, replacement, main, count=1)
+              if count != 1:
+                  raise SystemExit('Could not register AppUpdaterPlugin in MainActivity.java')
+              main_path.write_text(main)
+          manifest = manifest_path.read_text()
+          permission = '<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />'
+          if 'android.permission.REQUEST_INSTALL_PACKAGES' not in manifest:
+              manifest = re.sub(r'(<manifest[^>]*>)', r'\1\n    ' + permission, manifest, count=1)
+              manifest_path.write_text(manifest)
+          print('Native APK updater registered.')
+          PY
 
       - name: Configure Firebase Cloud Messaging
         env:
