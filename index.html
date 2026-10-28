@@ -1044,6 +1044,38 @@ img,svg,video,canvas{max-width:100%}
 body.light-theme #adminPanelSheet .admin-shell{background:linear-gradient(145deg,#fff,#f5f7fb);border-color:rgba(100,116,139,.2)}
 body.light-theme #adminPanelSheet .admin-card{background:rgba(255,255,255,.88)}
 
+
+/* Android/mobile: keep the floating Add button geometrically aligned */
+#addBtn.fab{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:50px;
+  height:50px;
+  width:auto;
+  min-width:132px;
+  padding:0 20px;
+  line-height:1.2;
+  text-align:center;
+  white-space:nowrap;
+  box-sizing:border-box;
+  -webkit-appearance:none;
+  appearance:none;
+  transform-origin:center;
+}
+#addBtn.fab:active{transform:scale(.985)}
+@media(max-width:600px){
+  #addBtn.fab{
+    right:max(16px, env(safe-area-inset-right));
+    bottom:calc(18px + env(safe-area-inset-bottom));
+    min-height:50px;
+    height:50px;
+    border-radius:16px;
+    padding-inline:20px;
+  }
+}
+
 </style>
 <base target="_blank">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
