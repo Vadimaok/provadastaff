@@ -1127,7 +1127,7 @@ try {
       <button class="admin-tab active" type="button" data-admin-tab="accounts">Аккаунты</button>
       <button class="admin-tab" type="button" data-admin-tab="development">Задачи</button>
       <button class="admin-tab" type="button" data-admin-tab="reports">Отчёты КНЗ</button>
-      <button class="admin-tab" type="button" data-admin-tab="roles">Роли</button><button class="admin-tab" type="button" data-admin-tab="features">Доступ функций</button><button class="admin-tab" type="button" data-admin-tab="other">Другое</button>
+      <button class="admin-tab" type="button" data-admin-tab="roles">Роли</button><button class="admin-tab" type="button" data-admin-tab="features">Доступ функций</button><button class="admin-tab" type="button" data-admin-tab="other">Другое</button><button class="admin-tab" type="button" data-admin-tab="audit">Журнал действий</button>
     </nav>
     <div id="adminAccountsView">
     <section class="admin-stats">
@@ -1139,6 +1139,9 @@ try {
       <section class="admin-card">
         <h3>Аккаунты</h3>
         <input id="adminUserSearch" type="search" placeholder="Поиск по почте или имени" aria-label="Поиск пользователей">
+        <label class="field"><span>Фильтр по роли</span><select id="adminUserRoleFilter"><option value="all">Все роли</option><option value="employee">Сотрудник</option><option value="employee_knz">Сотрудник КНЗ</option><option value="shift_senior">Старший КНЗ</option></select></label>
+        <label class="field"><span>Активность</span><select id="adminUserOnlineFilter"><option value="all">Все пользователи</option><option value="online">Сейчас в сети</option><option value="offline">Не в сети</option></select></label>
+        <p class="settings-hint">Статус «В сети» означает, что устройство отправляло сигнал в последние 2 минуты.</p>
         <div id="adminAccountsList" class="admin-account-list"><div class="admin-empty">Загрузка списка аккаунтов…</div></div>
       </section>
       <section class="admin-card">
@@ -2550,9 +2553,15 @@ document.querySelector('#adminUpdateRefreshVersionBtn')?.addEventListener('click
 function adminTotalForAccount(u){return Number(u?.total_spent||0);}
 function adminRenderAccounts(){
   const q=(document.querySelector('#adminUserSearch')?.value||'').trim().toLowerCase();
-  const visible=adminAccounts.filter(u=>String(u.email||'').toLowerCase().includes(q)||adminAccountName(u).toLowerCase().includes(q)||String(u.user_id||'').toLowerCase().includes(q));
+  const roleFilter=document.querySelector('#adminUserRoleFilter')?.value||'all';
+  const onlineFilter=document.querySelector('#adminUserOnlineFilter')?.value||'all';
+  const visible=adminAccounts.filter(u=>
+    (String(u.email||'').toLowerCase().includes(q)||adminAccountName(u).toLowerCase().includes(q)||String(u.user_id||'').toLowerCase().includes(q)) &&
+    (roleFilter==='all'||(u.role||'employee')===roleFilter) &&
+    (onlineFilter==='all'||(onlineFilter==='online'?u.is_online===true:u.is_online!==true))
+  );
   const list=document.querySelector('#adminAccountsList');
-  list.innerHTML=visible.length?visible.map(u=>{const roleLabels={employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ / Старший КНЗ',shift_day:'Дневная смена',shift_night:'Ночная смена'};const roles=[roleLabels[u.role]||u.role||'Сотрудник',u.shift_role?roleLabels[u.shift_role]||u.shift_role:null].filter(Boolean);return '<button type="button" class="admin-account '+(u.user_id===adminSelectedId?'active':'')+'" data-admin-user="'+escapeHtml(u.user_id)+'"><strong>'+escapeHtml(u.email||'Без почты')+'</strong><span>'+escapeHtml(adminAccountName(u))+'</span><span class="admin-account-roles">'+roles.map(r=>'<span class="admin-role-chip">'+escapeHtml(r)+'</span>').join('')+'</span><span class="settings-hint">Создан '+escapeHtml(adminFormatDate(u.created_at))+'</span><span class="admin-account-total">'+fmt(adminTotalForAccount(u))+' · '+Number(u.expense_count||0)+' записей</span></button>';}).join(''):'<div class="admin-empty">Пользователи не найдены.</div>';
+  list.innerHTML=visible.length?visible.map(u=>{const roleLabels={employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ / Старший КНЗ',shift_day:'Дневная смена',shift_night:'Ночная смена'};const roles=[roleLabels[u.role]||u.role||'Сотрудник',u.shift_role?roleLabels[u.shift_role]||u.shift_role:null].filter(Boolean);return '<button type="button" class="admin-account '+(u.user_id===adminSelectedId?'active':'')+'" data-admin-user="'+escapeHtml(u.user_id)+'"><strong>'+escapeHtml(u.email||'Без почты')+'</strong><span>'+escapeHtml(adminAccountName(u))+'</span><span class="admin-account-roles">'+roles.map(r=>'<span class="admin-role-chip">'+escapeHtml(r)+'</span>').join('')+'</span><span class="settings-hint">Создан '+escapeHtml(adminFormatDate(u.created_at))+'</span><span class="admin-account-live '+(u.is_online?'is-online':'')+'">'+(u.is_online?'● В сети':'○ Не в сети')+' · синхр. '+escapeHtml(u.last_seen_at?new Date(u.last_seen_at).toLocaleString('ru-RU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'нет данных')+'</span><span class="admin-account-total">'+(u.summary_only?'Расходы загрузятся при открытии':fmt(adminTotalForAccount(u))+' · '+Number(u.expense_count||0)+' записей')+'</span></button>';}).join(''):'<div class="admin-empty">Пользователи не найдены.</div>';
   document.querySelector('#adminUsersCount').textContent=String(adminAccounts.length);
   document.querySelector('#adminGlobalTotal').textContent=fmt(adminAccounts.reduce((a,u)=>a+adminTotalForAccount(u),0));
   document.querySelector('#adminGlobalCount').textContent=String(adminAccounts.reduce((a,u)=>a+Number(u.expense_count||0),0));
@@ -2569,9 +2578,15 @@ async function openAdminPanel(){
   const allowed=await refreshAdminAccess();
   if(!allowed){closeAdminPanel();toast('У этого аккаунта нет прав администратора');return;}
   try{
-    const {data,error}=await cloudClient.rpc('admin_list_accounts');
-    if(error)throw error;
-    adminAccounts=Array.isArray(data)?data:(data?.accounts||[]);
+    let {data,error}=await cloudClient.rpc('admin_list_accounts_summary');
+    if(error){
+      const fallback=await cloudClient.rpc('admin_list_accounts');
+      if(fallback.error)throw fallback.error;
+      data=fallback.data;
+      adminAccounts=(Array.isArray(data)?data:(data?.accounts||[])).map(u=>({...u,summary_only:false}));
+    } else {
+      adminAccounts=(Array.isArray(data)?data:(data?.accounts||[])).map(u=>({...u,summary_only:true,total_spent:0,expense_count:0}));
+    }
     adminRenderAccounts();adminPopulateAssignees();adminLoadRoles();
     if(adminSelectedId&&adminAccounts.some(u=>u.user_id===adminSelectedId))await adminSelectAccount(adminSelectedId);
   }catch(e){document.querySelector('#adminAccountsList').innerHTML='<div class="admin-empty">Не удалось загрузить аккаунты. Проверь, что выполнил supabase/admin.sql.</div>';adminStatus(e.message||'Ошибка загрузки',true);}
@@ -2691,6 +2706,8 @@ document.querySelector('#adminPanelSheet')?.addEventListener('click',e=>{if(e.ta
 document.querySelector('#adminReportsRefreshBtn')?.addEventListener('click',adminLoadKnzReports);
 document.querySelector('#adminReportsList')?.addEventListener('click',e=>{const b=e.target.closest('[data-admin-approve-knz]');if(b)adminApproveKnzTask(b.dataset.adminApproveKnz);});
 document.querySelector('#adminUserSearch')?.addEventListener('input',adminRenderAccounts);
+document.querySelector('#adminUserRoleFilter')?.addEventListener('change',adminRenderAccounts);
+document.querySelector('#adminUserOnlineFilter')?.addEventListener('change',adminRenderAccounts);
 document.querySelector('#adminAccountsList')?.addEventListener('click',e=>{const b=e.target.closest('[data-admin-user]');if(b)adminSelectAccount(b.dataset.adminUser);});
 document.querySelector('#adminAccountDetail')?.addEventListener('input',e=>{if(e.target.id==='adminExpenseSearch')adminRenderExpenseRows();});
 document.querySelector('#adminAccountDetail')?.addEventListener('click',e=>{
