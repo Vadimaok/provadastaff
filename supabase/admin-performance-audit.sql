@@ -109,6 +109,79 @@ $$;
 revoke all on function public.admin_list_audit_log(integer) from public, anon;
 grant execute on function public.admin_list_audit_log(integer) to authenticated;
 
+-- Record task lifecycle and role changes at the database boundary so actions
+-- from both Admin and Shift Senior are captured (not only browser-side calls).
+create or replace function public.audit_provoda_task_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  actor uuid := (select auth.uid());
+  target uuid;
+  action_name text;
+  detail jsonb;
+begin
+  if TG_OP = 'DELETE' then
+    target := old.assignee_id;
+    action_name := 'task_deleted';
+    detail := jsonb_build_object('task_id',old.id,'title',old.title,'status',old.status);
+  elsif TG_OP = 'INSERT' then
+    target := new.assignee_id;
+    action_name := 'task_created';
+    detail := jsonb_build_object('task_id',new.id,'title',new.title,'status',new.status,'assignee_id',new.assignee_id);
+  else
+    target := new.assignee_id;
+    if old.status is distinct from new.status and new.status = 'approved' then
+      action_name := 'report_approved';
+    elsif old.status is distinct from new.status and new.status = 'rejected' then
+      action_name := 'report_rejected';
+    else
+      action_name := 'task_updated';
+    end if;
+    detail := jsonb_build_object('task_id',new.id,'title',new.title,'from_status',old.status,'to_status',new.status,'assignee_id',new.assignee_id);
+  end if;
+  if actor is null then
+    actor := coalesce(case when TG_OP='DELETE' then old.created_by else new.created_by end, target);
+  end if;
+  insert into public.admin_audit_log(actor_id,action_type,target_user_id,details)
+  values(actor,action_name,target,coalesce(detail,'{}'::jsonb));
+  if TG_OP='DELETE' then return old; end if;
+  return new;
+end;
+$;
+drop trigger if exists provoda_audit_task_changes on public.admin_tasks;
+create trigger provoda_audit_task_changes
+after insert or update or delete on public.admin_tasks
+for each row execute function public.audit_provoda_task_change();
+
+create or replace function public.audit_provoda_role_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare actor uuid; old_role text; old_shift text;
+begin
+  actor := coalesce((select auth.uid()),new.updated_by);
+  if TG_OP='INSERT' then
+    old_role := null; old_shift := null;
+  else
+    old_role := old.role; old_shift := old.shift_role;
+  end if;
+  if TG_OP='INSERT' or old_role is distinct from new.role or old_shift is distinct from new.shift_role then
+    insert into public.admin_audit_log(actor_id,action_type,target_user_id,details)
+    values(actor,'role_changed',new.user_id,jsonb_build_object('from_role',old_role,'to_role',new.role,'from_shift_role',old_shift,'to_shift_role',new.shift_role));
+  end if;
+  return new;
+end;
+$;
+drop trigger if exists provoda_audit_role_changes on public.user_roles;
+create trigger provoda_audit_role_changes
+after insert or update on public.user_roles
+for each row execute function public.audit_provoda_role_change();
+
 
 -- Private notification center: users can read only their own notification history.
 create or replace function public.user_list_notifications(limit_rows integer default 100)
