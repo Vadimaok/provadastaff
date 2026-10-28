@@ -1,0 +1,51 @@
+name: Build Provoda Staff for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "desktop/**"
+      - "provoda-logo.svg"
+      - ".github/workflows/windows-portable.yml"
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build portable Windows app
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package.json
+
+      - name: Install desktop dependencies and icon tooling
+        working-directory: desktop
+        run: npm install --no-audit --no-fund --no-package-lock
+
+      - name: Generate Windows icon from the current Provoda logo
+        working-directory: desktop
+        run: |
+          npm install --no-save --no-audit --no-fund --no-package-lock sharp png-to-ico
+          node --input-type=module -e "import sharp from 'sharp'; import pngToIco from 'png-to-ico'; import fs from 'node:fs/promises'; await sharp('../provoda-logo.svg').resize(256, 256).png().toFile('provoda-icon.png'); await fs.writeFile('provoda-icon.ico', await pngToIco('provoda-icon.png'));"
+          if (!(Test-Path "provoda-icon.ico")) { throw "Windows icon was not generated" }
+
+      - name: Build portable EXE
+        working-directory: desktop
+        run: npx electron-builder --win portable --x64
+
+      - name: Upload portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Provoda-Staff-Windows
+          path: desktop/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
