@@ -2642,7 +2642,7 @@ document.querySelector('#adminForceUpdateSelectedBtn')?.addEventListener('click'
 document.querySelector('#adminForceUpdateAllBtn')?.addEventListener('click',()=>adminPublishUpdateNotice('force'));
 document.querySelector('#adminUpdateRefreshVersionBtn')?.addEventListener('click',adminLoadUpdateControls);
 
-const ADMIN_AUDIT_LABELS={role_changed:'Изменена роль',profile_updated:'Изменён профиль',task_created:'Создана задача',task_updated:'Изменена задача',task_deleted:'Удалена задача',report_approved:'Одобрен отчёт КНЗ',expenses_updated:'Изменены расходы пользователя'};
+const ADMIN_AUDIT_LABELS={role_changed:'Изменена роль',profile_updated:'Изменён профиль',task_created:'Создана задача',task_updated:'Изменена задача',task_deleted:'Удалена задача',report_approved:'Одобрен отчёт КНЗ',report_rejected:'Отклонён отчёт КНЗ',expenses_updated:'Изменены расходы пользователя'};
 async function adminWriteAudit(action,targetUserId=null,details={}){if(['task_created','task_updated','task_deleted','role_changed','report_approved','report_rejected'].includes(action))return;try{const {error}=await cloudClient.rpc('admin_log_action',{action_type:action,target_user_id:targetUserId,details});if(error)console.info('Admin audit log unavailable:',error.message);}catch(e){console.info('Admin audit log unavailable:',e?.message||e);}}
 function adminPopulateAuditFilters(){
  const select=document.querySelector('#adminAuditTargetFilter');if(!select)return;
