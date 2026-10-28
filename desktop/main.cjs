@@ -11,6 +11,23 @@ const DESKTOP_CSS = `
   .dashboard-tiles { width: 100% !important; max-width: none !important; }
   .panel { width: min(960px, calc(100vw - 32px)) !important; max-width: calc(100vw - 32px) !important; max-height: calc(100vh - 32px) !important; bottom: 16px !important; left: 50% !important; right: auto !important; transform: translateX(-50%) !important; border-radius: 22px !important; padding: clamp(16px, 1.8vw, 28px) !important; }
   .panel .grab { display: none !important; }
+  /* Windows: keep Settings centered instead of inheriting the generic bottom-sheet layout. */
+  #settingsSheet .settings-panel {
+    position: absolute !important;
+    left: 50% !important;
+    right: auto !important;
+    top: 50% !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    width: min(760px, calc(100vw - 64px)) !important;
+    max-width: calc(100vw - 64px) !important;
+    max-height: calc(100vh - 64px) !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+    border-radius: 26px !important;
+  }
   .fab { right: clamp(16px, 2vw, 32px) !important; bottom: clamp(16px, 2vw, 32px) !important; }
   .toast { bottom: 24px !important; }
   .profilebar { margin-bottom: 20px !important; }
