@@ -801,6 +801,7 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
 
 
 .admin-account-live{display:block;font-size:11px;color:var(--muted);margin-top:4px}.admin-account-live.is-online{color:var(--good);font-weight:750}
+.notification-center-list{display:grid;gap:9px;margin-top:12px}.notification-center-item{padding:12px;border:1px solid var(--line);border-radius:13px;background:rgba(148,163,184,.045)}.notification-center-item.unread{border-color:rgba(124,92,255,.38);background:rgba(124,92,255,.07)}.notification-center-item strong{display:block;font-size:13px}.notification-center-item p{font-size:12px;line-height:1.5;color:var(--muted);margin:5px 0}.notification-center-item time{font-size:10px;color:var(--muted)}
 /* Provoda Staff live sync + strict report rejection notices */
 #toast,#toast2{max-width:min(440px,calc(100vw - 32px));width:max-content;min-width:220px;display:flex;align-items:center;gap:11px;padding:14px 17px;border:1px solid rgba(148,163,184,.34);border-radius:16px;background:linear-gradient(145deg,rgba(20,28,40,.97),rgba(10,15,24,.98));color:#f8fafc;box-shadow:0 18px 55px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.06);font-size:13px;font-weight:650;line-height:1.4;white-space:normal;text-align:left;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 #toast.show,#toast2.show{animation:provoda-toast-in .24s ease-out}
@@ -1251,6 +1252,10 @@ try {
       </section>
     </section>
 
+    <section class="settings-group-card" aria-labelledby="settingsNotificationCenterTitle">
+      <div class="settings-group-heading"><span class="settings-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span><div><h3 id="settingsNotificationCenterTitle">Центр уведомлений</h3><p>Задачи, отчёты и важные события аккаунта.</p></div></div>
+      <section class="settings-subsection"><div class="admin-inline-actions"><button type="button" class="ghost" id="refreshNotificationCenterBtn">Обновить историю</button><button type="button" class="ghost" id="markNotificationsReadBtn">Отметить прочитанными</button></div><div id="notificationCenterStatus" class="settings-hint" role="status" aria-live="polite">Нажми «Обновить историю», чтобы загрузить уведомления.</div><div id="notificationCenterList" class="notification-center-list"></div></section>
+    </section>
     <section class="settings-group-card" aria-labelledby="settingsAppearanceTitle">
       <div class="settings-group-heading"><span class="settings-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></span><div><h3 id="settingsAppearanceTitle">Персонализация</h3><p>Подстрой цвета, фон и плотность интерфейса под себя.</p></div></div>
       <section class="settings-subsection">
@@ -2339,6 +2344,24 @@ async function initCloudAuth(){
 
 
 /* Admin panel uses server-checked Supabase RPCs; UI visibility is not the security boundary. */
+async function loadNotificationCenter(){
+ const box=document.querySelector('#notificationCenterList'),status=document.querySelector('#notificationCenterStatus');
+ if(!box||!cloudClient||!cloudUser){if(status)status.textContent='Войди в аккаунт, чтобы увидеть уведомления.';return;}
+ if(status)status.textContent='Загружаю уведомления…';
+ try{
+  const {data,error}=await cloudClient.rpc('user_list_notifications',{limit_rows:100});if(error)throw error;
+  const rows=Array.isArray(data)?data:[];
+  box.innerHTML=rows.length?rows.map(n=>'<article class="notification-center-item '+(!n.read_at?'unread':'')+'"><strong>'+escapeHtml(n.title||'Уведомление')+'</strong><p>'+escapeHtml(n.body||'')+'</p><time>'+escapeHtml(n.created_at?new Date(n.created_at).toLocaleString('ru-RU'):'')+(n.read_at?' · Прочитано':' · Новое')+'</time></article>').join(''):'<div class="admin-empty">Уведомлений пока нет.</div>';
+  if(status)status.textContent='Показаны последние '+rows.length+' уведомлений.';
+ }catch(e){if(status)status.textContent=(e.message||'Не удалось загрузить уведомления')+'. Для центра уведомлений выполни supabase/admin-performance-audit.sql.';}
+}
+async function markNotificationCenterRead(){
+ const status=document.querySelector('#notificationCenterStatus');
+ if(!cloudClient||!cloudUser)return;
+ try{const {error}=await cloudClient.rpc('user_mark_notifications_read');if(error)throw error;await loadNotificationCenter();if(status)status.textContent='Все уведомления отмечены прочитанными.';}
+ catch(e){if(status)status.textContent=e.message||'Не удалось отметить уведомления.';}
+}
+
 let adminAllowed=false, adminAccounts=[], adminSelectedId=null, adminSelectedState=null, adminEditRows=[];
 function adminStatus(message,isError=false){const el=document.querySelector('#adminStatus');if(el){el.textContent=message;el.style.color=isError?'var(--bad)':'var(--muted)';}}
 function adminSetVisible(yes){const b=document.querySelector('#openAdminPanelBtn');if(b)b.classList.toggle('admin-visible',!!yes);adminAllowed=!!yes;}
@@ -3131,6 +3154,8 @@ async function changeAccountPassword(){
 }
 
 document.querySelector('#refreshDeviceSessionsBtn')?.addEventListener('click',refreshDeviceSessions);
+document.querySelector('#refreshNotificationCenterBtn')?.addEventListener('click',loadNotificationCenter);
+document.querySelector('#markNotificationsReadBtn')?.addEventListener('click',markNotificationCenterRead);
 document.querySelector('#settingsLogoutBtn').addEventListener('click',signOut);
 document.querySelector('#settingsCsvBtn').addEventListener('click',exportCSV);
 document.querySelector('#settingsBackupBtn').addEventListener('click',exportBackup);
