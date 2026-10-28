@@ -1,4 +1,4 @@
-package com.vadimaok.minitrati;
+package com.provoda.staff;
 
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
