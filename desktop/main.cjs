@@ -146,7 +146,7 @@ function openMainWindow() {
             const badge = document.createElement('div');
             badge.id = 'settingsDesktopVersion';
             badge.innerHTML = '<span>Windows</span><strong>v' + version + '</strong>';
-            heading.appendChild(badge);
+            (heading.querySelector('div') || heading).appendChild(badge);
           };
           addVersion();
           const observer = new MutationObserver(addVersion);
