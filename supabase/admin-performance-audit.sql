@@ -20,7 +20,7 @@ language plpgsql
 stable
 security definer
 set search_path = ''
-as $audit_task$
+as $$
 declare result jsonb;
 begin
   if not public.is_current_admin() then
@@ -59,7 +59,7 @@ returns boolean
 language plpgsql
 security definer
 set search_path = ''
-as $audit_task$
+as $$
 begin
   if not public.is_current_admin() then
     raise exception 'Доступ запрещён: нужны права администратора' using errcode = '42501';
@@ -81,7 +81,7 @@ language plpgsql
 stable
 security definer
 set search_path = ''
-as $audit_task$
+as $$
 declare result jsonb;
 begin
   if not public.is_current_admin() then
