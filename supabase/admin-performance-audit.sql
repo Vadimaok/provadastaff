@@ -108,3 +108,53 @@ end;
 $$;
 revoke all on function public.admin_list_audit_log(integer) from public, anon;
 grant execute on function public.admin_list_audit_log(integer) to authenticated;
+
+
+-- Private notification center: users can read only their own notification history.
+create or replace function public.user_list_notifications(limit_rows integer default 100)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare result jsonb;
+begin
+  if (select auth.uid()) is null then
+    raise exception 'Нужна авторизация' using errcode = '42501';
+  end if;
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', n.id, 'kind', n.kind, 'title', n.title, 'body', n.body,
+    'created_at', n.created_at, 'read_at', n.read_at
+  ) order by n.created_at desc), '[]'::jsonb)
+  into result
+  from (
+    select id, kind, title, body, created_at, read_at
+    from public.user_notifications
+    where user_id = (select auth.uid())
+    order by created_at desc
+    limit greatest(1, least(coalesce(limit_rows,100),200))
+  ) n;
+  return result;
+end;
+$$;
+revoke all on function public.user_list_notifications(integer) from public, anon;
+grant execute on function public.user_list_notifications(integer) to authenticated;
+
+create or replace function public.user_mark_notifications_read()
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if (select auth.uid()) is null then
+    raise exception 'Нужна авторизация' using errcode = '42501';
+  end if;
+  update public.user_notifications set read_at = now()
+  where user_id = (select auth.uid()) and read_at is null;
+  return true;
+end;
+$$;
+revoke all on function public.user_mark_notifications_read() from public, anon;
+grant execute on function public.user_mark_notifications_read() to authenticated;
