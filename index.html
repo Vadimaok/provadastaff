@@ -807,7 +807,21 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
 .admin-live-badge.is-online:before{background:var(--good);box-shadow:0 0 0 3px rgba(52,211,153,.13)}
 .admin-account-last-seen{display:block;min-width:0;overflow-wrap:anywhere;text-align:right;color:var(--muted);font-size:10px;line-height:1.4}
 @media(max-width:430px){.admin-account-live{align-items:flex-start;flex-direction:column}.admin-account-last-seen{text-align:left}}
-.notification-center-list{display:grid;gap:9px;margin-top:12px}.notification-center-item{padding:12px;border:1px solid var(--line);border-radius:13px;background:rgba(148,163,184,.045)}.notification-center-item.unread{border-color:rgba(124,92,255,.38);background:rgba(124,92,255,.07)}.notification-center-item strong{display:block;font-size:13px}.notification-center-item p{font-size:12px;line-height:1.5;color:var(--muted);margin:5px 0}.notification-center-item time{font-size:10px;color:var(--muted)}
+.admin-account-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 12px;flex-wrap:wrap}
+.admin-account-toolbar .admin-status{margin:0;flex:1;min-width:140px;font-size:11px}
+.admin-account-toolbar button{white-space:nowrap}
+.admin-audit-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
+.admin-audit-filters label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--muted);min-width:0}
+.admin-audit-filters select,.admin-audit-filters input{min-width:0;padding:10px 11px;font-size:12px;border-radius:12px}
+.admin-audit-count{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin:8px 0}
+.notification-center-controls{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.notification-center-controls select{flex:1;min-width:150px;padding:10px 12px;font-size:12px}
+.notification-center-item{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:8px}
+.notification-center-item .notification-copy{min-width:0}
+.notification-center-item .notification-open{padding:7px 9px;border-radius:10px;border:1px solid var(--line);background:rgba(124,92,255,.1);font-size:11px;font-weight:700;white-space:nowrap}
+.notification-center-item .notification-type{display:inline-block;margin-bottom:5px;padding:3px 7px;border-radius:99px;background:rgba(148,163,184,.1);color:var(--muted);font-size:10px;font-weight:750}
+.notification-center-item .notification-unread-dot{display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:var(--accent2);vertical-align:middle}
+@media(max-width:430px){.admin-audit-filters{grid-template-columns:1fr}.notification-center-item{grid-template-columns:minmax(0,1fr)}.notification-center-item .notification-open{justify-self:start}}.notification-center-item{padding:12px;border:1px solid var(--line);border-radius:13px;background:rgba(148,163,184,.045)}.notification-center-item.unread{border-color:rgba(124,92,255,.38);background:rgba(124,92,255,.07)}.notification-center-item strong{display:block;font-size:13px}.notification-center-item p{font-size:12px;line-height:1.5;color:var(--muted);margin:5px 0}.notification-center-item time{font-size:10px;color:var(--muted)}
 /* Provoda Staff live sync + strict report rejection notices */
 #toast,#toast2{max-width:min(440px,calc(100vw - 32px));width:max-content;min-width:220px;display:flex;align-items:center;gap:11px;padding:14px 17px;border:1px solid rgba(148,163,184,.34);border-radius:16px;background:linear-gradient(145deg,rgba(20,28,40,.97),rgba(10,15,24,.98));color:#f8fafc;box-shadow:0 18px 55px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.06);font-size:13px;font-weight:650;line-height:1.4;white-space:normal;text-align:left;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 #toast.show,#toast2.show{animation:provoda-toast-in .24s ease-out}
@@ -1137,7 +1151,14 @@ try {
       <button class="admin-tab" type="button" data-admin-tab="reports">Отчёты КНЗ</button>
       <button class="admin-tab" type="button" data-admin-tab="roles">Роли</button><button class="admin-tab" type="button" data-admin-tab="features">Доступ функций</button><button class="admin-tab" type="button" data-admin-tab="other">Другое</button><button class="admin-tab" type="button" data-admin-tab="audit">Журнал действий</button>
     </nav>
-    <section id="adminAuditView" class="hidden"><div class="admin-card"><div class="admin-detail-head"><div><h3 style="margin:0">Журнал действий</h3><p class="settings-hint">История изменений, выполненных администраторами.</p></div><button class="ghost" id="adminAuditRefreshBtn" type="button">Обновить</button></div><div id="adminAuditStatus" class="admin-status" role="status" aria-live="polite"></div><div id="adminAuditList"><div class="admin-empty">Открой раздел, чтобы загрузить журнал.</div></div></div></section>
+    <section id="adminAuditView" class="hidden"><div class="admin-card"><div class="admin-detail-head"><div><h3 style="margin:0">Журнал действий</h3><p class="settings-hint">История изменений, выполненных администраторами.</p></div><button class="ghost" id="adminAuditRefreshBtn" type="button">Обновить</button></div><div id="adminAuditStatus" class="admin-status" role="status" aria-live="polite"></div>
+    <div class="admin-audit-filters">
+      <label>Сотрудник<select id="adminAuditTargetFilter"><option value="all">Все сотрудники</option></select></label>
+      <label>Тип действия<select id="adminAuditTypeFilter"><option value="all">Все действия</option><option value="task_created">Создание задачи</option><option value="task_updated">Изменение задачи</option><option value="task_deleted">Удаление задачи</option><option value="role_changed">Изменение роли</option><option value="profile_updated">Изменение профиля</option><option value="report_approved">Одобрение отчёта</option><option value="report_rejected">Отклонение отчёта</option><option value="expenses_updated">Изменение расходов</option></select></label>
+      <label>С даты<input id="adminAuditFrom" type="date"></label>
+      <label>По дату<input id="adminAuditTo" type="date"></label>
+    </div>
+    <div id="adminAuditCount" class="admin-audit-count"></div><div id="adminAuditList"><div class="admin-empty">Открой раздел, чтобы загрузить журнал.</div></div></div></section>
     <div id="adminAccountsView">
     <section class="admin-stats">
       <div class="admin-stat"><span>Всего аккаунтов</span><strong id="adminUsersCount">—</strong></div>
@@ -1146,7 +1167,8 @@ try {
     </section>
     <div class="admin-layout">
       <section class="admin-card">
-        <h3>Аккаунты</h3>
+        <div class="admin-detail-head"><h3 style="margin:0">Аккаунты</h3><button class="ghost" id="adminAccountsRefreshBtn" type="button">↻ Обновить</button></div>
+        <div class="admin-account-toolbar"><label class="field" style="flex:1;margin:0;min-width:150px"><span>Сортировка</span><select id="adminUserSort"><option value="activity">По последней активности</option><option value="name_asc">По имени А—Я</option><option value="name_desc">По имени Я—А</option><option value="role">По роли</option><option value="activity_old">Сначала давно неактивные</option></select></label><span id="adminAccountsUpdated" class="admin-status" role="status" aria-live="polite">Список ещё не обновлялся</span></div>
         <input id="adminUserSearch" type="search" placeholder="Поиск по почте или имени" aria-label="Поиск пользователей">
         <label class="field"><span>Фильтр по роли</span><select id="adminUserRoleFilter"><option value="all">Все роли</option><option value="employee">Сотрудник</option><option value="employee_knz">Сотрудник КНЗ</option><option value="shift_senior">Старший КНЗ</option></select></label>
         <label class="field"><span>Активность</span><select id="adminUserOnlineFilter"><option value="all">Все пользователи</option><option value="online">Сейчас в сети</option><option value="offline">Не в сети</option></select></label>
@@ -1260,7 +1282,7 @@ try {
 
     <section class="settings-group-card" aria-labelledby="settingsNotificationCenterTitle">
       <div class="settings-group-heading"><span class="settings-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span><div><h3 id="settingsNotificationCenterTitle">Центр уведомлений</h3><p>Задачи, отчёты и важные события аккаунта.</p></div></div>
-      <section class="settings-subsection"><div class="admin-inline-actions"><button type="button" class="ghost" id="refreshNotificationCenterBtn">Обновить историю</button><button type="button" class="ghost" id="markNotificationsReadBtn">Отметить прочитанными</button></div><div id="notificationCenterStatus" class="settings-hint" role="status" aria-live="polite">Нажми «Обновить историю», чтобы загрузить уведомления.</div><div id="notificationCenterList" class="notification-center-list"></div></section>
+      <section class="settings-subsection"><div class="notification-center-controls"><select id="notificationCenterFilter" aria-label="Категория уведомлений"><option value="all">Все категории</option><option value="tasks">Задачи</option><option value="reports">Отчёты</option><option value="shifts">Смены</option><option value="important">Важные события</option><option value="unread">Только непрочитанные</option></select><span id="notificationUnreadCount" class="recent-count">Непрочитанных: —</span></div><div class="admin-inline-actions"><button type="button" class="ghost" id="refreshNotificationCenterBtn">Обновить историю</button><button type="button" class="ghost" id="markNotificationsReadBtn">Отметить прочитанными</button></div><div id="notificationCenterStatus" class="settings-hint" role="status" aria-live="polite">Нажми «Обновить историю», чтобы загрузить уведомления.</div><div id="notificationCenterList" class="notification-center-list"></div></section>
     </section>
     <section class="settings-group-card" aria-labelledby="settingsAppearanceTitle">
       <div class="settings-group-heading"><span class="settings-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></span><div><h3 id="settingsAppearanceTitle">Персонализация</h3><p>Подстрой цвета, фон и плотность интерфейса под себя.</p></div></div>
@@ -2350,15 +2372,43 @@ async function initCloudAuth(){
 
 
 /* Admin panel uses server-checked Supabase RPCs; UI visibility is not the security boundary. */
+async function notificationCategory(n){
+ const k=String(n?.kind||'').toLowerCase(),t=String(n?.title||'').toLowerCase(),b=String(n?.body||'').toLowerCase();
+ if(k.includes('shift')||t.includes('смен'))return 'shifts';
+ if(k.includes('report')||k.includes('task_approved')||k.includes('task_rejected')||t.includes('отчёт')||t.includes('отчет')||t.includes('одобрен')||t.includes('отклон'))return 'reports';
+ if(k.includes('task')||t.includes('задач'))return 'tasks';
+ return 'important';
+}
+function notificationCategoryLabel(c){return ({tasks:'Задача',reports:'Отчёт',shifts:'Смена',important:'Важное'})[c]||'Важное';}
+function notificationTarget(n){
+ const c=notificationCategory(n),k=String(n?.kind||'').toLowerCase();
+ if(c==='shifts')return 'shift';
+ if(c==='reports'||k.includes('approved')||k.includes('rejected'))return 'reports';
+ if(c==='tasks')return 'tasks';
+ return 'settings';
+}
+function openNotificationTarget(target){
+ closeSettings();
+ if(target==='tasks'){const b=document.querySelector('#openTasksBtn,[data-open-tasks],#myTasksBtn');if(b){b.click();return;}toast('Открой раздел «Мои задачи» из главного меню.');return;}
+ if(target==='shift'||target==='reports'){const b=document.querySelector('#openShiftReportsBtn,[data-open-shift-reports],#shiftReportsBtn');if(b){b.click();return;}toast('Открой раздел «Сменные отчёты» из меню приложения.');return;}
+ openSettings();
+}
+function renderNotificationCenter(){
+ const box=document.querySelector('#notificationCenterList'),filter=document.querySelector('#notificationCenterFilter')?.value||'all';
+ const unread=notificationCenterRows.filter(n=>!n.read_at).length,unreadEl=document.querySelector('#notificationUnreadCount');
+ if(unreadEl)unreadEl.textContent='Непрочитанных: '+unread;
+ const rows=notificationCenterRows.filter(n=>filter==='all'||(filter==='unread'?!n.read_at:notificationCategory(n)===filter));
+ box.innerHTML=rows.length?rows.map(n=>{const cat=notificationCategory(n),target=notificationTarget(n);return '<article class="notification-center-item '+(!n.read_at?'unread':'')+'"><div class="notification-copy"><span class="notification-type">'+notificationCategoryLabel(cat)+'</span><strong>'+escapeHtml(n.title||'Уведомление')+(!n.read_at?'<span class="notification-unread-dot" aria-label="Непрочитано"></span>':'')+'</strong><p>'+escapeHtml(n.body||'')+'</p><time>'+escapeHtml(n.created_at?new Date(n.created_at).toLocaleString('ru-RU'):'')+(n.read_at?' · Прочитано':' · Новое')+'</time></div><button class="notification-open" type="button" data-notification-target="'+target+'">Открыть</button></article>';}).join(''):'<div class="admin-empty">Уведомлений в этой категории нет.</div>';
+}
 async function loadNotificationCenter(){
  const box=document.querySelector('#notificationCenterList'),status=document.querySelector('#notificationCenterStatus');
  if(!box||!cloudClient||!cloudUser){if(status)status.textContent='Войди в аккаунт, чтобы увидеть уведомления.';return;}
  if(status)status.textContent='Загружаю уведомления…';
  try{
   const {data,error}=await cloudClient.rpc('user_list_notifications',{limit_rows:100});if(error)throw error;
-  const rows=Array.isArray(data)?data:[];
-  box.innerHTML=rows.length?rows.map(n=>'<article class="notification-center-item '+(!n.read_at?'unread':'')+'"><strong>'+escapeHtml(n.title||'Уведомление')+'</strong><p>'+escapeHtml(n.body||'')+'</p><time>'+escapeHtml(n.created_at?new Date(n.created_at).toLocaleString('ru-RU'):'')+(n.read_at?' · Прочитано':' · Новое')+'</time></article>').join(''):'<div class="admin-empty">Уведомлений пока нет.</div>';
-  if(status)status.textContent='Показаны последние '+rows.length+' уведомлений.';
+  notificationCenterRows=Array.isArray(data)?data:[];
+  renderNotificationCenter();
+  if(status)status.textContent='История обновлена · '+notificationCenterRows.length+' уведомлений.';
  }catch(e){if(status)status.textContent=(e.message||'Не удалось загрузить уведомления')+'. Для центра уведомлений выполни supabase/admin-performance-audit.sql.';}
 }
 async function markNotificationCenterRead(){
@@ -2369,6 +2419,7 @@ async function markNotificationCenterRead(){
 }
 
 let adminAllowed=false, adminAccounts=[], adminSelectedId=null, adminSelectedState=null, adminEditRows=[];
+let adminAuditRows=[];let notificationCenterRows=[];
 function adminStatus(message,isError=false){const el=document.querySelector('#adminStatus');if(el){el.textContent=message;el.style.color=isError?'var(--bad)':'var(--muted)';}}
 function adminSetVisible(yes){const b=document.querySelector('#openAdminPanelBtn');if(b)b.classList.toggle('admin-visible',!!yes);adminAllowed=!!yes;}
 async function refreshAdminAccess(){
@@ -2589,14 +2640,34 @@ document.querySelector('#adminUpdateRefreshVersionBtn')?.addEventListener('click
 
 const ADMIN_AUDIT_LABELS={role_changed:'Изменена роль',profile_updated:'Изменён профиль',task_created:'Создана задача',task_updated:'Изменена задача',task_deleted:'Удалена задача',report_approved:'Одобрен отчёт КНЗ',expenses_updated:'Изменены расходы пользователя'};
 async function adminWriteAudit(action,targetUserId=null,details={}){try{const {error}=await cloudClient.rpc('admin_log_action',{action_type:action,target_user_id:targetUserId,details});if(error)console.info('Admin audit log unavailable:',error.message);}catch(e){console.info('Admin audit log unavailable:',e?.message||e);}}
+function adminPopulateAuditFilters(){
+ const select=document.querySelector('#adminAuditTargetFilter');if(!select)return;
+ const old=select.value||'all';
+ select.innerHTML='<option value="all">Все сотрудники</option>'+adminAccounts.map(u=>'<option value="'+escapeHtml(u.user_id)+'">'+escapeHtml(adminAccountName(u))+' · '+escapeHtml(u.email||'без почты')+'</option>').join('');
+ if([...select.options].some(o=>o.value===old))select.value=old;
+}
+function adminRenderAuditLog(){
+ const box=document.querySelector('#adminAuditList');if(!box)return;
+ const target=document.querySelector('#adminAuditTargetFilter')?.value||'all';
+ const type=document.querySelector('#adminAuditTypeFilter')?.value||'all';
+ const from=document.querySelector('#adminAuditFrom')?.value||'',to=document.querySelector('#adminAuditTo')?.value||'';
+ const rows=adminAuditRows.filter(x=>{
+  if(target!=='all'&&String(x.target_user_id||'')!==target)return false;
+  if(type!=='all'&&x.action_type!==type)return false;
+  const day=x.created_at?new Date(x.created_at).toISOString().slice(0,10):'';
+  if(from&&day<from)return false;if(to&&day>to)return false;return true;
+ });
+ box.innerHTML=rows.length?rows.map(x=>'<article class="admin-task"><div class="admin-task-head"><strong>'+escapeHtml(ADMIN_AUDIT_LABELS[x.action_type]||x.action_type||'Действие')+'</strong><span class="recent-count">'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleString('ru-RU'):'—')+'</span></div><div class="admin-task-meta"><span>Исполнитель: '+escapeHtml(x.actor_email||'Неизвестно')+'</span><span>Сотрудник: '+escapeHtml(x.target_name||x.target_email||'—')+'</span></div>'+(x.details&&Object.keys(x.details).length?'<p>'+escapeHtml(Object.entries(x.details).map(([k,v])=>k+': '+String(v)).join(' · '))+'</p>':'')+'</article>').join(''):'<div class="admin-empty">По выбранным фильтрам записей нет.</div>';
+ const count=document.querySelector('#adminAuditCount');if(count)count.textContent='Показано '+rows.length+' из '+adminAuditRows.length+' событий';
+}
 async function adminLoadAuditLog(){
  const box=document.querySelector('#adminAuditList'),status=document.querySelector('#adminAuditStatus');if(!box||!adminAllowed)return;
  box.innerHTML='<div class="admin-empty">Загружаю журнал…</div>';
  try{
-  const {data,error}=await cloudClient.rpc('admin_list_audit_log',{limit_rows:150});if(error)throw error;
-  const rows=Array.isArray(data)?data:[];
-  box.innerHTML=rows.length?rows.map(x=>'<article class="admin-task"><div class="admin-task-head"><strong>'+escapeHtml(ADMIN_AUDIT_LABELS[x.action_type]||x.action_type||'Действие')+'</strong><span class="recent-count">'+escapeHtml(x.created_at?new Date(x.created_at).toLocaleString('ru-RU'):'—')+'</span></div><div class="admin-task-meta"><span>Администратор: '+escapeHtml(x.actor_email||'Неизвестно')+'</span><span>Пользователь: '+escapeHtml(x.target_name||x.target_email||'—')+'</span></div>'+(x.details&&Object.keys(x.details).length?'<p>'+escapeHtml(Object.entries(x.details).map(([k,v])=>k+': '+String(v)).join(' · '))+'</p>':'')+'</article>').join(''):'<div class="admin-empty">Записей пока нет. Новые действия будут фиксироваться после включения журнала.</div>';
-  if(status)status.textContent='Записей: '+rows.length+'. Показаны последние события.';
+  const {data,error}=await cloudClient.rpc('admin_list_audit_log',{limit_rows:300});if(error)throw error;
+  adminAuditRows=Array.isArray(data)?data:[];
+  adminPopulateAuditFilters();adminRenderAuditLog();
+  if(status)status.textContent='Журнал обновлён · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
  }catch(e){box.innerHTML='<div class="admin-empty">Не удалось загрузить журнал. Выполни supabase/admin-performance-audit.sql.</div>';if(status)status.textContent=e.message||'Ошибка журнала';}
 }
 function adminTotalForAccount(u){return Number(u?.total_spent||0);}
@@ -2609,8 +2680,19 @@ function adminRenderAccounts(){
     (roleFilter==='all'||(u.role||'employee')===roleFilter) &&
     (onlineFilter==='all'||(onlineFilter==='online'?u.is_online===true:u.is_online!==true))
   );
+  const sort=document.querySelector('#adminUserSort')?.value||'activity';
+  const roleOrder={shift_senior:0,employee_knz:1,employee:2};
+  visible.sort((a,b)=>{
+    const online=(b.is_online===true?1:0)-(a.is_online===true?1:0);if(online)return online;
+    if(sort==='name_asc'||sort==='name_desc'){const d=adminAccountName(a).localeCompare(adminAccountName(b),'ru',{sensitivity:'base'});return sort==='name_desc'?-d:d;}
+    if(sort==='role'){const d=(roleOrder[a.role]??9)-(roleOrder[b.role]??9);return d||adminAccountName(a).localeCompare(adminAccountName(b),'ru');}
+    const ta=a.last_seen_at?new Date(a.last_seen_at).getTime():0,tb=b.last_seen_at?new Date(b.last_seen_at).getTime():0;
+    return sort==='activity_old'?ta-tb:tb-ta;
+  });
   const list=document.querySelector('#adminAccountsList');
   list.innerHTML=visible.length?visible.map(u=>{const roleLabels={employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ / Старший КНЗ',shift_day:'Дневная смена',shift_night:'Ночная смена'};const roles=[roleLabels[u.role]||u.role||'Сотрудник',u.shift_role?roleLabels[u.shift_role]||u.shift_role:null].filter(Boolean);return '<button type="button" class="admin-account '+(u.user_id===adminSelectedId?'active':'')+'" data-admin-user="'+escapeHtml(u.user_id)+'"><strong>'+escapeHtml(u.email||'Без почты')+'</strong><span>'+escapeHtml(adminAccountName(u))+'</span><span class="admin-account-roles">'+roles.map(r=>'<span class="admin-role-chip">'+escapeHtml(r)+'</span>').join('')+'</span><span class="settings-hint">Создан '+escapeHtml(adminFormatDate(u.created_at))+'</span><span class="admin-account-live"><span class="admin-live-badge '+(u.is_online?'is-online':'')+'">'+(u.is_online?'В сети':'Не в сети')+'</span><span class="admin-account-last-seen">'+(u.last_seen_at?'Последняя активность · '+escapeHtml(new Date(u.last_seen_at).toLocaleString('ru-RU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})):'Активность не зафиксирована')+'</span></span><span class="admin-account-total">'+(u.summary_only?'Расходы загрузятся при открытии':fmt(adminTotalForAccount(u))+' · '+Number(u.expense_count||0)+' записей')+'</span></button>';}).join(''):'<div class="admin-empty">Пользователи не найдены.</div>';
+  const onlineCount=adminAccounts.filter(u=>u.is_online===true).length;
+  const updated=document.querySelector('#adminAccountsUpdated');if(updated)updated.textContent=onlineCount+' в сети · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
   document.querySelector('#adminUsersCount').textContent=String(adminAccounts.length);
   const summaryOnly=adminAccounts.some(u=>u.summary_only);
   document.querySelector('#adminGlobalTotal').textContent=summaryOnly?'По запросу':fmt(adminAccounts.reduce((a,u)=>a+adminTotalForAccount(u),0));
@@ -2640,6 +2722,20 @@ async function openAdminPanel(){
     adminRenderAccounts();adminPopulateAssignees();adminLoadRoles();
     if(adminSelectedId&&adminAccounts.some(u=>u.user_id===adminSelectedId))await adminSelectAccount(adminSelectedId);
   }catch(e){document.querySelector('#adminAccountsList').innerHTML='<div class="admin-empty">Не удалось загрузить аккаунты. Проверь, что выполнил supabase/admin.sql.</div>';adminStatus(e.message||'Ошибка загрузки',true);}
+}
+async function adminRefreshAccounts(){
+ const btn=document.querySelector('#adminAccountsRefreshBtn'),label=document.querySelector('#adminAccountsUpdated');
+ if(btn){btn.disabled=true;btn.textContent='Обновляю…';}
+ if(label)label.textContent='Запрашиваю свежие статусы…';
+ try{
+  const {data,error}=await cloudClient.rpc('admin_list_accounts_summary');
+  if(error)throw error;
+  adminAccounts=(Array.isArray(data)?data:(data?.accounts||[])).map(u=>({...u,summary_only:true,total_spent:0,expense_count:0}));
+  adminRenderAccounts();adminPopulateAssignees();adminPopulateAuditFilters();
+  if(adminSelectedId&&adminAccounts.some(u=>u.user_id===adminSelectedId))await adminSelectAccount(adminSelectedId);
+  if(label)label.textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+ }catch(e){if(label)label.textContent='Не удалось обновить: '+(e.message||'ошибка');adminStatus('Не удалось обновить статусы. Проверь подключение и SQL-миграцию.',true);}
+ finally{if(btn){btn.disabled=false;btn.textContent='↻ Обновить';}}
 }
 function closeAdminPanel(){document.querySelector('#adminPanelSheet').classList.remove('open');document.querySelector('#adminPanelSheet').setAttribute('aria-hidden','true');}
 function adminFlattenState(data){
@@ -2760,7 +2856,10 @@ document.querySelector('#adminReportsList')?.addEventListener('click',e=>{const 
 document.querySelector('#adminUserSearch')?.addEventListener('input',adminRenderAccounts);
 document.querySelector('#adminUserRoleFilter')?.addEventListener('change',adminRenderAccounts);
 document.querySelector('#adminUserOnlineFilter')?.addEventListener('change',adminRenderAccounts);
+document.querySelector('#adminUserSort')?.addEventListener('change',adminRenderAccounts);
+document.querySelector('#adminAccountsRefreshBtn')?.addEventListener('click',adminRefreshAccounts);
 document.querySelector('#adminAuditRefreshBtn')?.addEventListener('click',adminLoadAuditLog);
+['adminAuditTargetFilter','adminAuditTypeFilter','adminAuditFrom','adminAuditTo'].forEach(id=>document.querySelector('#'+id)?.addEventListener('change',adminRenderAuditLog));
 document.querySelector('#adminAccountsList')?.addEventListener('click',e=>{const b=e.target.closest('[data-admin-user]');if(b)adminSelectAccount(b.dataset.adminUser);});
 document.querySelector('#adminAccountDetail')?.addEventListener('input',e=>{if(e.target.id==='adminExpenseSearch')adminRenderExpenseRows();});
 document.querySelector('#adminAccountDetail')?.addEventListener('click',e=>{
@@ -3163,6 +3262,8 @@ async function changeAccountPassword(){
 document.querySelector('#refreshDeviceSessionsBtn')?.addEventListener('click',refreshDeviceSessions);
 document.querySelector('#refreshNotificationCenterBtn')?.addEventListener('click',loadNotificationCenter);
 document.querySelector('#markNotificationsReadBtn')?.addEventListener('click',markNotificationCenterRead);
+document.querySelector('#notificationCenterFilter')?.addEventListener('change',renderNotificationCenter);
+document.querySelector('#notificationCenterList')?.addEventListener('click',e=>{const b=e.target.closest('[data-notification-target]');if(b)openNotificationTarget(b.dataset.notificationTarget);});
 document.querySelector('#settingsLogoutBtn').addEventListener('click',signOut);
 document.querySelector('#settingsCsvBtn').addEventListener('click',exportCSV);
 document.querySelector('#settingsBackupBtn').addEventListener('click',exportBackup);
