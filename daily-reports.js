@@ -328,7 +328,7 @@
       const note=$('#stFeatureNotice'),settings=$('#drSettingsView');
       if(section==='tasks'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');$('#shiftTasksWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'});}
       else if(section==='reports'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');open();}
-      else if(section==='stock'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');if(typeof openCatalog==='function')openCatalog();else $('#openCatalogBtn')?.click();}
+      else if(section==='stock'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');if(typeof closeShiftPanel==='function')closeShiftPanel();if(typeof openCatalog==='function')openCatalog();else $('#openCatalogBtn')?.click();}
       else if(section==='roles'){note?.classList.remove('visible');if(isReviewer){settings?.classList.remove('dr-hidden');renderCategories();loadUsers();settings?.scrollIntoView({behavior:'smooth',block:'start'});}else if(note){note.innerHTML='<strong>Недостаточно прав</strong>Назначать дневную и ночную смену может только Админ или СТ.';note.classList.add('visible');}}
       else if(section==='spend'){settings?.classList.add('dr-hidden');if(note){note.innerHTML='<strong>Общие отчёты трат</strong>Этот раздел будет показывать, кто какие товары взял, количество и общую сумму. Сейчас личные расходы пользователей изолированы; для безопасного общего отчёта нужно подключить отдельный защищённый источник Supabase.';note.classList.add('visible');}}
       else if(section==='analytics'){
