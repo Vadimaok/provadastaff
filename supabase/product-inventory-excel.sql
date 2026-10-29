@@ -70,7 +70,7 @@ create or replace function public.shared_stock_set(
  product_name text,new_quantity numeric,new_unit text default 'шт',
  new_low_stock_threshold numeric default null,new_category text default 'другое',new_price numeric default 0
 )
-returns boolean language plpgsql security definer set search_path='' as $
+returns boolean language plpgsql security definer set search_path='' as $$
 declare existing_name text;
 begin
  if (select auth.uid()) is null then raise exception 'Нужно войти в аккаунт' using errcode='42501'; end if;
