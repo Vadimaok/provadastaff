@@ -320,7 +320,28 @@
       startLiveUpdates();scheduleLiveRefresh();
     }
   });
+  async function loadSharedSpend(){
+    const rows=$('#stSpendRows'),foot=$('#stSpendFoot');if(!rows)return;
+    if(!cloudClient||!cloudUser){rows.innerHTML='<tr><td colspan="6">Войди в аккаунт.</td></tr>';return;}
+    rows.innerHTML='<tr><td colspan="6">Загружаю журнал…</td></tr>';
+    try{
+      const {data,error}=await cloudClient.rpc('shared_product_issues_list',{date_from:null,date_to:null});if(error)throw error;
+      const items=Array.isArray(data?.items)?data.items:[];const total=Number(data?.total)||0;
+      if($('#stSpendTotal'))$('#stSpendTotal').textContent=new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:2}).format(total);
+      if($('#stSpendCount'))$('#stSpendCount').textContent=String(data?.count||items.length);
+      rows.innerHTML=items.length?items.map(x=>'<tr><td>'+esc(new Date(x.created_at).toLocaleString('ru-RU'))+'</td><td>'+esc(x.employee_name||'Сотрудник')+'</td><td>'+esc(x.product_name)+'</td><td>'+esc(x.quantity)+' '+esc(x.unit||'шт')+'</td><td>'+esc(x.unit_price)+' ₽</td><td>'+esc(x.total)+' ₽</td></tr>').join(''):'<tr><td colspan="6">Выдач пока нет. Покупки из общего каталога появятся здесь после установки SQL-миграции.</td></tr>';
+      if(foot)foot.textContent='Записей: '+items.length+'. Сумма считается по журналу общих выдач; личные расходы не раскрываются.';
+      window.__provodaSharedSpendRows=items;
+    }catch(e){rows.innerHTML='<tr><td colspan="6">Не удалось загрузить общие траты. Проверь применение supabase/shared-stock-spend-custom-roles.sql. '+esc(e.message||'')+'</td></tr>';if(foot)foot.textContent='Доступ ограничен Админом и СТ.';}
+  }
+  function downloadSharedSpendCsv(){
+    const rows=window.__provodaSharedSpendRows||[];if(!rows.length){notice('Нет записей для экспорта.',true);return;}
+    const csv=[['Дата','Сотрудник','Товар','Количество','Ед.','Цена','Сумма','Комментарий'],...rows.map(x=>[new Date(x.created_at).toLocaleString('ru-RU'),x.employee_name,x.product_name,x.quantity,x.unit,x.unit_price,x.total,x.note||''])].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
+    const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='provoda-shared-spend.csv';a.click();URL.revokeObjectURL(url);
+  }
   document.addEventListener('click',e=>{
+    if(e.target.closest('[data-st-spend-refresh]')){loadSharedSpend();return;}
+    if(e.target.closest('[data-st-spend-export]')){downloadSharedSpendCsv();return;}
     const quick=e.target.closest('[data-st-section]');
     if(quick){
       const section=quick.dataset.stSection;
@@ -330,16 +351,24 @@
       else if(section==='reports'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');open();}
       else if(section==='stock'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');if(typeof closeShiftPanel==='function')closeShiftPanel();if(typeof openCatalog==='function')openCatalog();else $('#openCatalogBtn')?.click();}
       else if(section==='roles'){note?.classList.remove('visible');if(isReviewer){settings?.classList.remove('dr-hidden');renderCategories();loadUsers();settings?.scrollIntoView({behavior:'smooth',block:'start'});}else if(note){note.innerHTML='<strong>Недостаточно прав</strong>Назначать дневную и ночную смену может только Админ или СТ.';note.classList.add('visible');}}
-      else if(section==='spend'){settings?.classList.add('dr-hidden');if(note){note.innerHTML='<strong>Общие отчёты трат</strong>Этот раздел будет показывать, кто какие товары взял, количество и общую сумму. Сейчас личные расходы пользователей изолированы; для безопасного общего отчёта нужно подключить отдельный защищённый источник Supabase.';note.classList.add('visible');}}
+      else if(section==='spend'){
+        settings?.classList.add('dr-hidden');
+        if(note){note.innerHTML='<strong>Общие траты · выдача товаров</strong><div class="st-analytics-grid"><div><span>Общая сумма</span><b id="stSpendTotal">—</b></div><div><span>Выдач</span><b id="stSpendCount">—</b></div></div><div class="dr-actions" style="margin-top:12px"><button type="button" class="dr-btn" data-st-spend-refresh>Обновить</button><button type="button" class="dr-btn" data-st-spend-export>Скачать CSV</button></div><div class="dr-table-wrap" style="margin-top:12px"><table class="dr-table" style="min-width:620px"><thead><tr><th>Когда</th><th>Кто</th><th>Что взял</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr></thead><tbody id="stSpendRows"><tr><td colspan="6">Загружаю…</td></tr></tbody></table></div><p id="stSpendFoot" class="small">Журнал выдач из общего каталога. Для совместной работы примени новую SQL-миграцию.</p>';note.classList.add('visible');}
+        loadSharedSpend();
+      }
       else if(section==='analytics'){
         settings?.classList.add('dr-hidden');
-        if(note){note.innerHTML='<strong>Аналитика сменных отчётов</strong><div class="st-analytics-grid"><div><span>Всего</span><b id="stMetricTotal">—</b></div><div><span>Одобрено</span><b id="stMetricApproved">—</b></div><div><span>Отклонено</span><b id="stMetricRejected">—</b></div><div><span>На проверке</span><b id="stMetricPending">—</b></div><div><span>Успешность</span><b id="stMetricRate">—</b></div><div><span>Дневные / ночные</span><b id="stMetricShifts">—</b></div></div><p id="stAnalyticsFoot" style="margin:10px 0 0">Загружаю актуальные данные…</p>';note.classList.add('visible');}
+        if(note){note.innerHTML='<strong>Расширенная аналитика · сотрудники и динамика</strong><div class="st-analytics-grid"><div><span>Всего отчётов</span><b id="stMetricTotal">—</b></div><div><span>Одобрено</span><b id="stMetricApproved">—</b></div><div><span>Отклонено / ошибки</span><b id="stMetricRejected">—</b></div><div><span>На проверке</span><b id="stMetricPending">—</b></div><div><span>Успешность</span><b id="stMetricRate">—</b></div><div><span>Дневные / ночные</span><b id="stMetricShifts">—</b></div></div><h4 style="margin:16px 0 8px">Показатели по сотрудникам</h4><div id="stAnalyticsPeople" class="dr-table-wrap"><div class="dr-card">Загружаю…</div></div><h4 style="margin:16px 0 8px">Динамика по дням</h4><div id="stAnalyticsTrend" class="dr-table-wrap"></div><p id="stAnalyticsFoot" style="margin:10px 0 0">Загружаю актуальные данные…</p>';note.classList.add('visible');}
         load({silent:true}).then(()=>{
           const total=reports.length,approved=reports.filter(r=>r.status==='approved').length,rejected=reports.filter(r=>r.status==='rejected').length,pending=reports.filter(r=>r.status==='pending').length,done=approved+rejected,rate=done?Math.round(approved/done*100):0,day=reports.filter(r=>r.shift_type==='day').length,night=reports.filter(r=>r.shift_type==='night').length;
           const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=String(value);};
           set('stMetricTotal',total);set('stMetricApproved',approved);set('stMetricRejected',rejected);set('stMetricPending',pending);set('stMetricRate',done?rate+'%':'—');set('stMetricShifts',day+' / '+night);
-          set('stAnalyticsFoot','Учитываются последние '+total+' сменных отчётов, доступных в системе. Успешность рассчитана среди уже проверенных отчётов.');
-        }).catch(()=>{setTimeout(()=>{const foot=$('#stAnalyticsFoot');if(foot)foot.textContent='Не удалось обновить статистику. Открой «Отчёты» и проверь подключение.';},0);});
+          const byPerson=new Map(),byDate=new Map();
+          reports.forEach(r=>{const name=r.author_name||users.find(u=>u.user_id===r.submitted_by)?.display_name||r.submitted_by||'Сотрудник';const p=byPerson.get(name)||{total:0,approved:0,rejected:0,pending:0,missing:0};p.total++;p[r.status]=(p[r.status]||0)+1;if(Array.isArray(r.items)&&r.items.some(i=>!i.completed))p.missing++;byPerson.set(name,p);const date=String(r.report_date||r.submitted_at||'').slice(0,10);if(date){const d=byDate.get(date)||{total:0,approved:0,rejected:0};d.total++;d[r.status]=(d[r.status]||0)+1;byDate.set(date,d);}});
+          const people=$('#stAnalyticsPeople');if(people){const rows=[...byPerson.entries()].sort((a,b)=>b[1].total-a[1].total);people.innerHTML=rows.length?'<table class="dr-table"><thead><tr><th>Сотрудник</th><th>Всего</th><th>Успешно</th><th>Ошибки / отказ</th><th>На проверке</th><th>Незаполненный чек-лист</th></tr></thead><tbody>'+rows.map(([name,p])=>'<tr><td>'+esc(name)+'</td><td>'+p.total+'</td><td class="good">'+p.approved+'</td><td class="warn">'+p.rejected+'</td><td>'+p.pending+'</td><td>'+p.missing+'</td></tr>').join('')+'</tbody></table>':'Нет отчётов для анализа.';}
+          const trend=$('#stAnalyticsTrend');if(trend){const rows=[...byDate.entries()].sort((a,b)=>b[0].localeCompare(a[0])).slice(0,21);trend.innerHTML=rows.length?'<table class="dr-table"><thead><tr><th>Дата</th><th>Всего</th><th>Одобрено</th><th>Отклонено</th><th>Успешность</th></tr></thead><tbody>'+rows.map(([date,p])=>'<tr><td>'+esc(date)+'</td><td>'+p.total+'</td><td class="good">'+(p.approved||0)+'</td><td class="warn">'+(p.rejected||0)+'</td><td>'+((p.approved||0)+(p.rejected||0)?Math.round((p.approved||0)/((p.approved||0)+(p.rejected||0))*100)+'%':'—')+'</td></tr>').join('')+'</tbody></table>':'Нет данных.';}
+          set('stAnalyticsFoot','Анализ последних '+total+' загруженных сменных отчётов. «Незаполненный чек-лист» — отчёты, где хотя бы один пункт не отмечен; это индикатор ошибки, а не автоматическое отклонение.');
+        }).catch(()=>{const foot=$('#stAnalyticsFoot');if(foot)foot.textContent='Не удалось обновить статистику. Открой «Отчёты» и проверь подключение.';});
       }
       return;
     }
