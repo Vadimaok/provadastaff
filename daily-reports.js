@@ -490,6 +490,17 @@
     const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='provoda-shared-spend.csv';a.click();URL.revokeObjectURL(url);
   }
   document.addEventListener('change',async e=>{if(e.target?.id==='stInventoryFile'&&e.target.files?.[0]){try{const rows=await inventoryReadFile(e.target.files[0]);inventoryPreview(rows);}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать файл.';}}},true);
+  document.addEventListener('input',e=>{
+    const card=e.target.closest('#stStockTable [data-st-product]');if(!card)return;
+    const cost=card.querySelector('[data-st-cost]'),qty=card.querySelector('[data-st-qty]');
+    if(e.target.matches('[data-st-cost]')){
+      const q=Number(qty?.value),v=Number(cost?.value);
+      if(q>0&&Number.isFinite(v)&&v>=0)card.dataset.unitCost=String(v/q);
+    }else if(e.target.matches('[data-st-qty]')){
+      const q=Number(qty?.value),unit=Number(card.dataset.unitCost)||0;
+      if(Number.isFinite(q)&&q>=0&&cost)cost.value=(unit*q).toFixed(2);
+    }
+  },true);
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-st-spend-refresh]')){loadSharedSpend();return;}
     if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}
