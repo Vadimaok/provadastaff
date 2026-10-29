@@ -73,14 +73,18 @@
     const shiftWorkspace=$('#shiftTasksWorkspace');
     const settingsView=$('#drSettingsView');
     if(shiftWorkspace&&settingsView&&!$('#drShiftAdminCard')){
-      const adminCard=document.createElement('section');
-      adminCard.id='drShiftAdminCard';
-      adminCard.className='admin-card dr-shift-admin-card';
+      const nav=document.createElement('nav');
+      nav.id='stQuickNav';nav.className='st-quick-nav';nav.setAttribute('aria-label','Разделы панели управления СТ');
+      nav.innerHTML='<button type="button" class="st-quick-btn active" data-st-section="tasks"><span class="st-quick-icon">✓</span><span>Задачи</span></button><button type="button" class="st-quick-btn" data-st-section="reports"><span class="st-quick-icon">▤</span><span>Отчёты</span></button><button type="button" class="st-quick-btn" data-st-section="stock"><span class="st-quick-icon">▦</span><span>Тов. база</span></button><button type="button" class="st-quick-btn" data-st-section="spend"><span class="st-quick-icon">₽</span><span>Общие траты</span></button><button type="button" class="st-quick-btn" data-st-section="analytics"><span class="st-quick-icon">↗</span><span>Аналитика</span></button><button type="button" class="st-quick-btn" data-st-section="roles"><span class="st-quick-icon">♙</span><span>Роли КНЗ</span></button>';
+      const navStyle=document.createElement('style');navStyle.id='stQuickNavStyles';
+      navStyle.textContent=`.st-quick-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:0 0 16px}.st-quick-btn{min-width:0;min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:9px 5px;border:1px solid var(--line,rgba(255,255,255,.1));border-radius:14px;background:rgba(255,255,255,.025);color:var(--text,#edf3fb);font:600 11px/1.15 inherit;cursor:pointer;transition:background .16s,border-color .16s,transform .16s}.st-quick-btn:hover{border-color:rgba(79,140,255,.45);transform:translateY(-1px)}.st-quick-btn.active{background:linear-gradient(145deg,rgba(79,140,255,.2),rgba(53,198,176,.09));border-color:rgba(79,140,255,.55);box-shadow:inset 0 1px rgba(255,255,255,.04)}.st-quick-icon{display:grid;place-items:center;width:27px;height:27px;border-radius:9px;background:rgba(79,140,255,.12);font-size:15px;color:#8db5ff}.st-quick-btn span:last-child{white-space:nowrap}.st-feature-notice{display:none;padding:16px;border:1px solid var(--line,rgba(255,255,255,.1));border-radius:14px;background:rgba(255,255,255,.025);color:var(--muted,#8d9bad);font-size:13px;line-height:1.55;margin:0 0 14px}.st-feature-notice strong{display:block;color:var(--text,#edf3fb);font-size:14px;margin-bottom:5px}.st-feature-notice.visible{display:block}@media(max-width:760px){.st-quick-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.st-quick-btn{min-height:61px}.st-quick-btn span:last-child{font-size:10px}}@media(max-width:380px){.st-quick-btn{padding:8px 2px}.st-quick-icon{width:24px;height:24px}}`;
+      document.head.appendChild(navStyle);
+      const featureNotice=document.createElement('div');featureNotice.id='stFeatureNotice';featureNotice.className='st-feature-notice';featureNotice.setAttribute('role','status');
+      nav.insertAdjacentElement('afterend',featureNotice);
+      shiftWorkspace.parentNode.insertBefore(nav,shiftWorkspace);
+      const adminCard=document.createElement('section');adminCard.id='drShiftAdminCard';adminCard.className='admin-card dr-shift-admin-card';
       adminCard.innerHTML='<div class="dr-admin-hero"><div class="dr-admin-icon" aria-hidden="true">▤</div><div><div class="small">PROVODA STAFF · CONTROL</div><h3>Ежедневные отчёты</h3><p>Настройка чек-листов, сменных ролей и доступности отчётов.</p></div></div><div id="drShiftAdminNotice" class="dr-admin-notice" role="status" aria-live="polite"></div>';
-      settingsView.classList.add('dr-shift-settings');
-      adminCard.appendChild(settingsView);
-      shiftWorkspace.appendChild(adminCard);
-      $('#drSettingsTab')?.classList.add('dr-hidden');
+      settingsView.classList.add('dr-shift-settings');adminCard.appendChild(settingsView);shiftWorkspace.appendChild(adminCard);$('#drSettingsTab')?.classList.add('dr-hidden');
     }
     $('#drClose').addEventListener('click',close);
     $('#drToggleChecklist').addEventListener('click',()=>{const box=$('#drChecklist'),btn=$('#drToggleChecklist'),open=box.classList.contains('dr-hidden');box.classList.toggle('dr-hidden',!open);btn.setAttribute('aria-expanded',String(open));btn.textContent=open?'Чек-лист смены · скрыть отметки':'Чек-лист смены · показать отметки';});
@@ -317,10 +321,23 @@
     }
   });
   document.addEventListener('click',e=>{
+    const quick=e.target.closest('[data-st-section]');
+    if(quick){
+      const section=quick.dataset.stSection;
+      document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b===quick));
+      const note=$('#stFeatureNotice'),settings=$('#drSettingsView');
+      if(section==='tasks'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');$('#shiftTasksWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'});}
+      else if(section==='reports'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');open();}
+      else if(section==='stock'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');if(typeof openCatalog==='function')openCatalog();else $('#openCatalogBtn')?.click();}
+      else if(section==='roles'){note?.classList.remove('visible');if(isReviewer){settings?.classList.remove('dr-hidden');renderCategories();loadUsers();settings?.scrollIntoView({behavior:'smooth',block:'start'});}else if(note){note.innerHTML='<strong>Недостаточно прав</strong>Назначать дневную и ночную смену может только Админ или СТ.';note.classList.add('visible');}}
+      else if(section==='spend'){settings?.classList.add('dr-hidden');if(note){note.innerHTML='<strong>Общие отчёты трат</strong>Этот раздел будет показывать, кто какие товары взял, количество и общую сумму. Сейчас личные расходы пользователей изолированы; для безопасного общего отчёта нужно подключить отдельный защищённый источник Supabase.';note.classList.add('visible');}}
+      else if(section==='analytics'){settings?.classList.add('dr-hidden');if(note){note.innerHTML='<strong>Аналитика</strong>Здесь будут показатели успешных и отклонённых отчётов, просрочек и статистика по сотрудникам. Сменные отчёты уже доступны в разделе «Отчёты».';note.classList.add('visible');}}
+      return;
+    }
     if(e.target.closest('#openDailyReportsBtn'))open();
     if(e.target.closest('#openShiftPanelBtn')){
-      ensureUI();
-      if(cloudClient&&cloudUser)load().then(()=>{if(isReviewer){$('#drSettingsView')?.classList.remove('dr-hidden');renderCategories();loadUsers();}});
+      ensureUI();document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b.dataset.stSection==='tasks'));$('#stFeatureNotice')?.classList.remove('visible');
+      if(cloudClient&&cloudUser)load().then(()=>{if(isReviewer){$('#drSettingsView')?.classList.add('dr-hidden');renderCategories();loadUsers();}});
     }
   });
   document.addEventListener('DOMContentLoaded',ensureUI);
