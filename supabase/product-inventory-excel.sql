@@ -93,3 +93,25 @@ revoke all on function public.shared_stock_set(text,numeric,text,numeric,text,nu
 grant execute on function public.shared_stock_set(text,numeric,text,numeric,text,numeric) to authenticated;
 
 commit;
+
+-- Secure inline editing for inventory rows in the ST panel.
+create or replace function public.admin_inventory_update_item(product_name text, item jsonb)
+returns boolean language plpgsql security definer set search_path='' as $$
+declare actor uuid := (select auth.uid()); nm text := trim(coalesce(product_name,''));
+begin
+ if actor is null then raise exception 'Нужно войти в аккаунт' using errcode='42501'; end if;
+ if not public.is_current_admin() and public.daily_report_my_role()<>'shift_senior' then raise exception 'Редактировать товарную базу может только Админ или СТ' using errcode='42501'; end if;
+ if length(nm) not between 1 and 200 or jsonb_typeof(item)<>'object' then raise exception 'Некорректные данные товара'; end if;
+ if exists(select 1 from jsonb_each_text(item) e where e.key in ('volume','purchase_price','price','warehouse_quantity','cold_quantity','shelf_quantity','total_quantity','plan_quantity','tg_writeoffs','inventory_value') and nullif(trim(e.value),'') is not null and trim(e.value)::numeric<0) then raise exception 'Количество и цены не могут быть отрицательными'; end if;
+ update public.product_catalog c set
+  category=case when item ? 'category' and nullif(trim(item->>'category'),'') is not null then left(trim(item->>'category'),80) else c.category end,
+  volume=coalesce(nullif(item->>'volume','')::numeric,c.volume),purchase_price=coalesce(nullif(item->>'purchase_price','')::numeric,c.purchase_price),price=coalesce(nullif(item->>'price','')::numeric,c.price),
+  warehouse_quantity=coalesce(nullif(item->>'warehouse_quantity','')::numeric,c.warehouse_quantity),cold_quantity=coalesce(nullif(item->>'cold_quantity','')::numeric,c.cold_quantity),shelf_quantity=coalesce(nullif(item->>'shelf_quantity','')::numeric,c.shelf_quantity),
+  total_quantity=coalesce(nullif(item->>'total_quantity','')::numeric,c.total_quantity),plan_quantity=coalesce(nullif(item->>'plan_quantity','')::numeric,c.plan_quantity),total_deviation=coalesce(nullif(item->>'total_deviation','')::numeric,c.total_deviation),tg_writeoffs=coalesce(nullif(item->>'tg_writeoffs','')::numeric,c.tg_writeoffs),inventory_value=coalesce(nullif(item->>'inventory_value','')::numeric,c.inventory_value),
+  stock_quantity=coalesce(nullif(item->>'total_quantity','')::numeric,c.stock_quantity),updated_at=now(),updated_by=actor
+ where lower(trim(c.name))=lower(nm) and c.active=true;
+ if not found then raise exception 'Товар не найден или отключён'; end if;
+ return true;
+end $$;
+revoke all on function public.admin_inventory_update_item(text,jsonb) from public,anon;
+grant execute on function public.admin_inventory_update_item(text,jsonb) to authenticated;
