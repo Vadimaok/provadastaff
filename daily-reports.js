@@ -403,9 +403,23 @@
       const merged=new Map(base.map(x=>[String(x.name||'').trim().toLowerCase(),{...x}]));
       saved.forEach(x=>merged.set(String(x.name||'').trim().toLowerCase(),{...(merged.get(String(x.name||'').trim().toLowerCase())||{}),...x}));
       const rows=[...merged.values()].sort((x,y)=>String(x.name).localeCompare(String(y.name),'ru'));
-      box.innerHTML=rows.length?'<table class="dr-table" style="min-width:1250px"><thead><tr><th>Название</th><th>Категория</th><th>Объём / вес</th><th>Закупка</th><th>Реализация</th><th>Склад</th><th>Холод</th><th>Полки</th><th>Итого</th><th>План</th><th>Отклонение</th><th>Списания TG</th><th>Стоимость</th><th>Коррекция остатка</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.category||'')+'</td><td>'+esc(x.volume??'—')+'</td><td>'+esc(x.purchase_price??'—')+'</td><td>'+esc(x.price??'—')+'</td><td>'+esc(x.warehouse_quantity??'—')+'</td><td>'+esc(x.cold_quantity??'—')+'</td><td>'+esc(x.shelf_quantity??'—')+'</td><td><strong>'+esc(x.total_quantity??x.stock_quantity??'—')+'</strong></td><td>'+esc(x.plan_quantity??'—')+'</td><td>'+esc(x.total_deviation??'—')+'</td><td>'+esc(x.tg_writeoffs??'—')+'</td><td>'+esc(x.inventory_value??'—')+'</td><td><div style="display:flex;gap:5px;min-width:140px"><input data-st-stock-qty="'+esc(x.name)+'" type="number" min="0" step="0.001" value="'+(x.total_quantity??x.stock_quantity??'')+'" placeholder="Кол-во" style="width:78px;min-width:70px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px"><button type="button" class="dr-btn" data-st-stock-save="'+esc(x.name)+'">Сохранить</button></div></td></tr>').join('')+'</tbody></table>':'<div class="dr-card">Товарная база пока пустая. Импортируй Excel или вставь таблицу из буфера.</div>';
+      const fields=[['category','Категория','text'],['volume','Объём / вес','number'],['purchase_price','Закупка','number'],['price','Реализация','number'],['warehouse_quantity','Склад','number'],['cold_quantity','Холод','number'],['shelf_quantity','Полки','number'],['total_quantity','Итого','number'],['plan_quantity','План','number'],['total_deviation','Отклонение','number'],['tg_writeoffs','Списания TG','number'],['inventory_value','Стоимость','number']];
+      box.innerHTML=rows.length?'<table class="dr-table" style="min-width:1550px"><thead><tr><th>Название</th>'+fields.map(f=>'<th>'+f[1]+'</th>').join('')+'<th>Действие</th></tr></thead><tbody>'+rows.map(x=>'<tr data-st-inventory-row="'+esc(x.name)+'"><td><strong>'+esc(x.name)+'</strong></td>'+fields.map(f=>'<td><input data-st-inv-field="'+f[0]+'" type="'+f[2]+'" '+(f[2]==='number'?'step="0.001"':'')+' value="'+esc(x[f[0]]??'')+'" style="width:100px;min-width:85px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px"></td>').join('')+'<td><button type="button" class="dr-btn primary" data-st-inv-save>Сохранить</button></td></tr>').join('')+'</tbody></table>':'<div class="dr-card">Товарная база пока пустая. Импортируй Excel или вставь таблицу из буфера.</div>';
       if(foot)foot.textContent='Всего товаров: '+rows.length+'. Пустые значения сохранены как пустые, а не заменены нулями.';
     }catch(e){box.innerHTML='<div class="dr-card">Не удалось загрузить товарную базу: '+esc(e.message||'')+'.</div>';}
+  }
+  async function saveInventoryItem(button){
+    const row=button.closest('[data-st-inventory-row]'),name=row?.dataset.stInventoryRow,foot=$('#stStockFoot');
+    if(!row||!name)return;
+    const item={};
+    row.querySelectorAll('[data-st-inv-field]').forEach(input=>{const value=input.value.trim();if(value!=='')item[input.dataset.stInvField]=value;});
+    button.disabled=true;button.textContent='Сохраняю…';
+    try{
+      const {error}=await cloudClient.rpc('admin_inventory_update_item',{product_name:name,item});
+      if(error)throw error;
+      if(foot)foot.textContent='Изменения товара «'+name+'» сохранены.';
+      await loadStockTable();
+    }catch(e){if(foot)foot.textContent='Не удалось сохранить товар: '+(e.message||'ошибка');button.disabled=false;button.textContent='Сохранить';}
   }
   async function saveStockRow(name){
     const qtyEl=document.querySelector('[data-st-stock-qty="'+CSS.escape(name)+'"]'),unitEl=document.querySelector('[data-st-stock-unit="'+CSS.escape(name)+'"]'),foot=$('#stStockFoot');
@@ -442,6 +456,7 @@
     if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}
     if(e.target.closest('[data-st-inventory-parse]')){try{const raw=$('#stInventoryPaste')?.value||'';inventoryPreview(inventoryRowsFromMatrix(raw.split(/\r?\n/).map(line=>line.split('\t'))));}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать таблицу.';}return;}
     if(e.target.closest('[data-st-inventory-import]')){inventoryImport();return;}
+    const inventorySave=e.target.closest('[data-st-inv-save]');if(inventorySave){saveInventoryItem(inventorySave);return;}
     const stockSave=e.target.closest('[data-st-stock-save]');if(stockSave){saveStockRow(stockSave.dataset.stStockSave);return;}
     if(e.target.closest('[data-st-spend-export]')){downloadSharedSpendCsv();return;}
     const quick=e.target.closest('[data-st-section]');
