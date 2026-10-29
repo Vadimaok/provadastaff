@@ -1163,7 +1163,7 @@ try {
 <div class="wrap">
   <header class="top">
     <div class="brand"><img class="brand-mark" src="./provoda-logo.svg?v=1" alt=""><div class="brand-copy"><b>Provoda staff</b><span id="monthLabel">—</span></div></div>
-    <div class="actions"><button class="icon" id="openDailyTasksBtn" title="Ежедневные задачи" aria-label="Ежедневные задачи">✓</button>
+    <div class="actions">
       <button class="icon" id="importBtn" title="Импортировать резервную копию JSON" aria-label="Импортировать резервную копию"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v3h14v-3"/></svg></button>
       <button class="icon" id="exportBtn" title="Скачать резервную копию JSON" aria-label="Скачать резервную копию"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M5 16v4h14v-4"/></svg></button>
       <input type="file" id="importFile" accept="application/json,.json" class="hidden">
@@ -1309,7 +1309,65 @@ try {
     <header class="admin-top"><div><h2 id="shiftPanelTitle">Панель управления СТ.</h2><p>Разрабатывается · инструменты старшего смены</p></div><button class="icon" id="closeShiftPanelBtn" type="button" aria-label="Закрыть панель">×</button></header>
     <div id="shiftFeatureDisabled" class="admin-card shift-coming-soon hidden"><h3>Функция временно отключена</h3><p>Администратор временно отключил панель Старший КНЗ.</p></div><section id="shiftTasksWorkspace"><div class="admin-dev-layout"><div class="admin-card"><h3>Назначить задачу КНЗ</h3><p class="settings-hint">Сотрудник КНЗ сможет взять задачу в работу и приложить скриншот результата.</p><input id="shiftTaskEditId" type="hidden"><label class="admin-role-field">Название<input id="shiftTaskTitle" maxlength="100" placeholder="Что нужно сделать?"></label><label class="admin-role-field">Описание<textarea id="shiftTaskDescription" maxlength="2000" placeholder="Подробности задачи…"></textarea></label><label class="admin-role-field">Сотрудник КНЗ<select id="shiftTaskAssignee"><option value="">Загрузка…</option></select></label><div class="admin-inline-actions"><button class="admin-primary" id="shiftTaskSaveBtn" type="button">Назначить задачу</button><button class="ghost" id="shiftTaskCancelBtn" type="button">Очистить</button></div><p id="shiftTaskStatus" class="admin-status"></p></div><div class="admin-card"><div class="admin-detail-head"><div><h3 style="margin:0">Задачи КНЗ</h3><p class="settings-hint">Статусы и отправленные скриншоты</p></div><button class="ghost" id="shiftTaskRefreshBtn" type="button">Обновить</button></div><div id="shiftTaskList" class="admin-task-list"><div class="admin-empty">Загружаем задачи…</div></div></div></div></section>
   </div>
-</div><div id="knzTasksSheet" aria-hidden="true"><div class="admin-shell shift-shell" role="dialog" aria-modal="true"><header class="admin-top"><div><h2>Мои задачи КНЗ</h2><p>Взятие в работу и отправка результата</p></div><button class="icon" id="closeKnzTasksBtn" type="button">×</button></header><div id="knzFeatureDisabled" class="admin-card shift-coming-soon hidden"><h3>Функция временно отключена</h3><p>Администратор временно отключил задачи КНЗ.</p></div><div class="knz-history-module"><button type="button" id="knzHistoryToggle" class="ghost knz-history-toggle" aria-expanded="false"><span>История отчётов</span><span id="knzHistoryCount" class="recent-count">0</span><span id="knzHistoryChevron" aria-hidden="true">⌄</span></button><div id="knzHistoryPanel" class="knz-history-panel hidden"><div class="knz-history-toolbar"><p>Отправленные на проверку, отклонённые и одобренные отчёты.</p><button type="button" id="knzHistoryRefreshBtn" class="ghost">Обновить</button></div><div id="knzHistoryList" class="admin-task-list"><div class="admin-empty">История появится после отправки первого отчёта.</div></div></div></div><div id="knzTaskList" class="admin-task-list"><div class="admin-empty">Загружаем задачи…</div></div></div></div>
+</div><div id="knzTasksSheet" aria-hidden="true"><div class="admin-shell shift-shell" role="dialog" aria-modal="true"><header class="admin-top"><div><h2>Мои задачи КНЗ</h2><p>Взятие в работу и отправка результата</p></div><button class="icon" id="closeKnzTasksBtn" type="button">×</button></header><div id="knzFeatureDisabled" class="admin-card shift-coming-soon hidden"><h3>Функция временно отключена</h3><p>Администратор временно отключил задачи КНЗ.</p></div><div class="knz-history-module"><button type="button" id="knzHistoryToggle" class="ghost knz-history-toggle" aria-expanded="false"><span>История отчётов</span><span id="knzHistoryCount" class="recent-count">0</span><span id="knzHistoryChevron" aria-hidden="true">⌄</span></button><div id="knzHistoryPanel" class="knz-history-panel hidden"><div class="knz-history-toolbar"><p>Отправленные на проверку, отклонённые и одобренные отчёты.</p><button type="button" id="knzHistoryRefreshBtn" class="ghost">Обновить</button></div><div id="knzHistoryList" class="admin-task-list"><div class="admin-empty">История появится после отправки первого отчёта.</div></div></div></div><div id="knzTaskList" class="admin-task-list"><div class="admin-empty">Загружаем задачи…</div></div><style id="dailyTasksStyles">#dailyTasksSheet{display:block;position:static;inset:auto;z-index:auto;overflow:visible;background:transparent;padding:0;backdrop-filter:none}#dailyTasksSheet .dt-shell{max-width:none;margin:0 auto}.dt-head .dt-close{display:none}.dt-head h2{font-size:18px}.dt-card{background:var(--card2)}.dt-tabs{margin-top:14px}</style>
+<section id="dailyTasksSheet" class="admin-card" aria-labelledby="dailyTasksTitle">
+ <div class="dt-shell">
+  <header class="dt-head"><div><h2 id="dailyTasksTitle">Ежедневные задачи</h2><div class="dt-sub" id="dtDateLabel">Чек-лист смены и поручения СТ</div></div></header>
+  <div class="dt-tabs" id="dtTabs"><button class="active" data-dt-tab="mine">Мои задачи</button><button data-dt-tab="review" id="dtReviewTab" class="hidden">На проверку</button><button data-dt-tab="manage" id="dtManageTab" class="hidden">Управление</button></div>
+  <div id="dtMessage" class="dt-message hidden" role="status"></div>
+  <section id="dtMineView"><div id="dtMineList" aria-live="polite"><div class="dt-empty">Загружаю задачи…</div></div></section>
+  <section id="dtReviewView" class="hidden"><div id="dtReviewList"></div></section>
+  <section id="dtManageView" class="hidden">
+   <div class="dt-card"><h3>Добавить ежедневную задачу</h3><p>Она будет появляться в чек-листе каждого сотрудника каждый день.</p>
+    <input class="dt-field" id="dtTemplateTitle" maxlength="140" placeholder="Название задачи">
+    <textarea class="dt-field" id="dtTemplateDescription" maxlength="2000" rows="2" placeholder="Описание (необязательно)"></textarea>
+    <div class="dt-actions"><button class="primary" id="dtCreateTemplateBtn">Добавить в ежедневный список</button></div>
+   </div>
+   <div class="dt-card"><h3>Поручение сотруднику</h3>
+    <input class="dt-field" id="dtAssignmentTitle" maxlength="140" placeholder="Название поручения">
+    <textarea class="dt-field" id="dtAssignmentDescription" maxlength="2000" rows="2" placeholder="Что нужно сделать (необязательно)"></textarea>
+    <select class="dt-field" id="dtEmployeeSelect"><option value="">Загрузка сотрудников…</option></select>
+    <input class="dt-field" id="dtDueDate" type="date">
+    <div class="dt-actions"><button class="primary" id="dtCreateAssignmentBtn">Назначить поручение</button></div>
+   </div>
+  </section>
+ </div>
+</section>
+<script id="dailyTasksScript">
+(()=>{
+ const $=s=>document.querySelector(s), sheet=$('#dailyTasksSheet');
+ if(!sheet||!$('#openDailyTasksBtn'))return;
+ let tab='mine',reviewer=false,items=[],reviewItems=[];
+ const labels={new:'Не выполнена',submitted:'На проверке',approved:'Подтверждена',rejected:'Нужно исправить'};
+ const safe=s=>typeof escapeHtml==='function'?escapeHtml(String(s??'')):String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function message(s,bad=false){const e=$('#dtMessage');e.textContent=s;e.classList.remove('hidden');e.style.color=bad?'var(--bad)':'var(--muted)';}
+ function status(s){return '<span class="dt-status '+safe(s)+'">'+safe(labels[s]||s)+'</span>'}
+ function switchTab(next){tab=next;$('#dtMineView').classList.toggle('hidden',next!=='mine');$('#dtReviewView').classList.toggle('hidden',next!=='review');$('#dtManageView').classList.toggle('hidden',next!=='manage');$('#dtTabs').querySelectorAll('[data-dt-tab]').forEach(b=>b.classList.toggle('active',b.dataset.dtTab===next));if(next==='review')loadReview();}
+ async function open(){if(!cloudClient||!cloudUser){if(typeof toast==='function')toast('Войди в аккаунт, чтобы открыть задачи.');return;}await detectRole();switchTab('mine');await loadMine();}
+ function close(){}
+ async function rpc(name,args={}){const {data,error}=await cloudClient.rpc(name,args);if(error)throw error;return data;}
+ function renderMine(){
+  const box=$('#dtMineList');
+  if(!items.length){box.innerHTML='<div class="dt-empty">На сегодня задач нет. Если нужно, СТ добавит ежедневные задачи или поручения.</div>';return;}
+  box.innerHTML=items.map(t=>'<article class="dt-card"><div class="dt-head"><h3>'+safe(t.title)+'</h3>'+status(t.status)+'</div>'+(t.description?'<p>'+safe(t.description)+'</p>':'')+'<div class="dt-meta">'+(t.kind==='daily'?'Ежедневный чек-лист':'Поручение СТ')+(t.due_date?' · срок '+safe(t.due_date):'')+'</div>'+(t.completion_note?'<p><b>Твой комментарий:</b> '+safe(t.completion_note)+'</p>':'')+(t.reviewer_note?'<p><b>Комментарий СТ:</b> '+safe(t.reviewer_note)+'</p>':'')+((t.status==='new'||t.status==='rejected')?'<textarea class="dt-field" rows="2" maxlength="2000" placeholder="Комментарий к выполнению (необязательно)" data-dt-note="'+safe(t.id)+'"></textarea><div class="dt-actions"><button class="primary" data-dt-submit="'+safe(t.id)+'" data-kind="'+safe(t.kind)+'">Отправить на проверку</button></div>':'')+'</article>').join('');
+ }
+ async function loadMine(){try{const d=await rpc('daily_tasks_list_my');items=Array.isArray(d?.items)?d.items:[];$('#dtDateLabel').textContent='Сегодня · '+safe(d?.date||'')+' · выполнение подтверждает СТ';renderMine();}catch(e){$('#dtMineList').innerHTML='<div class="dt-empty">Не удалось загрузить задачи. Сначала нужно применить supabase/daily-tasks.sql. '+safe(e.message||'')+'</div>';}}
+ async function loadReview(){try{reviewItems=await rpc('daily_tasks_list_review')||[];if(!Array.isArray(reviewItems))reviewItems=[];$('#dtReviewList').innerHTML=reviewItems.length?reviewItems.map(t=>'<article class="dt-card"><div class="dt-head"><h3>'+safe(t.title)+'</h3>'+status('submitted')+'</div><p>Сотрудник: '+safe(t.employee_name||'—')+' · '+safe(t.task_date||'')+'</p>'+(t.description?'<p>'+safe(t.description)+'</p>':'')+(t.completion_note?'<p><b>Комментарий сотрудника:</b> '+safe(t.completion_note)+'</p>':'')+'<textarea class="dt-field" rows="2" maxlength="2000" placeholder="Комментарий (обязателен при отклонении)" data-dt-review-note="'+safe(t.id)+'"></textarea><div class="dt-actions"><button class="positive" data-dt-review="'+safe(t.id)+'" data-kind="'+safe(t.kind)+'" data-decision="approved">Подтвердить</button><button class="negative" data-dt-review="'+safe(t.id)+'" data-kind="'+safe(t.kind)+'" data-decision="rejected">Отклонить</button></div></article>').join(''):'<div class="dt-empty">Нет задач, ожидающих проверки.</div>';}catch(e){$('#dtReviewList').innerHTML='<div class="dt-empty">Не удалось загрузить очередь проверки: '+safe(e.message||'')+'</div>';}}
+ async function loadManage(){try{const users=await rpc('daily_tasks_list_employees');$('#dtEmployeeSelect').innerHTML='<option value="">Выбери сотрудника</option>'+users.map(u=>'<option value="'+safe(u.id)+'">'+safe(u.name)+' · '+safe(u.email)+'</option>').join('');}catch(e){message('Не удалось загрузить сотрудников: '+(e.message||''),true);}}
+ async function detectRole(){try{const r=await rpc('daily_tasks_is_reviewer');reviewer=r===true;}catch{reviewer=false;}$('#dtReviewTab').classList.toggle('hidden',!reviewer);$('#dtManageTab').classList.toggle('hidden',!reviewer);if(reviewer)loadManage();}
+ $('#openDailyTasksBtn')?.addEventListener('click',open);
+ $('#dtTabs').addEventListener('click',e=>{const b=e.target.closest('[data-dt-tab]');if(b&&!b.classList.contains('hidden'))switchTab(b.dataset.dtTab);});
+ sheet.addEventListener('click',async e=>{
+  const submit=e.target.closest('[data-dt-submit]');
+  if(submit){submit.disabled=true;try{const id=submit.dataset.dtSubmit,kind=submit.dataset.kind,note=$('[data-dt-note="'+CSS.escape(id)+'"]')?.value||'';await rpc('daily_tasks_submit',{task_id:id,task_kind:kind,note});message('Отправлено СТ на проверку.');await loadMine();}catch(err){message(err.message||'Не удалось отправить задачу',true);}finally{submit.disabled=false;}return;}
+  const review=e.target.closest('[data-dt-review]');
+  if(review){const id=review.dataset.dtReview,kind=review.dataset.kind,decision=review.dataset.decision,note=$('[data-dt-review-note="'+CSS.escape(id)+'"]')?.value||'';if(decision==='rejected'&&!note.trim()){message('При отклонении укажи причину, чтобы сотрудник знал, что исправить.',true);return;}review.disabled=true;try{await rpc('daily_tasks_review',{task_id:id,task_kind:kind,decision,note});message(decision==='approved'?'Выполнение подтверждено.':'Задача отклонена, сотрудник увидит причину.');await loadReview();}catch(err){message(err.message||'Не удалось проверить задачу',true);}finally{review.disabled=false;}return;}
+ });
+ $('#dtCreateTemplateBtn').addEventListener('click',async()=>{const title=$('#dtTemplateTitle').value.trim();if(!title){message('Введи название ежедневной задачи.',true);return;}try{await rpc('daily_tasks_create_template',{task_title:title,task_description:$('#dtTemplateDescription').value.trim()});$('#dtTemplateTitle').value='';$('#dtTemplateDescription').value='';message('Ежедневная задача добавлена.');await loadMine();}catch(e){message(e.message||'Не удалось добавить задачу',true);}});
+ $('#dtCreateAssignmentBtn').addEventListener('click',async()=>{const title=$('#dtAssignmentTitle').value.trim(),target=$('#dtEmployeeSelect').value;if(!title||!target){message('Укажи название и выбери сотрудника.',true);return;}try{await rpc('daily_tasks_create_assignment',{task_title:title,task_description:$('#dtAssignmentDescription').value.trim(),target_user_id:target,target_due_date:$('#dtDueDate').value||null});$('#dtAssignmentTitle').value='';$('#dtAssignmentDescription').value='';message('Поручение назначено, сотруднику отправлено уведомление.');}catch(e){message(e.message||'Не удалось назначить поручение',true);}});
+ detectRole();
+})();
+</script></div></div>
 <div id="adminPanelSheet" aria-hidden="true">
   <div class="admin-shell" role="dialog" aria-modal="true" aria-labelledby="adminPanelTitle">
     <header class="admin-top">
@@ -3721,72 +3779,6 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
 </script>
 
 
-<style id="dailyTasksStyles">
-#dailyTasksSheet{position:fixed;inset:0;z-index:900;display:none;overflow:auto;background:rgba(5,8,13,.96);padding:calc(14px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));backdrop-filter:blur(18px)}
-#dailyTasksSheet.open{display:block}#dailyTasksSheet .dt-shell{max-width:900px;margin:0 auto}
-.dt-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.dt-head h2{margin:0;font-size:24px;letter-spacing:-.03em}.dt-sub{color:var(--muted);font-size:13px;margin-top:4px}
-.dt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}.dt-tabs button,.dt-actions button{border:1px solid var(--line);background:rgba(255,255,255,.055);padding:10px 13px;border-radius:12px;font-weight:700}.dt-tabs button.active{background:rgba(124,92,255,.22);border-color:rgba(124,92,255,.55)}
-.dt-card{border:1px solid var(--line);background:rgba(255,255,255,.045);border-radius:18px;padding:16px;margin:10px 0}.dt-card h3{font-size:16px;margin:0 0 6px}.dt-card p{margin:5px 0;color:var(--muted);font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}.dt-meta{font-size:12px;color:var(--muted);margin:10px 0}.dt-status{display:inline-flex;padding:4px 9px;border-radius:99px;background:rgba(124,92,255,.16);font-size:11px;font-weight:800}.dt-status.approved{background:rgba(52,211,153,.14);color:#6ee7b7}.dt-status.rejected{background:rgba(251,113,133,.13);color:#fda4af}.dt-status.submitted{background:rgba(251,191,36,.12);color:#fcd34d}
-.dt-field{display:block;width:100%;margin:9px 0;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.045);color:var(--text);font:inherit}.dt-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.dt-actions .primary{background:linear-gradient(135deg,var(--accent),#4f46e5);border-color:transparent}.dt-actions .positive{border-color:rgba(52,211,153,.4);color:#6ee7b7}.dt-actions .negative{border-color:rgba(251,113,133,.4);color:#fda4af}.dt-empty,.dt-message{padding:14px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);font-size:13px}.dt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.dt-form-grid .wide{grid-column:1/-1}
-@media(max-width:560px){.dt-form-grid{grid-template-columns:1fr}.dt-form-grid .wide{grid-column:auto}.dt-head h2{font-size:20px}}
-</style>
-<div id="dailyTasksSheet" role="dialog" aria-modal="true" aria-labelledby="dailyTasksTitle">
- <div class="dt-shell">
-  <header class="dt-head"><div><h2 id="dailyTasksTitle">Ежедневные задачи</h2><div class="dt-sub" id="dtDateLabel">Чек-лист смены и поручения СТ</div></div><button class="icon" id="closeDailyTasksBtn" aria-label="Закрыть">✕</button></header>
-  <div class="dt-tabs" id="dtTabs"><button class="active" data-dt-tab="mine">Мои задачи</button><button data-dt-tab="review" id="dtReviewTab" class="hidden">На проверку</button><button data-dt-tab="manage" id="dtManageTab" class="hidden">Управление</button></div>
-  <div id="dtMessage" class="dt-message hidden" role="status"></div>
-  <section id="dtMineView"><div id="dtMineList" aria-live="polite"><div class="dt-empty">Загружаю задачи…</div></div></section>
-  <section id="dtReviewView" class="hidden"><div id="dtReviewList"></div></section>
-  <section id="dtManageView" class="hidden">
-   <div class="dt-card"><h3>Добавить ежедневную задачу</h3><p>Она будет появляться в чек-листе каждого сотрудника каждый день.</p>
-    <input class="dt-field" id="dtTemplateTitle" maxlength="140" placeholder="Название задачи">
-    <textarea class="dt-field" id="dtTemplateDescription" maxlength="2000" rows="2" placeholder="Описание (необязательно)"></textarea>
-    <div class="dt-actions"><button class="primary" id="dtCreateTemplateBtn">Добавить в ежедневный список</button></div>
-   </div>
-   <div class="dt-card"><h3>Поручение сотруднику</h3>
-    <input class="dt-field" id="dtAssignmentTitle" maxlength="140" placeholder="Название поручения">
-    <textarea class="dt-field" id="dtAssignmentDescription" maxlength="2000" rows="2" placeholder="Что нужно сделать (необязательно)"></textarea>
-    <select class="dt-field" id="dtEmployeeSelect"><option value="">Загрузка сотрудников…</option></select>
-    <input class="dt-field" id="dtDueDate" type="date">
-    <div class="dt-actions"><button class="primary" id="dtCreateAssignmentBtn">Назначить поручение</button></div>
-   </div>
-  </section>
- </div>
-</div>
-<script id="dailyTasksScript">
-(()=>{
- const $=s=>document.querySelector(s), sheet=$('#dailyTasksSheet');
- if(!sheet||!$('#openDailyTasksBtn'))return;
- let tab='mine',reviewer=false,items=[],reviewItems=[];
- const labels={new:'Не выполнена',submitted:'На проверке',approved:'Подтверждена',rejected:'Нужно исправить'};
- const safe=s=>typeof escapeHtml==='function'?escapeHtml(String(s??'')):String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- function message(s,bad=false){const e=$('#dtMessage');e.textContent=s;e.classList.remove('hidden');e.style.color=bad?'var(--bad)':'var(--muted)';}
- function status(s){return '<span class="dt-status '+safe(s)+'">'+safe(labels[s]||s)+'</span>'}
- function switchTab(next){tab=next;$('#dtMineView').classList.toggle('hidden',next!=='mine');$('#dtReviewView').classList.toggle('hidden',next!=='review');$('#dtManageView').classList.toggle('hidden',next!=='manage');$('#dtTabs').querySelectorAll('[data-dt-tab]').forEach(b=>b.classList.toggle('active',b.dataset.dtTab===next));if(next==='review')loadReview();}
- async function open(){if(!cloudClient||!cloudUser){if(typeof toast==='function')toast('Войди в аккаунт, чтобы открыть задачи.');return;}await detectRole();sheet.classList.add('open');document.body.style.overflow='hidden';switchTab('mine');await loadMine();}
- function close(){sheet.classList.remove('open');document.body.style.overflow='';}
- async function rpc(name,args={}){const {data,error}=await cloudClient.rpc(name,args);if(error)throw error;return data;}
- function renderMine(){
-  const box=$('#dtMineList');
-  if(!items.length){box.innerHTML='<div class="dt-empty">На сегодня задач нет. Если нужно, СТ добавит ежедневные задачи или поручения.</div>';return;}
-  box.innerHTML=items.map(t=>'<article class="dt-card"><div class="dt-head"><h3>'+safe(t.title)+'</h3>'+status(t.status)+'</div>'+(t.description?'<p>'+safe(t.description)+'</p>':'')+'<div class="dt-meta">'+(t.kind==='daily'?'Ежедневный чек-лист':'Поручение СТ')+(t.due_date?' · срок '+safe(t.due_date):'')+'</div>'+(t.completion_note?'<p><b>Твой комментарий:</b> '+safe(t.completion_note)+'</p>':'')+(t.reviewer_note?'<p><b>Комментарий СТ:</b> '+safe(t.reviewer_note)+'</p>':'')+((t.status==='new'||t.status==='rejected')?'<textarea class="dt-field" rows="2" maxlength="2000" placeholder="Комментарий к выполнению (необязательно)" data-dt-note="'+safe(t.id)+'"></textarea><div class="dt-actions"><button class="primary" data-dt-submit="'+safe(t.id)+'" data-kind="'+safe(t.kind)+'">Отправить на проверку</button></div>':'')+'</article>').join('');
- }
- async function loadMine(){try{const d=await rpc('daily_tasks_list_my');items=Array.isArray(d?.items)?d.items:[];$('#dtDateLabel').textContent='Сегодня · '+safe(d?.date||'')+' · выполнение подтверждает СТ';renderMine();}catch(e){$('#dtMineList').innerHTML='<div class="dt-empty">Не удалось загрузить задачи. Сначала нужно применить supabase/daily-tasks.sql. '+safe(e.message||'')+'</div>';}}
- async function loadReview(){try{reviewItems=await rpc('daily_tasks_list_review')||[];if(!Array.isArray(reviewItems))reviewItems=[];$('#dtReviewList').innerHTML=reviewItems.length?reviewItems.map(t=>'<article class="dt-card"><div class="dt-head"><h3>'+safe(t.title)+'</h3>'+status('submitted')+'</div><p>Сотрудник: '+safe(t.employee_name||'—')+' · '+safe(t.task_date||'')+'</p>'+(t.description?'<p>'+safe(t.description)+'</p>':'')+(t.completion_note?'<p><b>Комментарий сотрудника:</b> '+safe(t.completion_note)+'</p>':'')+'<textarea class="dt-field" rows="2" maxlength="2000" placeholder="Комментарий (обязателен при отклонении)" data-dt-review-note="'+safe(t.id)+'"></textarea><div class="dt-actions"><button class="positive" data-dt-review="'+safe(t.id)+'" data-kind="'+safe(t.kind)+'" data-decision="approved">Подтвердить</button><button class="negative" data-dt-review="'+safe(t.id)+'" data-kind="'+safe(t.kind)+'" data-decision="rejected">Отклонить</button></div></article>').join(''):'<div class="dt-empty">Нет задач, ожидающих проверки.</div>';}catch(e){$('#dtReviewList').innerHTML='<div class="dt-empty">Не удалось загрузить очередь проверки: '+safe(e.message||'')+'</div>';}}
- async function loadManage(){try{const users=await rpc('daily_tasks_list_employees');$('#dtEmployeeSelect').innerHTML='<option value="">Выбери сотрудника</option>'+users.map(u=>'<option value="'+safe(u.id)+'">'+safe(u.name)+' · '+safe(u.email)+'</option>').join('');}catch(e){message('Не удалось загрузить сотрудников: '+(e.message||''),true);}}
- async function detectRole(){try{const r=await rpc('daily_tasks_is_reviewer');reviewer=r===true;}catch{reviewer=false;}$('#dtReviewTab').classList.toggle('hidden',!reviewer);$('#dtManageTab').classList.toggle('hidden',!reviewer);if(reviewer)loadManage();}
- $('#openDailyTasksBtn').addEventListener('click',open);$('#closeDailyTasksBtn').addEventListener('click',close);
- $('#dtTabs').addEventListener('click',e=>{const b=e.target.closest('[data-dt-tab]');if(b&&!b.classList.contains('hidden'))switchTab(b.dataset.dtTab);});
- sheet.addEventListener('click',async e=>{
-  const submit=e.target.closest('[data-dt-submit]');
-  if(submit){submit.disabled=true;try{const id=submit.dataset.dtSubmit,kind=submit.dataset.kind,note=$('[data-dt-note="'+CSS.escape(id)+'"]')?.value||'';await rpc('daily_tasks_submit',{task_id:id,task_kind:kind,note});message('Отправлено СТ на проверку.');await loadMine();}catch(err){message(err.message||'Не удалось отправить задачу',true);}finally{submit.disabled=false;}return;}
-  const review=e.target.closest('[data-dt-review]');
-  if(review){const id=review.dataset.dtReview,kind=review.dataset.kind,decision=review.dataset.decision,note=$('[data-dt-review-note="'+CSS.escape(id)+'"]')?.value||'';if(decision==='rejected'&&!note.trim()){message('При отклонении укажи причину, чтобы сотрудник знал, что исправить.',true);return;}review.disabled=true;try{await rpc('daily_tasks_review',{task_id:id,task_kind:kind,decision,note});message(decision==='approved'?'Выполнение подтверждено.':'Задача отклонена, сотрудник увидит причину.');await loadReview();}catch(err){message(err.message||'Не удалось проверить задачу',true);}finally{review.disabled=false;}return;}
- });
- $('#dtCreateTemplateBtn').addEventListener('click',async()=>{const title=$('#dtTemplateTitle').value.trim();if(!title){message('Введи название ежедневной задачи.',true);return;}try{await rpc('daily_tasks_create_template',{task_title:title,task_description:$('#dtTemplateDescription').value.trim()});$('#dtTemplateTitle').value='';$('#dtTemplateDescription').value='';message('Ежедневная задача добавлена.');await loadMine();}catch(e){message(e.message||'Не удалось добавить задачу',true);}});
- $('#dtCreateAssignmentBtn').addEventListener('click',async()=>{const title=$('#dtAssignmentTitle').value.trim(),target=$('#dtEmployeeSelect').value;if(!title||!target){message('Укажи название и выбери сотрудника.',true);return;}try{await rpc('daily_tasks_create_assignment',{task_title:title,task_description:$('#dtAssignmentDescription').value.trim(),target_user_id:target,target_due_date:$('#dtDueDate').value||null});$('#dtAssignmentTitle').value='';$('#dtAssignmentDescription').value='';message('Поручение назначено, сотруднику отправлено уведомление.');}catch(e){message(e.message||'Не удалось назначить поручение',true);}});
- detectRole();
-})();
-</script>
+
 </body>
 </html>
