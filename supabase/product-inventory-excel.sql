@@ -23,7 +23,7 @@ begin
  for r in select value from jsonb_array_elements(rows) loop
   nm:=left(trim(coalesce(r->>'name','')),200);
   if nm='' then continue; end if;
-  cat:=left(coalesce(nullif(trim(r->>'category'),''),'другое'),80);
+  cat:=left(nullif(trim(coalesce(r->>'category','')),''),80);
   v:=nullif(r->>'volume','')::numeric;
   pp:=nullif(r->>'purchase_price','')::numeric;
   retail:=nullif(r->>'retail_price','')::numeric;
@@ -33,7 +33,7 @@ begin
    warehouse_quantity,cold_quantity,shelf_quantity,total_quantity,plan_quantity,total_deviation,tg_writeoffs,inventory_value,
    available,active,stock_quantity,stock_unit,updated_at,updated_by,stock_imported_at
   ) values(
-   nm,cat,v,pp,coalesce(retail,0),
+   nm,coalesce(cat,'другое'),v,pp,coalesce(retail,0),
    nullif(r->>'warehouse_quantity','')::numeric,
    nullif(r->>'cold_quantity','')::numeric,
    nullif(r->>'shelf_quantity','')::numeric,
@@ -45,13 +45,18 @@ begin
    true,true,nullif(r->>'total_quantity','')::numeric,'шт',now(),(select auth.uid()),now()
   )
   on conflict(name) do update set
-   category=excluded.category,
-   volume=coalesce(excluded.volume,public.product_catalog.volume),
-   purchase_price=coalesce(excluded.purchase_price,public.product_catalog.purchase_price),
-   price=case when r ? 'retail_price' then coalesce(excluded.price,0) else public.product_catalog.price end,
-   warehouse_quantity=excluded.warehouse_quantity,cold_quantity=excluded.cold_quantity,shelf_quantity=excluded.shelf_quantity,
-   total_quantity=excluded.total_quantity,plan_quantity=excluded.plan_quantity,total_deviation=excluded.total_deviation,
-   tg_writeoffs=excluded.tg_writeoffs,inventory_value=excluded.inventory_value,
+   category=coalesce(cat,public.product_catalog.category),
+   volume=coalesce(v,public.product_catalog.volume),
+   purchase_price=coalesce(pp,public.product_catalog.purchase_price),
+   price=coalesce(retail,public.product_catalog.price),
+   warehouse_quantity=coalesce(excluded.warehouse_quantity,public.product_catalog.warehouse_quantity),
+   cold_quantity=coalesce(excluded.cold_quantity,public.product_catalog.cold_quantity),
+   shelf_quantity=coalesce(excluded.shelf_quantity,public.product_catalog.shelf_quantity),
+   total_quantity=coalesce(excluded.total_quantity,public.product_catalog.total_quantity),
+   plan_quantity=coalesce(excluded.plan_quantity,public.product_catalog.plan_quantity),
+   total_deviation=coalesce(excluded.total_deviation,public.product_catalog.total_deviation),
+   tg_writeoffs=coalesce(excluded.tg_writeoffs,public.product_catalog.tg_writeoffs),
+   inventory_value=coalesce(excluded.inventory_value,public.product_catalog.inventory_value),
    stock_quantity=excluded.total_quantity,stock_unit='шт',available=true,active=true,updated_at=now(),updated_by=(select auth.uid()),stock_imported_at=now();
   n:=n+1;
  end loop;
