@@ -3763,7 +3763,7 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
  function message(s,bad=false){const e=$('#dtMessage');e.textContent=s;e.classList.remove('hidden');e.style.color=bad?'var(--bad)':'var(--muted)';}
  function status(s){return '<span class="dt-status '+safe(s)+'">'+safe(labels[s]||s)+'</span>'}
  function switchTab(next){tab=next;$('#dtMineView').classList.toggle('hidden',next!=='mine');$('#dtReviewView').classList.toggle('hidden',next!=='review');$('#dtManageView').classList.toggle('hidden',next!=='manage');$('#dtTabs').querySelectorAll('[data-dt-tab]').forEach(b=>b.classList.toggle('active',b.dataset.dtTab===next));if(next==='review')loadReview();}
- function open(){if(!cloudClient||!cloudUser){if(typeof toast==='function')toast('Войди в аккаунт, чтобы открыть задачи.');return;}sheet.classList.add('open');document.body.style.overflow='hidden';loadMine();}
+ async function open(){if(!cloudClient||!cloudUser){if(typeof toast==='function')toast('Войди в аккаунт, чтобы открыть задачи.');return;}await detectRole();sheet.classList.add('open');document.body.style.overflow='hidden';switchTab('mine');await loadMine();}
  function close(){sheet.classList.remove('open');document.body.style.overflow='';}
  async function rpc(name,args={}){const {data,error}=await cloudClient.rpc(name,args);if(error)throw error;return data;}
  function renderMine(){
