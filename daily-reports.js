@@ -438,7 +438,8 @@
   document.addEventListener('change',async e=>{if(e.target?.id==='stInventoryFile'&&e.target.files?.[0]){try{const rows=await inventoryReadFile(e.target.files[0]);inventoryPreview(rows);}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать файл.';}}});
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-st-spend-refresh]')){loadSharedSpend();return;}
-    if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}\n    if(e.target.closest('[data-st-inventory-parse]')){try{const raw=$('#stInventoryPaste')?.value||'';inventoryPreview(inventoryRowsFromMatrix(raw.split(/\\r?\\n/).map(line=>line.split('\\t'))));}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать таблицу.';}return;}\n    if(e.target.closest('[data-st-inventory-import]')){inventoryImport();return;}
+    if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}
+    if(e.target.closest('[data-st-inventory-parse]')){try{const raw=$('#stInventoryPaste')?.value||'';inventoryPreview(inventoryRowsFromMatrix(raw.split(/\r?\n/).map(line=>line.split('\t'))));}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать таблицу.';}return;}\n    if(e.target.closest('[data-st-inventory-import]')){inventoryImport();return;}
     const stockSave=e.target.closest('[data-st-stock-save]');if(stockSave){saveStockRow(stockSave.dataset.stStockSave);return;}
     if(e.target.closest('[data-st-spend-export]')){downloadSharedSpendCsv();return;}
     const quick=e.target.closest('[data-st-section]');
