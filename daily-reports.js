@@ -342,7 +342,8 @@
     const raw=qtyEl.value.trim(),qty=raw===''?null:Number(raw);
     if(qty!==null&&(!Number.isFinite(qty)||qty<0)){if(foot)foot.textContent='Остаток должен быть числом не меньше нуля.';return;}
     const unit=(unitEl?.value||'шт').trim()||'шт';
-    try{const {error}=await cloudClient.rpc('shared_stock_set',{product_name:name,new_quantity:qty,new_unit:unit,new_low_stock_threshold:null});if(error)throw error;if(foot)foot.textContent='Остаток для «'+name+'» сохранён.';await loadStockTable();}
+    const item=(typeof allCatalogProducts==='function'?allCatalogProducts():[]).find(x=>String(x.name||'').trim().toLowerCase()===String(name||'').trim().toLowerCase())||{};
+    try{const {error}=await cloudClient.rpc('shared_stock_set',{product_name:name,new_quantity:qty,new_unit:unit,new_low_stock_threshold:null,new_category:item.category||'другое',new_price:Number(item.price)||0});if(error)throw error;if(foot)foot.textContent='Остаток для «'+name+'» сохранён.';await loadStockTable();}
     catch(e){if(foot)foot.textContent='Не удалось сохранить остаток: '+(e.message||'ошибка');}
   }
   async function loadSharedSpend(){
