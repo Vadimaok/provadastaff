@@ -51,7 +51,7 @@ declare
   result jsonb;
 begin
   if not public.is_current_admin()
-     and public.daily_report_my_role() <> 'shift_senior'
+     and coalesce(public.daily_report_my_role(), '') <> 'shift_senior'
      and not public.is_current_kuznetsova() then
     raise exception 'Общие траты доступны только Админу, СТ и роли Кузнецова'
       using errcode='42501';
