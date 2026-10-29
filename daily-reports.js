@@ -69,6 +69,20 @@
       <div class="dr-card"><h3>Категории отчётов</h3><div id="drCategoryList"></div><div class="dr-grid"><label>Смена<select id="drCatShift"><option value="day">Дневная</option><option value="night">Ночная</option></select></label><label>Название категории<input id="drCatTitle" maxlength="180" placeholder="Например, чистая стойка"></label></div><div class="dr-actions"><button class="dr-btn primary" id="drAddCategory">Добавить категорию</button></div></div></section>
     </section>`;
     document.body.appendChild(sheet);
+    // Daily-report administration lives inside the ST control panel, not in the employee report window.
+    const shiftWorkspace=$('#shiftTasksWorkspace');
+    const settingsView=$('#drSettingsView');
+    if(shiftWorkspace&&settingsView&&!$('#drShiftAdminCard')){
+      const adminCard=document.createElement('section');
+      adminCard.id='drShiftAdminCard';
+      adminCard.className='admin-card dr-shift-admin-card';
+      adminCard.innerHTML='<div class="dr-admin-hero"><div class="dr-admin-icon" aria-hidden="true">▤</div><div><div class="small">PROVODA STAFF · CONTROL</div><h3>Ежедневные отчёты</h3><p>Настройка чек-листов, сменных ролей и доступности отчётов.</p></div></div><div id="drShiftAdminNotice" class="dr-admin-notice" role="status" aria-live="polite"></div>';
+      settingsView.classList.remove('dr-hidden');
+      settingsView.classList.add('dr-shift-settings');
+      adminCard.appendChild(settingsView);
+      shiftWorkspace.appendChild(adminCard);
+      $('#drSettingsTab')?.classList.add('dr-hidden');
+    }
     $('#drClose').addEventListener('click',close);
     $('#drToggleChecklist').addEventListener('click',()=>{const box=$('#drChecklist'),btn=$('#drToggleChecklist'),open=box.classList.contains('dr-hidden');box.classList.toggle('dr-hidden',!open);btn.setAttribute('aria-expanded',String(open));btn.textContent=open?'Чек-лист смены · скрыть отметки':'Чек-лист смены · показать отметки';});
     $('#drShift').addEventListener('change',renderChecklist);
@@ -90,7 +104,10 @@
     $('#drHistoryList').addEventListener('click',historyAction);
     $('#drCategoryList').addEventListener('click',categoryAction);
   }
-  function notice(msg,bad=false){const el=$('#drNotice');if(el){el.textContent=msg;el.style.color=bad?'var(--bad)':'var(--muted)';}}
+  function notice(msg,bad=false){
+    const color=bad?'var(--bad)':'var(--muted)';
+    ['#drNotice','#drShiftAdminNotice'].forEach(sel=>{const el=$(sel);if(el){el.textContent=msg;el.style.color=color;}});
+  }
   function close(){const s=$('#dailyReportsSheet');if(s){s.classList.remove('open');s.setAttribute('aria-hidden','true');}stopLiveUpdates();}
   function open(){ensureUI();activeView='new';if(!cloudClient||!cloudUser){notice('Сначала войди в аккаунт.',true);return;}try{closeProfileMenu()}catch{}$('#dailyReportsSheet').classList.add('open');$('#dailyReportsSheet').setAttribute('aria-hidden','false');$('#drDate').value=new Date().toISOString().slice(0,10);$('#drChecklist').classList.add('dr-hidden');$('#drToggleChecklist').setAttribute('aria-expanded','false');$('#drToggleChecklist').textContent='Чек-лист смены · показать отметки';load();startLiveUpdates();}
   async function getRole(){
@@ -113,13 +130,13 @@
       isEnabled=setting?.enabled!==false;cats=categoryRows||[];reports=rows||[];
       $('#drDisabled').classList.toggle('dr-hidden',(isEnabled&&canSubmit)||isAdmin||isReviewer);
       $('#drNewView').classList.toggle('dr-hidden',(!isEnabled&&!isAdmin&&!isReviewer)||!canSubmit);
-      $('#drSettingsTab').classList.toggle('dr-hidden',!isReviewer);
+      $('#drSettingsTab').classList.add('dr-hidden');
       $('#drModuleSettingsCard').classList.toggle('dr-hidden',!isAdmin);
       $('#drEnabled').checked=isEnabled;
       const canSeeNew=(isEnabled||isAdmin||isReviewer)&&canSubmit;
       $('#drNewView').classList.toggle('dr-hidden',activeView!=='new'||!canSeeNew);
       $('#drHistoryView').classList.toggle('dr-hidden',activeView!=='history');
-      $('#drSettingsView').classList.toggle('dr-hidden',activeView!=='settings'||!isReviewer);
+      $('#drSettingsView').classList.toggle('dr-hidden',!isReviewer);
       document.querySelectorAll('#drTabs [data-dr-view]').forEach(b=>b.classList.toggle('primary',b.dataset.drView===activeView));
       if(!canSubmit&&!isReviewer)notice('Для заполнения отчёта Админ или СТ должен назначить дополнительную роль дневной или ночной смены.',true);
       if(!silent){renderChecklist();renderHistory();renderExcelManage();renderCategories();if(isReviewer)await loadUsers();}
@@ -134,7 +151,7 @@
     activeView=view;
     $('#drNewView').classList.toggle('dr-hidden',view!=='new');
     $('#drHistoryView').classList.toggle('dr-hidden',view!=='history');
-    $('#drSettingsView').classList.toggle('dr-hidden',view!=='settings');
+    $('#drSettingsView').classList.toggle('dr-hidden',!isReviewer);
     document.querySelectorAll('#drTabs [data-dr-view]').forEach(b=>b.classList.toggle('primary',b.dataset.drView===view));
     if(view==='history'){renderHistory();renderExcelManage();}if(view==='settings'){renderCategories();loadUsers();}
   }
@@ -300,7 +317,13 @@
       startLiveUpdates();scheduleLiveRefresh();
     }
   });
-  document.addEventListener('click',e=>{if(e.target.closest('#openDailyReportsBtn'))open();});
+  document.addEventListener('click',e=>{
+    if(e.target.closest('#openDailyReportsBtn'))open();
+    if(e.target.closest('#openShiftPanelBtn')){
+      ensureUI();
+      if(cloudClient&&cloudUser)load().then(()=>{if(isReviewer){$('#drSettingsView')?.classList.remove('dr-hidden');renderCategories();loadUsers();}});
+    }
+  });
   document.addEventListener('DOMContentLoaded',ensureUI);
   if(document.readyState!=='loading')ensureUI();
 })();
