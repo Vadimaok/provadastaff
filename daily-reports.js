@@ -321,25 +321,22 @@
     }
   });
   let inventoryImportRows=[];
-  const inventoryHeader=(v)=>String(v??'').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim().replace(/\\s+/g,' ');
+  const inventoryHeader=v=>String(v??'').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim().replace(/\s+/g,' ');
   const inventoryAliases={
     name:['название','наименование','товар','название товара','итого товаров название'],
     category:['категория','тип'],
     volume:['обьем 1 шт гр литр','объем 1 шт гр литр','обьем','объем','вес объем'],
     purchase_price:['закуп за 1 шт','закупка за 1 шт','закупочная цена','закуп'],
     retail_price:['реализация','цена реализации','розница','цена'],
-    warehouse_quantity:['склад','остаток склад'],
-    cold_quantity:['холод','холодильник'],
-    shelf_quantity:['полки','полка'],
+    warehouse_quantity:['склад','остаток склад'],cold_quantity:['холод','холодильник'],shelf_quantity:['полки','полка'],
     total_quantity:['итого в наличии','итого наличие','фактический остаток','всего в наличии'],
-    plan_quantity:['по лану','по плану','план'],
-    total_deviation:['общее откл','общее отклонение','отклонение'],
+    plan_quantity:['по лану','по плану','план'],total_deviation:['общее откл','общее отклонение'],
     tg_writeoffs:['из tg списания','из тг списания','списания tg','списания'],
     inventory_value:['стоимость','общая стоимость','стоимость остатка']
   };
   function inventoryNumber(value){
     if(value===null||value===undefined||String(value).trim()==='')return null;
-    const n=Number(String(value).replace(/\\s/g,'').replace(',','.').replace(/[₽р]/gi,''));
+    const n=Number(String(value).replace(/\s/g,'').replace(',','.').replace(/[₽р]/gi,''));
     if(!Number.isFinite(n))throw new Error('Некорректное число: '+value);
     return n;
   }
@@ -350,11 +347,11 @@
     Object.entries(inventoryAliases).forEach(([key,aliases])=>{indexes[key]=headers.findIndex(h=>aliases.includes(h));});
     if(indexes.name<0)throw new Error('Не найдена колонка «Название».');
     const out=[];
-    matrix.slice(headerIndex+1).forEach((row,rowIndex)=>{
+    matrix.slice(headerIndex+1).forEach(row=>{
       const name=String(row[indexes.name]??'').trim();
       if(!name||/^итог/i.test(name))return;
       const item={name};
-      Object.keys(inventoryAliases).filter(k=>k!=='name').forEach(key=>{const i=indexes[key];if(i>=0)item[key]=inventoryNumber(row[i]);});
+      Object.keys(inventoryAliases).filter(k=>k!=='name'&&k!=='category').forEach(key=>{const i=indexes[key];if(i>=0)item[key]=inventoryNumber(row[i]);});
       item.category=indexes.category>=0?String(row[indexes.category]??'').trim():'';
       out.push(item);
     });
@@ -362,36 +359,34 @@
   }
   async function inventoryLoadXlsx(){
     if(window.XLSX)return;
-    await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';s.onload=resolve;s.onerror=()=>reject(new Error('Не удалось загрузить модуль чтения Excel. Можно скопировать ячейки из Excel и вставить в поле ниже.'));document.head.appendChild(s);});
+    await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';s.onload=resolve;s.onerror=()=>reject(new Error('Не удалось загрузить модуль чтения Excel. Скопируй ячейки из Excel и вставь в поле ниже.'));document.head.appendChild(s);});
   }
   async function inventoryReadFile(file){
     const ext=(file.name.split('.').pop()||'').toLowerCase();
-    if(ext==='csv'||ext==='tsv'||ext==='txt'){
-      const text=await file.text();return inventoryRowsFromMatrix(text.replace(/^\\uFEFF/,'').split(/\\r?\\n/).map(line=>line.split(ext==='csv'?/[;\\t]/:/\\t/)));
+    if(['csv','tsv','txt'].includes(ext)){
+      const text=await file.text();
+      const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/);
+      return inventoryRowsFromMatrix(lines.map(line=>line.split(ext==='csv'?/[;\t]/:/\t/)));
     }
     await inventoryLoadXlsx();
     const data=await file.arrayBuffer(),workbook=window.XLSX.read(data,{type:'array',cellDates:false});
-    const sheet=workbook.Sheets[workbook.SheetNames[0]];
-    return inventoryRowsFromMatrix(window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:null,raw:false}));
+    return inventoryRowsFromMatrix(window.XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]],{header:1,defval:null,raw:false}));
   }
   function inventoryPreview(rows){
     inventoryImportRows=rows;
-    const preview=$('#stInventoryPreview');
-    if(!preview)return;
+    const preview=$('#stInventoryPreview');if(!preview)return;
     preview.innerHTML=rows.length?'<strong>Готово к импорту: '+rows.length+' товаров</strong><div class="small">Пример: '+rows.slice(0,4).map(x=>esc(x.name)).join(' · ')+'</div>':'В таблице не найдено товарных строк.';
     const btn=$('#stInventoryImport');if(btn)btn.disabled=!rows.length;
   }
   async function inventoryImport(){
-    const foot=$('#stStockFoot');
-    if(!inventoryImportRows.length)return;
+    const foot=$('#stStockFoot');if(!inventoryImportRows.length)return;
     if(!cloudClient||!cloudUser){if(foot)foot.textContent='Войди в аккаунт для загрузки общей базы.';return;}
     const btn=$('#stInventoryImport');if(btn){btn.disabled=true;btn.textContent='Импортирую…';}
     try{
       const {data,error}=await cloudClient.rpc('admin_inventory_bulk_import',{rows:inventoryImportRows});
       if(error)throw error;
       if(foot)foot.textContent='Импорт завершён. Добавлено/обновлено товаров: '+(data?.imported??inventoryImportRows.length)+'.';
-      inventoryImportRows=[];inventoryPreview([]);
-      await loadStockTable();
+      inventoryImportRows=[];inventoryPreview([]);await loadStockTable();
     }catch(e){if(foot)foot.textContent='Импорт не выполнен: '+(e.message||'ошибка');}
     finally{if(btn){btn.disabled=!inventoryImportRows.length;btn.textContent='Загрузить товары в общую базу';}}
   }
@@ -406,7 +401,7 @@
       const base=typeof allCatalogProducts==='function'?allCatalogProducts():[];
       const merged=new Map(base.map(x=>[String(x.name||'').trim().toLowerCase(),{...x}]));
       saved.forEach(x=>merged.set(String(x.name||'').trim().toLowerCase(),{...(merged.get(String(x.name||'').trim().toLowerCase())||{}),...x}));
-      const rows=[...merged.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru'));
+      const rows=[...merged.values()].sort((x,y)=>String(x.name).localeCompare(String(y.name),'ru'));
       box.innerHTML=rows.length?'<table class="dr-table" style="min-width:1250px"><thead><tr><th>Название</th><th>Категория</th><th>Объём / вес</th><th>Закупка</th><th>Реализация</th><th>Склад</th><th>Холод</th><th>Полки</th><th>Итого</th><th>План</th><th>Отклонение</th><th>Списания TG</th><th>Стоимость</th><th>Коррекция остатка</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.category||'')+'</td><td>'+esc(x.volume??'—')+'</td><td>'+esc(x.purchase_price??'—')+'</td><td>'+esc(x.price??'—')+'</td><td>'+esc(x.warehouse_quantity??'—')+'</td><td>'+esc(x.cold_quantity??'—')+'</td><td>'+esc(x.shelf_quantity??'—')+'</td><td><strong>'+esc(x.total_quantity??x.stock_quantity??'—')+'</strong></td><td>'+esc(x.plan_quantity??'—')+'</td><td>'+esc(x.total_deviation??'—')+'</td><td>'+esc(x.tg_writeoffs??'—')+'</td><td>'+esc(x.inventory_value??'—')+'</td><td><div style="display:flex;gap:5px;min-width:140px"><input data-st-stock-qty="'+esc(x.name)+'" type="number" min="0" step="0.001" value="'+(x.total_quantity??x.stock_quantity??'')+'" placeholder="Кол-во" style="width:78px;min-width:70px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px"><button type="button" class="dr-btn" data-st-stock-save="'+esc(x.name)+'">Сохранить</button></div></td></tr>').join('')+'</tbody></table>':'<div class="dr-card">Товарная база пока пустая. Импортируй Excel или вставь таблицу из буфера.</div>';
       if(foot)foot.textContent='Всего товаров: '+rows.length+'. Пустые значения сохранены как пустые, а не заменены нулями.';
     }catch(e){box.innerHTML='<div class="dr-card">Не удалось загрузить товарную базу: '+esc(e.message||'')+'.</div>';}
@@ -440,7 +435,8 @@
     const csv=[['Дата','Сотрудник','Товар','Количество','Ед.','Цена','Сумма','Комментарий'],...rows.map(x=>[new Date(x.created_at).toLocaleString('ru-RU'),x.employee_name,x.product_name,x.quantity,x.unit,x.unit_price,x.total,x.note||''])].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
     const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='provoda-shared-spend.csv';a.click();URL.revokeObjectURL(url);
   }
-  document.addEventListener('change',async e=>{if(e.target?.id==='stInventoryFile'&&e.target.files?.[0]){try{const rows=await inventoryReadFile(e.target.files[0]);inventoryPreview(rows);}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать файл.';}}});\n  document.addEventListener('click',e=>{
+  document.addEventListener('change',async e=>{if(e.target?.id==='stInventoryFile'&&e.target.files?.[0]){try{const rows=await inventoryReadFile(e.target.files[0]);inventoryPreview(rows);}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать файл.';}}});
+  document.addEventListener('click',e=>{
     if(e.target.closest('[data-st-spend-refresh]')){loadSharedSpend();return;}
     if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}\n    if(e.target.closest('[data-st-inventory-parse]')){try{const raw=$('#stInventoryPaste')?.value||'';inventoryPreview(inventoryRowsFromMatrix(raw.split(/\\r?\\n/).map(line=>line.split('\\t'))));}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать таблицу.';}return;}\n    if(e.target.closest('[data-st-inventory-import]')){inventoryImport();return;}
     const stockSave=e.target.closest('[data-st-stock-save]');if(stockSave){saveStockRow(stockSave.dataset.stStockSave);return;}
