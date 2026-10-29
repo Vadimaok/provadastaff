@@ -35,13 +35,14 @@ create policy shared_product_issues_insert_own on public.shared_product_issues f
 
 create or replace function public.shared_product_issue(product_name text, quantity numeric, unit_price numeric default 0, note text default '')
 returns jsonb language plpgsql security definer set search_path='' as $$
-declare actor uuid := (select auth.uid()); nm text:=trim(coalesce(product_name,'')); un text:='шт'; stock numeric; tracked boolean:=false; price numeric(12,2):=coalesce(unit_price,0); issue_id uuid; who text:='';
+declare actor uuid := (select auth.uid()); nm text:=trim(coalesce(product_name,'')); un text:='шт'; stock numeric; tracked boolean:=false; price numeric(12,2):=coalesce(unit_price,0); issue_id uuid; who text:=''; db_name text; db_unit text; db_stock numeric; db_price numeric;
 begin
  if actor is null then raise exception 'Нужно войти в аккаунт' using errcode='42501'; end if;
  if length(nm) not between 1 and 160 or quantity is null or quantity<=0 or quantity>100000 or price<0 then raise exception 'Проверь товар, количество и цену'; end if;
  select coalesce(nullif(trim(raw_user_meta_data->>'display_name'),''),nullif(trim(raw_user_meta_data->>'username'),''),nullif(trim(raw_user_meta_data->>'name'),''),email,'Сотрудник') into who from auth.users where id=actor;
- select c.name,c.stock_unit,c.stock_quantity,c.price into nm,un,stock,price from public.product_catalog c where lower(trim(c.name))=lower(trim(nm)) and c.active=true for update;
+ select c.name,c.stock_unit,c.stock_quantity,c.price into db_name,db_unit,db_stock,db_price from public.product_catalog c where lower(trim(c.name))=lower(trim(nm)) and c.active=true for update;
  if found then
+  nm:=db_name; un:=coalesce(nullif(trim(db_unit),''),'шт'); stock:=db_stock; price:=coalesce(db_price,price);
   tracked:=stock is not null;
   if tracked and stock<quantity then raise exception 'Недостаточный остаток: доступно % %',stock,un; end if;
   if tracked then update public.product_catalog set stock_quantity=stock_quantity-quantity,updated_at=now(),updated_by=actor where lower(trim(name))=lower(trim(nm)); end if;
