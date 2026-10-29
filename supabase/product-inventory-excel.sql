@@ -57,7 +57,7 @@ begin
    total_deviation=coalesce(excluded.total_deviation,public.product_catalog.total_deviation),
    tg_writeoffs=coalesce(excluded.tg_writeoffs,public.product_catalog.tg_writeoffs),
    inventory_value=coalesce(excluded.inventory_value,public.product_catalog.inventory_value),
-   stock_quantity=excluded.total_quantity,stock_unit='шт',available=true,active=true,updated_at=now(),updated_by=(select auth.uid()),stock_imported_at=now();
+   stock_quantity=coalesce(excluded.total_quantity,public.product_catalog.stock_quantity),stock_unit='шт',available=true,active=true,updated_at=now(),updated_by=(select auth.uid()),stock_imported_at=now();
   n:=n+1;
  end loop;
  return jsonb_build_object('imported',n);
