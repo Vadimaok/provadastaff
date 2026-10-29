@@ -484,7 +484,7 @@
     }
     if(e.target.closest('#openDailyReportsBtn'))open();
     if(e.target.closest('#openShiftPanelBtn')){
-      ensureUI();document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b.dataset.stSection==='tasks'));$('#stFeatureNotice')?.classList.remove('visible');
+      ensureUI();document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b.dataset.stSection==='tasks'));$('#stFeatureNotice')?.classList.remove('visible');$('#shiftTasksWorkspace')?.classList.remove('hidden');$('#drShiftAdminCard')?.classList.add('hidden');$('#drSettingsView')?.classList.add('dr-hidden');
       if(cloudClient&&cloudUser)load().then(()=>{if(isReviewer){$('#drSettingsView')?.classList.add('dr-hidden');renderCategories();loadUsers();}});
     }
   },true);
