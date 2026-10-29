@@ -139,4 +139,14 @@ begin
 end $$;
 revoke all on function public.admin_custom_role_assign(uuid,uuid) from public,anon;
 grant execute on function public.admin_custom_role_assign(uuid,uuid) to authenticated;
+create or replace function public.admin_custom_role_assignments_list()
+returns jsonb language plpgsql stable security definer set search_path='' as $
+begin
+ if not public.is_current_admin() then raise exception 'Доступ запрещён' using errcode='42501'; end if;
+ return coalesce((select jsonb_agg(jsonb_build_object('user_id',ur.user_id,'custom_role_id',cr.id,'title',cr.title,'color',cr.color) order by cr.title)
+   from public.user_roles ur join public.custom_roles cr on cr.id=ur.custom_role_id),'[]'::jsonb);
+end $;
+revoke all on function public.admin_custom_role_assignments_list() from public,anon;
+grant execute on function public.admin_custom_role_assignments_list() to authenticated;
+
 commit;
