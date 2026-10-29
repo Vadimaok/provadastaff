@@ -25,7 +25,6 @@ create table if not exists public.shared_product_issues(
 create index if not exists shared_product_issues_created_idx on public.shared_product_issues(created_at desc);
 alter table public.shared_product_issues enable row level security;
 revoke all on public.shared_product_issues from anon,authenticated;
-grant select,insert on public.shared_product_issues to authenticated;
 drop policy if exists shared_product_issues_read_reviewer on public.shared_product_issues;
 create policy shared_product_issues_read_reviewer on public.shared_product_issues for select to authenticated
  using(public.is_current_admin() or public.daily_report_my_role()='shift_senior');
