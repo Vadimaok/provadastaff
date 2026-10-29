@@ -320,21 +320,96 @@
       startLiveUpdates();scheduleLiveRefresh();
     }
   });
+  let inventoryImportRows=[];
+  const inventoryHeader=(v)=>String(v??'').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim().replace(/\\s+/g,' ');
+  const inventoryAliases={
+    name:['название','наименование','товар','название товара','итого товаров название'],
+    category:['категория','тип'],
+    volume:['обьем 1 шт гр литр','объем 1 шт гр литр','обьем','объем','вес объем'],
+    purchase_price:['закуп за 1 шт','закупка за 1 шт','закупочная цена','закуп'],
+    retail_price:['реализация','цена реализации','розница','цена'],
+    warehouse_quantity:['склад','остаток склад'],
+    cold_quantity:['холод','холодильник'],
+    shelf_quantity:['полки','полка'],
+    total_quantity:['итого в наличии','итого наличие','фактический остаток','всего в наличии'],
+    plan_quantity:['по лану','по плану','план'],
+    total_deviation:['общее откл','общее отклонение','отклонение'],
+    tg_writeoffs:['из tg списания','из тг списания','списания tg','списания'],
+    inventory_value:['стоимость','общая стоимость','стоимость остатка']
+  };
+  function inventoryNumber(value){
+    if(value===null||value===undefined||String(value).trim()==='')return null;
+    const n=Number(String(value).replace(/\\s/g,'').replace(',','.').replace(/[₽р]/gi,''));
+    if(!Number.isFinite(n))throw new Error('Некорректное число: '+value);
+    return n;
+  }
+  function inventoryRowsFromMatrix(matrix){
+    const headerIndex=matrix.findIndex(row=>Array.isArray(row)&&row.some(cell=>inventoryAliases.name.includes(inventoryHeader(cell))));
+    if(headerIndex<0)throw new Error('Не найдена колонка «Название». Проверь первую строку таблицы.');
+    const headers=matrix[headerIndex].map(inventoryHeader),indexes={};
+    Object.entries(inventoryAliases).forEach(([key,aliases])=>{indexes[key]=headers.findIndex(h=>aliases.includes(h));});
+    if(indexes.name<0)throw new Error('Не найдена колонка «Название».');
+    const out=[];
+    matrix.slice(headerIndex+1).forEach((row,rowIndex)=>{
+      const name=String(row[indexes.name]??'').trim();
+      if(!name||/^итог/i.test(name))return;
+      const item={name};
+      Object.keys(inventoryAliases).filter(k=>k!=='name').forEach(key=>{const i=indexes[key];if(i>=0)item[key]=inventoryNumber(row[i]);});
+      item.category=indexes.category>=0?String(row[indexes.category]??'').trim():'';
+      out.push(item);
+    });
+    return out;
+  }
+  async function inventoryLoadXlsx(){
+    if(window.XLSX)return;
+    await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';s.onload=resolve;s.onerror=()=>reject(new Error('Не удалось загрузить модуль чтения Excel. Можно скопировать ячейки из Excel и вставить в поле ниже.'));document.head.appendChild(s);});
+  }
+  async function inventoryReadFile(file){
+    const ext=(file.name.split('.').pop()||'').toLowerCase();
+    if(ext==='csv'||ext==='tsv'||ext==='txt'){
+      const text=await file.text();return inventoryRowsFromMatrix(text.replace(/^\\uFEFF/,'').split(/\\r?\\n/).map(line=>line.split(ext==='csv'?/[;\\t]/:/\\t/)));
+    }
+    await inventoryLoadXlsx();
+    const data=await file.arrayBuffer(),workbook=window.XLSX.read(data,{type:'array',cellDates:false});
+    const sheet=workbook.Sheets[workbook.SheetNames[0]];
+    return inventoryRowsFromMatrix(window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:null,raw:false}));
+  }
+  function inventoryPreview(rows){
+    inventoryImportRows=rows;
+    const preview=$('#stInventoryPreview');
+    if(!preview)return;
+    preview.innerHTML=rows.length?'<strong>Готово к импорту: '+rows.length+' товаров</strong><div class="small">Пример: '+rows.slice(0,4).map(x=>esc(x.name)).join(' · ')+'</div>':'В таблице не найдено товарных строк.';
+    const btn=$('#stInventoryImport');if(btn)btn.disabled=!rows.length;
+  }
+  async function inventoryImport(){
+    const foot=$('#stStockFoot');
+    if(!inventoryImportRows.length)return;
+    if(!cloudClient||!cloudUser){if(foot)foot.textContent='Войди в аккаунт для загрузки общей базы.';return;}
+    const btn=$('#stInventoryImport');if(btn){btn.disabled=true;btn.textContent='Импортирую…';}
+    try{
+      const {data,error}=await cloudClient.rpc('admin_inventory_bulk_import',{rows:inventoryImportRows});
+      if(error)throw error;
+      if(foot)foot.textContent='Импорт завершён. Добавлено/обновлено товаров: '+(data?.imported??inventoryImportRows.length)+'.';
+      inventoryImportRows=[];inventoryPreview([]);
+      await loadStockTable();
+    }catch(e){if(foot)foot.textContent='Импорт не выполнен: '+(e.message||'ошибка');}
+    finally{if(btn){btn.disabled=!inventoryImportRows.length;btn.textContent='Загрузить товары в общую базу';}}
+  }
   async function loadStockTable(){
     const box=$('#stStockTable'),foot=$('#stStockFoot');if(!box)return;
     if(!cloudClient||!cloudUser){box.innerHTML='<div class="dr-card">Войди в аккаунт.</div>';return;}
-    box.innerHTML='<div class="dr-card">Загружаю остатки…</div>';
+    box.innerHTML='<div class="dr-card">Загружаю товарную базу…</div>';
     try{
-      const {data,error}=await cloudClient.from('product_catalog').select('name,category,price,available,active,stock_quantity,stock_unit,low_stock_threshold').eq('active',true).order('name');
+      const {data,error}=await cloudClient.from('product_catalog').select('*').eq('active',true).order('name');
       if(error)throw error;
       const saved=Array.isArray(data)?data:[];
       const base=typeof allCatalogProducts==='function'?allCatalogProducts():[];
-      const merged=new Map(base.map(x=>[String(x.name||'').trim().toLowerCase(),{...x,stock_quantity:null,stock_unit:'шт',low_stock_threshold:null}]));
+      const merged=new Map(base.map(x=>[String(x.name||'').trim().toLowerCase(),{...x}]));
       saved.forEach(x=>merged.set(String(x.name||'').trim().toLowerCase(),{...(merged.get(String(x.name||'').trim().toLowerCase())||{}),...x}));
       const rows=[...merged.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru'));
-      box.innerHTML=rows.length?'<table class="dr-table"><thead><tr><th>Товар</th><th>Цена</th><th>Фактический остаток</th><th>Порог</th><th>Статус</th><th></th></tr></thead><tbody>'+rows.map((x,i)=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.price)+' ₽</td><td><div style="display:flex;gap:5px;min-width:145px"><input data-st-stock-qty="'+esc(x.name)+'" type="number" min="0" step="0.001" value="'+(x.stock_quantity==null?'':esc(x.stock_quantity))+'" placeholder="Не задан" style="width:90px;min-width:80px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px"><input data-st-stock-unit="'+esc(x.name)+'" value="'+esc(x.stock_unit||'шт')+'" aria-label="Единица измерения" style="width:55px;min-width:45px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px"></div></td><td>'+ (x.low_stock_threshold==null?'—':esc(x.low_stock_threshold))+'</td><td class="'+(x.stock_quantity!=null&&x.stock_quantity===0?'warn':x.stock_quantity!=null&&x.low_stock_threshold!=null&&x.stock_quantity<=x.low_stock_threshold?'warn':'good')+'">'+(x.stock_quantity==null?'Не задан':x.stock_quantity===0?'Нет остатка':x.low_stock_threshold!=null&&x.stock_quantity<=x.low_stock_threshold?'Мало':'В норме')+'</td><td><button type="button" class="dr-btn" data-st-stock-save="'+esc(x.name)+'">Сохранить</button></td></tr>').join('')+'</tbody></table>':'<div class="dr-card">В общем каталоге пока нет сохранённых товаров. Добавь товары через каталог, затем укажи фактический остаток.</div>';
-      if(foot)foot.textContent='Загружено позиций: '+rows.length+'. Пустой остаток означает «учёт ещё не задан», а не ноль.';
-    }catch(e){box.innerHTML='<div class="dr-card">Не удалось загрузить остатки: '+esc(e.message||'')+'. Проверь SQL-миграцию и права.</div>';}
+      box.innerHTML=rows.length?'<table class="dr-table" style="min-width:1250px"><thead><tr><th>Название</th><th>Категория</th><th>Объём / вес</th><th>Закупка</th><th>Реализация</th><th>Склад</th><th>Холод</th><th>Полки</th><th>Итого</th><th>План</th><th>Отклонение</th><th>Списания TG</th><th>Стоимость</th><th>Коррекция остатка</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.category||'')+'</td><td>'+esc(x.volume??'—')+'</td><td>'+esc(x.purchase_price??'—')+'</td><td>'+esc(x.price??'—')+'</td><td>'+esc(x.warehouse_quantity??'—')+'</td><td>'+esc(x.cold_quantity??'—')+'</td><td>'+esc(x.shelf_quantity??'—')+'</td><td><strong>'+esc(x.total_quantity??x.stock_quantity??'—')+'</strong></td><td>'+esc(x.plan_quantity??'—')+'</td><td>'+esc(x.total_deviation??'—')+'</td><td>'+esc(x.tg_writeoffs??'—')+'</td><td>'+esc(x.inventory_value??'—')+'</td><td><div style="display:flex;gap:5px;min-width:140px"><input data-st-stock-qty="'+esc(x.name)+'" type="number" min="0" step="0.001" value="'+(x.total_quantity??x.stock_quantity??'')+'" placeholder="Кол-во" style="width:78px;min-width:70px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px"><button type="button" class="dr-btn" data-st-stock-save="'+esc(x.name)+'">Сохранить</button></div></td></tr>').join('')+'</tbody></table>':'<div class="dr-card">Товарная база пока пустая. Импортируй Excel или вставь таблицу из буфера.</div>';
+      if(foot)foot.textContent='Всего товаров: '+rows.length+'. Пустые значения сохранены как пустые, а не заменены нулями.';
+    }catch(e){box.innerHTML='<div class="dr-card">Не удалось загрузить товарную базу: '+esc(e.message||'')+'.</div>';}
   }
   async function saveStockRow(name){
     const qtyEl=document.querySelector('[data-st-stock-qty="'+CSS.escape(name)+'"]'),unitEl=document.querySelector('[data-st-stock-unit="'+CSS.escape(name)+'"]'),foot=$('#stStockFoot');
@@ -365,9 +440,9 @@
     const csv=[['Дата','Сотрудник','Товар','Количество','Ед.','Цена','Сумма','Комментарий'],...rows.map(x=>[new Date(x.created_at).toLocaleString('ru-RU'),x.employee_name,x.product_name,x.quantity,x.unit,x.unit_price,x.total,x.note||''])].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
     const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='provoda-shared-spend.csv';a.click();URL.revokeObjectURL(url);
   }
-  document.addEventListener('click',e=>{
+  document.addEventListener('change',async e=>{if(e.target?.id==='stInventoryFile'&&e.target.files?.[0]){try{const rows=await inventoryReadFile(e.target.files[0]);inventoryPreview(rows);}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать файл.';}}});\n  document.addEventListener('click',e=>{
     if(e.target.closest('[data-st-spend-refresh]')){loadSharedSpend();return;}
-    if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}
+    if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}\n    if(e.target.closest('[data-st-inventory-parse]')){try{const raw=$('#stInventoryPaste')?.value||'';inventoryPreview(inventoryRowsFromMatrix(raw.split(/\\r?\\n/).map(line=>line.split('\\t'))));}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать таблицу.';}return;}\n    if(e.target.closest('[data-st-inventory-import]')){inventoryImport();return;}
     const stockSave=e.target.closest('[data-st-stock-save]');if(stockSave){saveStockRow(stockSave.dataset.stStockSave);return;}
     if(e.target.closest('[data-st-spend-export]')){downloadSharedSpendCsv();return;}
     const quick=e.target.closest('[data-st-section]');
@@ -375,9 +450,9 @@
       const section=quick.dataset.stSection;
       document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b===quick));
       const note=$('#stFeatureNotice'),settings=$('#drSettingsView');
-      if(section==='tasks'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');const panel=$('#shiftPanelSheet');if(panel)panel.scrollTo({top:0,behavior:'smooth'});setTimeout(()=>$('#shiftTasksWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'}),40);}
+      if(section==='tasks'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');const panel=$('#shiftPanelSheet');if(panel)panel.scrollTo({top:0,behavior:'smooth'});}
       else if(section==='reports'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');open();}
-      else if(section==='stock'){settings?.classList.add('dr-hidden');if(note){note.innerHTML='<strong>Товарная база · фактические остатки</strong><p class="small">Указывай фактический остаток по каждому товару. При выдаче товара через общий каталог количество будет уменьшаться автоматически.</p><div class="dr-actions"><button type="button" class="dr-btn" data-st-stock-refresh>Обновить остатки</button></div><div id="stStockTable" class="dr-table-wrap"><div class="dr-card">Загружаю каталог…</div></div><p id="stStockFoot" class="small">Для изменения остатка нужны права Админа или СТ и установленная SQL-миграция.</p>';note.classList.add('visible');}loadStockTable();}
+      else if(section==='stock'){settings?.classList.add('dr-hidden');if(note){note.innerHTML='<strong>Единая товарная база PROVODA</strong><p class="small">Все товары и их характеристики. Импортируй Excel целиком или скопируй диапазон ячеек прямо из Excel и вставь ниже. Совпадающие названия обновятся, новые товары добавятся.</p><div class="dr-card" style="margin:12px 0"><label class="small" for="stInventoryFile">Загрузить Excel / CSV</label><input id="stInventoryFile" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt" style="display:block;margin:8px 0;width:100%"><textarea id="stInventoryPaste" rows="5" placeholder="Или вставь сюда таблицу из Excel (Ctrl+C → Ctrl+V)…" style="width:100%;margin-top:8px"></textarea><div class="dr-actions"><button type="button" class="dr-btn" data-st-inventory-parse>Проверить таблицу</button><button type="button" class="dr-btn primary" id="stInventoryImport" data-st-inventory-import disabled>Загрузить товары в общую базу</button><button type="button" class="dr-btn" data-st-stock-refresh>Обновить</button></div><div id="stInventoryPreview" class="small">Выбери файл или вставь данные для предварительной проверки.</div></div><div id="stStockTable" class="dr-table-wrap"><div class="dr-card">Загружаю товарную базу…</div></div><p id="stStockFoot" class="small">Импорт доступен Администратору и СТ.</p>';note.classList.add('visible');}loadStockTable();}
       else if(section==='roles'){note?.classList.remove('visible');if(isReviewer){settings?.classList.remove('dr-hidden');renderCategories();loadUsers();settings?.scrollIntoView({behavior:'smooth',block:'start'});}else if(note){note.innerHTML='<strong>Недостаточно прав</strong>Назначать дневную и ночную смену может только Админ или СТ.';note.classList.add('visible');}}
       else if(section==='spend'){
         settings?.classList.add('dr-hidden');
