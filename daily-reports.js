@@ -435,7 +435,7 @@
     const csv=[['Дата','Сотрудник','Товар','Количество','Ед.','Цена','Сумма','Комментарий'],...rows.map(x=>[new Date(x.created_at).toLocaleString('ru-RU'),x.employee_name,x.product_name,x.quantity,x.unit,x.unit_price,x.total,x.note||''])].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
     const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='provoda-shared-spend.csv';a.click();URL.revokeObjectURL(url);
   }
-  document.addEventListener('change',async e=>{if(e.target?.id==='stInventoryFile'&&e.target.files?.[0]){try{const rows=await inventoryReadFile(e.target.files[0]);inventoryPreview(rows);}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать файл.';}}});
+  document.addEventListener('change',async e=>{if(e.target?.id==='stInventoryFile'&&e.target.files?.[0]){try{const rows=await inventoryReadFile(e.target.files[0]);inventoryPreview(rows);}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать файл.';}}},true);
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-st-spend-refresh]')){loadSharedSpend();return;}
     if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}
@@ -478,7 +478,7 @@
       ensureUI();document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b.dataset.stSection==='tasks'));$('#stFeatureNotice')?.classList.remove('visible');
       if(cloudClient&&cloudUser)load().then(()=>{if(isReviewer){$('#drSettingsView')?.classList.add('dr-hidden');renderCategories();loadUsers();}});
     }
-  });
+  },true);
   document.addEventListener('DOMContentLoaded',ensureUI);
   if(document.readyState!=='loading')ensureUI();
 })();
