@@ -88,7 +88,7 @@ begin
    low_stock_threshold=new_low_stock_threshold,updated_at=now(),updated_by=(select auth.uid()) where name=existing_name;
  end if;
  return true;
-end $;
+end $$;
 revoke all on function public.shared_stock_set(text,numeric,text,numeric,text,numeric) from public,anon;
 grant execute on function public.shared_stock_set(text,numeric,text,numeric,text,numeric) to authenticated;
 
