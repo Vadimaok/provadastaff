@@ -2984,7 +2984,7 @@ async function adminLoadCustomRoleAssignments(){
 }
 async function adminAssignCustomRole(){
  const userId=document.querySelector('#adminRoleUser')?.value,roleId=document.querySelector('#customRoleAssignSelect')?.value||null,status=document.querySelector('#customRoleStatus');if(!userId){status.textContent='Сначала выбери сотрудника.';return;}
- try{const res=await cloudClient.rpc('admin_custom_role_assign',{target_user_id:userId,target_role_id:roleId});if(res.error)throw res.error;status.textContent=roleId?'Дополнительная роль назначена.':'Дополнительная роль снята.';}
+ try{const res=await cloudClient.rpc('admin_custom_role_assign',{target_user_id:userId,target_role_id:roleId});if(res.error)throw res.error;status.textContent=roleId?'Дополнительная роль назначена.':'Дополнительная роль снята.';await adminLoadCustomRoleAssignments();}
  catch(e){status.textContent='Не удалось назначить роль: '+(e.message||'ошибка');}
 }
 function adminRenderAccounts(){
