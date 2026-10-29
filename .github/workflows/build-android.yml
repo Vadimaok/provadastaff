@@ -8,6 +8,7 @@ on:
       - "package.json"
       - "www/**"
       - "index.html"
+      - "daily-reports.js"
       - "supabase/**"
       - "app-version.json"
       - "package.json"

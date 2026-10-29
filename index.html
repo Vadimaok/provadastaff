@@ -1968,7 +1968,7 @@ function openDataTools(){
   document.querySelector('#dataToolsSheet').classList.add('open');document.querySelector('#dataToolsSheet').setAttribute('aria-hidden','false');
 }
 function closeDataTools(){const sheet=document.querySelector('#dataToolsSheet');sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');}
-async function openShiftPanel(){closeProfileMenu();closeSettings();if(currentUserRole!=='shift_senior'){toast('Эта панель доступна только роли Старший КНЗ');return;}const panel=document.querySelector('#shiftPanelSheet');panel.classList.add('open');panel.setAttribute('aria-hidden','false');const flags=await loadRoleFeatureFlags(),disabled=!flags.shift_senior;document.querySelector('#shiftFeatureDisabled').classList.toggle('hidden',!disabled);document.querySelector('#shiftTasksWorkspace').classList.toggle('hidden',disabled);if(!disabled)shiftLoadData();}
+async function openShiftPanel(){closeProfileMenu();closeSettings();let kuzAccess=false;if(currentUserRole!=='shift_senior'){try{const {data,error}=await cloudClient.rpc('is_current_kuznetsova');if(error)throw error;kuzAccess=!!data;}catch{}if(!kuzAccess){toast('Эта панель доступна только роли Старший КНЗ или Кузнецова');return;}}const panel=document.querySelector('#shiftPanelSheet');panel.classList.add('open');panel.setAttribute('aria-hidden','false');const flags=await loadRoleFeatureFlags(),disabled=kuzAccess?false:!flags.shift_senior;document.querySelector('#shiftFeatureDisabled').classList.toggle('hidden',!disabled);document.querySelector('#shiftTasksWorkspace').classList.toggle('hidden',disabled||kuzAccess);document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('hidden',kuzAccess&&b.dataset.stSection!=='spend'));if(kuzAccess){document.querySelector('#drShiftAdminCard')?.classList.add('hidden');document.querySelector('#stReportsWorkspace')?.classList.add('hidden');document.querySelector('#stQuickNav [data-st-section="spend"]')?.click();}else if(!disabled){document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.remove('hidden'));shiftLoadData();}}
 function closeShiftPanel(){const panel=document.querySelector('#shiftPanelSheet');panel.classList.remove('open');panel.setAttribute('aria-hidden','true');}
 async function openKnzTasks(){closeProfileMenu();closeSettings();if(currentUserRole!=='employee_knz'){toast('Доступ только для сотрудников КНЗ');return;}const panel=document.querySelector('#knzTasksSheet');panel.classList.add('open');panel.setAttribute('aria-hidden','false');const flags=await loadRoleFeatureFlags(),disabled=!flags.employee_knz;document.querySelector('#knzFeatureDisabled').classList.toggle('hidden',!disabled);document.querySelector('#knzTaskList').classList.toggle('hidden',disabled);if(!disabled)knzLoadTasks();}
 function closeKnzTasks(){const panel=document.querySelector('#knzTasksSheet');panel.classList.remove('open');panel.setAttribute('aria-hidden','true');}
@@ -3451,6 +3451,7 @@ function setAvatarImage(data){
 }
 let currentUserRole='employee';
 let currentUserShiftRole=null;
+let currentUserKuznetsova=false;
 let requestedTeamViewHandled=false;
 async function openRequestedTeamView(){
   const view=new URLSearchParams(window.location.search).get('view');
@@ -3467,10 +3468,11 @@ async function openRequestedTeamView(){
   }
 }
 async function refreshCurrentUserRole(){
-  if(!cloudClient||!cloudUser){currentUserRole='employee';applyRoleUI();return;}
+  if(!cloudClient||!cloudUser){currentUserRole='employee';currentUserKuznetsova=false;applyRoleUI();return;}
   try{const {data,error}=await cloudClient.rpc('user_get_my_role');if(error)throw error;currentUserRole=['employee','employee_knz','shift_senior'].includes(data)?data:'employee';}
   catch(e){console.info('Role could not be loaded:',e?.message||e);}
   try{const {data,error}=await cloudClient.rpc('user_get_my_shift_role');if(error)throw error;currentUserShiftRole=data||null;}catch{currentUserShiftRole=null;}
+  try{const {data,error}=await cloudClient.rpc('is_current_kuznetsova');if(error)throw error;currentUserKuznetsova=!!data;}catch{currentUserKuznetsova=false;}
   applyRoleUI();
   if(currentUserRole==='employee_knz')refreshKnzRejectedBanner();
   openRequestedTeamView();
@@ -3482,7 +3484,7 @@ async function refreshKnzRejectedBanner(){
 function applyRoleUI(){
   const labels={employee:'Сотрудник',employee_knz:'Сотрудник КНЗ',shift_senior:'СТ / Старший КНЗ',shift_day:'Дневная смена',shift_night:'Ночная смена'};
   const badge=document.querySelector('#profileRoleBadge');if(badge){badge.textContent=(labels[currentUserRole]||labels.employee)+(currentUserShiftRole?' · '+(labels[currentUserShiftRole]||'сменная роль'):'');badge.classList.remove('role-shift','role-knz','role-employee');badge.classList.add(currentUserRole==='shift_senior'?'role-shift':currentUserRole==='employee_knz'?'role-knz':(currentUserRole==='shift_day'||currentUserRole==='shift_night')?'role-shift':'role-employee');badge.classList.toggle('hidden',!cloudUser);}
-  const shift=document.querySelector('#openShiftPanelBtn');if(shift)shift.classList.toggle('admin-visible',!!cloudUser&&currentUserRole==='shift_senior');
+  const shift=document.querySelector('#openShiftPanelBtn');if(shift){shift.classList.toggle('admin-visible',!!cloudUser&&(currentUserRole==='shift_senior'||currentUserKuznetsova));const label=shift.querySelector('span:last-child');if(label)label.textContent=currentUserKuznetsova&&currentUserRole!=='shift_senior'?'Общие траты':'Панель управления СТ';}
   const knz=document.querySelector('#openKnzTasksBtn');if(knz)knz.classList.toggle('admin-visible',!!cloudUser&&currentUserRole==='employee_knz');
 }
 function syncProfileUI(){
