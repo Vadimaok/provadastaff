@@ -77,7 +77,6 @@
       adminCard.id='drShiftAdminCard';
       adminCard.className='admin-card dr-shift-admin-card';
       adminCard.innerHTML='<div class="dr-admin-hero"><div class="dr-admin-icon" aria-hidden="true">▤</div><div><div class="small">PROVODA STAFF · CONTROL</div><h3>Ежедневные отчёты</h3><p>Настройка чек-листов, сменных ролей и доступности отчётов.</p></div></div><div id="drShiftAdminNotice" class="dr-admin-notice" role="status" aria-live="polite"></div>';
-      settingsView.classList.remove('dr-hidden');
       settingsView.classList.add('dr-shift-settings');
       adminCard.appendChild(settingsView);
       shiftWorkspace.appendChild(adminCard);
