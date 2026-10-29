@@ -85,7 +85,7 @@
       if(shiftHeader)shiftHeader.insertAdjacentElement('afterend',nav);else shiftWorkspace.parentNode.insertBefore(nav,shiftWorkspace);
       const adminCard=document.createElement('section');adminCard.id='drShiftAdminCard';adminCard.className='admin-card dr-shift-admin-card';
       adminCard.innerHTML='<div class="dr-admin-hero"><div class="dr-admin-icon" aria-hidden="true">▤</div><div><div class="small">PROVODA STAFF · CONTROL</div><h3>Ежедневные отчёты</h3><p>Настройка чек-листов, сменных ролей и доступности отчётов.</p></div></div><div id="drShiftAdminNotice" class="dr-admin-notice" role="status" aria-live="polite"></div>';
-      settingsView.classList.add('dr-shift-settings');adminCard.appendChild(settingsView);shiftWorkspace.appendChild(adminCard);$('#drSettingsTab')?.classList.add('dr-hidden');
+      settingsView.classList.add('dr-shift-settings');adminCard.appendChild(settingsView);adminCard.classList.add('hidden');shiftWorkspace.insertAdjacentElement('afterend',adminCard);$('#drSettingsTab')?.classList.add('dr-hidden');
     }
     $('#drClose').addEventListener('click',close);
     $('#drToggleChecklist').addEventListener('click',()=>{const box=$('#drChecklist'),btn=$('#drToggleChecklist'),open=box.classList.contains('dr-hidden');box.classList.toggle('dr-hidden',!open);btn.setAttribute('aria-expanded',String(open));btn.textContent=open?'Чек-лист смены · скрыть отметки':'Чек-лист смены · показать отметки';});
@@ -448,18 +448,26 @@
     if(quick){
       const section=quick.dataset.stSection;
       document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b===quick));
-      const note=$('#stFeatureNotice'),settings=$('#drSettingsView');
-      if(section==='tasks'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');const panel=$('#shiftPanelSheet');if(panel)panel.scrollTo({top:0,behavior:'smooth'});}
-      else if(section==='reports'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');open();}
-      else if(section==='stock'){settings?.classList.add('dr-hidden');if(note){note.innerHTML='<strong>Единая товарная база PROVODA</strong><p class="small">Все товары и их характеристики. Импортируй Excel целиком или скопируй диапазон ячеек прямо из Excel и вставь ниже. Совпадающие названия обновятся, новые товары добавятся.</p><div class="dr-card" style="margin:12px 0"><label class="small" for="stInventoryFile">Загрузить Excel / CSV</label><input id="stInventoryFile" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt" style="display:block;margin:8px 0;width:100%"><textarea id="stInventoryPaste" rows="5" placeholder="Или вставь сюда таблицу из Excel (Ctrl+C → Ctrl+V)…" style="width:100%;margin-top:8px"></textarea><div class="dr-actions"><button type="button" class="dr-btn" data-st-inventory-parse>Проверить таблицу</button><button type="button" class="dr-btn primary" id="stInventoryImport" data-st-inventory-import disabled>Загрузить товары в общую базу</button><button type="button" class="dr-btn" data-st-stock-refresh>Обновить</button></div><div id="stInventoryPreview" class="small">Выбери файл или вставь данные для предварительной проверки.</div></div><div id="stStockTable" class="dr-table-wrap"><div class="dr-card">Загружаю товарную базу…</div></div><p id="stStockFoot" class="small">Импорт доступен Администратору и СТ.</p>';note.classList.add('visible');}loadStockTable();}
-      else if(section==='roles'){note?.classList.remove('visible');if(isReviewer){settings?.classList.remove('dr-hidden');renderCategories();loadUsers();settings?.scrollIntoView({behavior:'smooth',block:'start'});}else if(note){note.innerHTML='<strong>Недостаточно прав</strong>Назначать дневную и ночную смену может только Админ или СТ.';note.classList.add('visible');}}
-      else if(section==='spend'){
-        settings?.classList.add('dr-hidden');
+      const note=$('#stFeatureNotice'),settings=$('#drSettingsView'),workspace=$('#shiftTasksWorkspace'),adminCard=$('#drShiftAdminCard');
+      if(section==='tasks'){
+        note?.classList.remove('visible');settings?.classList.add('dr-hidden');adminCard?.classList.add('hidden');workspace?.classList.remove('hidden');
+        $('#shiftPanelSheet')?.scrollTo({top:0,behavior:'smooth'});
+      }else if(section==='reports'){
+        note?.classList.remove('visible');settings?.classList.add('dr-hidden');adminCard?.classList.add('hidden');workspace?.classList.add('hidden');open();
+      }else if(section==='stock'){
+        settings?.classList.add('dr-hidden');adminCard?.classList.add('hidden');workspace?.classList.add('hidden');
+        if(note){note.innerHTML='<strong>Единая товарная база PROVODA</strong><p class="small">Все товары и их характеристики. Импортируй Excel целиком или скопируй диапазон ячеек прямо из Excel и вставь ниже. Совпадающие названия обновятся, новые товары добавятся.</p><div class="dr-card" style="margin:12px 0"><label class="small" for="stInventoryFile">Загрузить Excel / CSV</label><input id="stInventoryFile" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt" style="display:block;margin:8px 0;width:100%"><textarea id="stInventoryPaste" rows="5" placeholder="Или вставь сюда таблицу из Excel (Ctrl+C → Ctrl+V)…" style="width:100%;margin-top:8px"></textarea><div class="dr-actions"><button type="button" class="dr-btn" data-st-inventory-parse>Проверить таблицу</button><button type="button" class="dr-btn primary" id="stInventoryImport" data-st-inventory-import disabled>Загрузить товары в общую базу</button><button type="button" class="dr-btn" data-st-stock-refresh>Обновить</button></div><div id="stInventoryPreview" class="small">Выбери файл или вставь данные для предварительной проверки.</div></div><div id="stStockTable" class="dr-table-wrap"><div class="dr-card">Загружаю товарную базу…</div></div><p id="stStockFoot" class="small">Импорт доступен Администратору и СТ.</p>';note.classList.add('visible');}
+        loadStockTable();
+      }else if(section==='roles'){
+        note?.classList.remove('visible');workspace?.classList.add('hidden');
+        if(isReviewer){adminCard?.classList.remove('hidden');settings?.classList.remove('dr-hidden');renderCategories();loadUsers();adminCard?.scrollIntoView({behavior:'smooth',block:'start'});}
+        else{adminCard?.classList.add('hidden');if(note){note.innerHTML='<strong>Недостаточно прав</strong>Назначать дневную и ночную смену может только Админ или СТ.';note.classList.add('visible');}}
+      }else if(section==='spend'){
+        settings?.classList.add('dr-hidden');adminCard?.classList.add('hidden');workspace?.classList.add('hidden');
         if(note){note.innerHTML='<strong>Общие траты · выдача товаров</strong><div class="st-analytics-grid"><div><span>Общая сумма</span><b id="stSpendTotal">—</b></div><div><span>Выдач</span><b id="stSpendCount">—</b></div></div><div class="dr-actions" style="margin-top:12px"><button type="button" class="dr-btn" data-st-spend-refresh>Обновить</button><button type="button" class="dr-btn" data-st-spend-export>Скачать CSV</button></div><div class="dr-table-wrap" style="margin-top:12px"><table class="dr-table" style="min-width:620px"><thead><tr><th>Когда</th><th>Кто</th><th>Что взял</th><th>Количество</th><th>Цена</th><th>Сумма</th></tr></thead><tbody id="stSpendRows"><tr><td colspan="6">Загружаю…</td></tr></tbody></table></div><p id="stSpendFoot" class="small">Журнал выдач из общего каталога. Для совместной работы примени новую SQL-миграцию.</p>';note.classList.add('visible');}
         loadSharedSpend();
-      }
-      else if(section==='analytics'){
-        settings?.classList.add('dr-hidden');
+      }else if(section==='analytics'){
+        settings?.classList.add('dr-hidden');adminCard?.classList.add('hidden');workspace?.classList.add('hidden');
         if(note){note.innerHTML='<strong>Расширенная аналитика · сотрудники и динамика</strong><div class="st-analytics-grid"><div><span>Всего отчётов</span><b id="stMetricTotal">—</b></div><div><span>Одобрено</span><b id="stMetricApproved">—</b></div><div><span>Отклонено / ошибки</span><b id="stMetricRejected">—</b></div><div><span>На проверке</span><b id="stMetricPending">—</b></div><div><span>Успешность</span><b id="stMetricRate">—</b></div><div><span>Дневные / ночные</span><b id="stMetricShifts">—</b></div></div><h4 style="margin:16px 0 8px">Показатели по сотрудникам</h4><div id="stAnalyticsPeople" class="dr-table-wrap"><div class="dr-card">Загружаю…</div></div><h4 style="margin:16px 0 8px">Динамика по дням</h4><div id="stAnalyticsTrend" class="dr-table-wrap"></div><p id="stAnalyticsFoot" style="margin:10px 0 0">Загружаю актуальные данные…</p>';note.classList.add('visible');}
         load({silent:true}).then(()=>{
           const total=reports.length,approved=reports.filter(r=>r.status==='approved').length,rejected=reports.filter(r=>r.status==='rejected').length,pending=reports.filter(r=>r.status==='pending').length,done=approved+rejected,rate=done?Math.round(approved/done*100):0,day=reports.filter(r=>r.shift_type==='day').length,night=reports.filter(r=>r.shift_type==='night').length;
