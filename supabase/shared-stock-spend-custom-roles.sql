@@ -55,11 +55,19 @@ grant execute on function public.shared_product_issue(text,numeric,numeric,text)
 
 create or replace function public.shared_stock_set(product_name text,new_quantity numeric,new_unit text default 'шт',new_low_stock_threshold numeric default null)
 returns boolean language plpgsql security definer set search_path='' as $$
+declare existing_name text;
 begin
  if not public.is_current_admin() and public.daily_report_my_role()<>'shift_senior' then raise exception 'Изменять остатки может только Админ или СТ' using errcode='42501'; end if;
+ if length(trim(coalesce(product_name,''))) not between 1 and 160 then raise exception 'Укажи товар'; end if;
  if new_quantity is not null and new_quantity<0 then raise exception 'Остаток не может быть отрицательным'; end if;
- update public.product_catalog set stock_quantity=new_quantity,stock_unit=coalesce(nullif(trim(new_unit),''),'шт'),low_stock_threshold=new_low_stock_threshold,updated_at=now(),updated_by=(select auth.uid()) where lower(trim(name))=lower(trim(product_name));
- if not found then raise exception 'Сначала сохрани товар в общем каталоге'; end if;
+ if new_low_stock_threshold is not null and new_low_stock_threshold<0 then raise exception 'Порог остатка не может быть отрицательным'; end if;
+ select c.name into existing_name from public.product_catalog c where lower(trim(c.name))=lower(trim(product_name)) limit 1;
+ if existing_name is null then
+  insert into public.product_catalog(name,category,price,available,active,stock_quantity,stock_unit,low_stock_threshold,updated_at,updated_by)
+  values(trim(product_name),'другое',0,true,true,new_quantity,coalesce(nullif(trim(new_unit),''),'шт'),new_low_stock_threshold,now(),(select auth.uid()));
+ else
+  update public.product_catalog set stock_quantity=new_quantity,stock_unit=coalesce(nullif(trim(new_unit),''),'шт'),low_stock_threshold=new_low_stock_threshold,updated_at=now(),updated_by=(select auth.uid()) where name=existing_name;
+ end if;
  return true;
 end $$;
 revoke all on function public.shared_stock_set(text,numeric,text,numeric) from public,anon;
