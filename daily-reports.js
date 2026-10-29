@@ -40,6 +40,28 @@
       .dr-shift-settings .dr-grid input,.dr-shift-settings .dr-grid select{border-radius:12px}
       .dr-shift-settings .dr-card[data-dr-category]{background:rgba(255,255,255,.035);border-color:rgba(148,163,184,.16)}
       .dr-shift-settings .dr-check{padding:11px 12px}
+      .dr-category-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .dr-category-card{margin:0;padding:10px;border-radius:12px}
+      .dr-category-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(92px,.8fr);gap:8px}
+      .dr-category-grid label{gap:4px;font-size:11px}
+      .dr-category-grid input,.dr-category-grid select{min-height:36px;padding:7px 8px;font-size:13px;border-radius:9px}
+      .dr-category-card .dr-actions{margin:8px 0 0}
+      .dr-category-card .dr-btn{min-height:34px;padding:7px 10px;font-size:12px}
+      .dr-inline-shell{width:100%;max-width:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent}
+      .st-reports-workspace{padding:0!important;overflow:hidden}
+      .st-reports-workspace .dr-head{position:relative;top:auto;padding-top:0}
+      #stStockTable .st-product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+      #stStockTable .st-product-card{margin:0;padding:12px;border-radius:14px;min-width:0}
+      #stStockTable .st-product-title{font-size:14px;font-weight:750;line-height:1.3;overflow-wrap:anywhere;margin-bottom:10px}
+      #stStockTable .st-product-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+      #stStockTable .st-product-metric{min-width:0;padding:8px 6px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.025)}
+      #stStockTable .st-product-metric span{display:block;color:var(--muted);font-size:10px;line-height:1.2;margin-bottom:5px}
+      #stStockTable .st-product-metric b{display:block;font-size:13px;line-height:1.2;overflow-wrap:anywhere}
+      #stStockTable .st-product-edit{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+      #stStockTable .st-product-edit label{font-size:10px;color:var(--muted);min-width:0}
+      #stStockTable .st-product-edit input{display:block;width:100%;min-width:0;margin-top:4px;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--card2);color:var(--text);font:inherit;font-size:13px}
+      #stStockTable .st-product-save{width:100%;margin-top:8px;min-height:36px;padding:7px 10px;font-size:12px}
+      @media(max-width:600px){.dr-category-list{grid-template-columns:minmax(0,1fr)}#stStockTable .st-product-grid{grid-template-columns:minmax(0,1fr)}}
       @media(max-width:600px){.dr-admin-hero{padding:15px 13px}.dr-admin-icon{width:40px;height:40px;flex-basis:40px}.dr-shift-settings{padding:0 10px 12px}.dr-shift-settings>.dr-card{padding:12px}.dr-admin-notice{margin-inline:12px}}
       .dr-check{display:flex;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(135deg,rgba(124,92,255,.09),rgba(34,211,238,.035));cursor:pointer;transition:border-color .16s,background .16s;min-width:0}.dr-check:has(input:checked){border-color:rgba(52,211,153,.55);background:rgba(52,211,153,.09)}.dr-check>input{appearance:none;-webkit-appearance:none;flex:0 0 23px;width:23px;height:23px;margin:0;border-radius:7px;border:1.5px solid rgba(148,163,184,.7);background:rgba(15,23,42,.45);display:grid;place-content:center;cursor:pointer}.dr-check>input:checked{background:var(--good);border-color:var(--good)}.dr-check>input:checked:before{content:'✓';font-size:16px;line-height:1;font-weight:900;color:#052e25}.dr-check>span{min-width:0}.dr-check strong{display:block;line-height:1.35;overflow-wrap:anywhere}.dr-check .small{line-height:1.45;margin-top:5px}
       .dr-checklist-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;margin:12px 0 8px;padding:13px 15px;border:1px solid var(--line);border-radius:15px;background:rgba(124,92,255,.09);color:var(--text);font:inherit;font-weight:750;cursor:pointer;min-height:48px}.dr-checklist-toggle:after{content:'＋';font-size:19px;color:var(--muted);flex:0 0 auto}.dr-checklist-toggle[aria-expanded="true"]:after{content:'−'}.dr-checklist-wrap{display:grid;gap:0}
@@ -85,7 +107,9 @@
       nav.insertAdjacentElement('afterend',featureNotice);
       const adminCard=document.createElement('section');adminCard.id='drShiftAdminCard';adminCard.className='admin-card dr-shift-admin-card';
       adminCard.innerHTML='<div class="dr-admin-hero"><div class="dr-admin-icon" aria-hidden="true">▤</div><div><div class="small">PROVODA STAFF · CONTROL</div><h3>Ежедневные отчёты</h3><p>Настройка чек-листов, сменных ролей и доступности отчётов.</p></div></div><div id="drShiftAdminNotice" class="dr-admin-notice" role="status" aria-live="polite"></div>';
-      settingsView.classList.add('dr-shift-settings');adminCard.appendChild(settingsView);adminCard.classList.add('hidden');shiftWorkspace.insertAdjacentElement('afterend',adminCard);$('#drSettingsTab')?.classList.add('dr-hidden');
+      settingsView.classList.add('dr-shift-settings');adminCard.appendChild(settingsView);adminCard.classList.add('hidden');shiftWorkspace.insertAdjacentElement('afterend',adminCard);
+      const reportsWorkspace=document.createElement('section');reportsWorkspace.id='stReportsWorkspace';reportsWorkspace.className='admin-card st-reports-workspace hidden';reportsWorkspace.setAttribute('aria-label','Отчёты СТ');adminCard.insertAdjacentElement('afterend',reportsWorkspace);
+      $('#drSettingsTab')?.classList.add('dr-hidden');
     }
     $('#drClose').addEventListener('click',close);
     $('#drToggleChecklist').addEventListener('click',()=>{const box=$('#drChecklist'),btn=$('#drToggleChecklist'),open=box.classList.contains('dr-hidden');box.classList.toggle('dr-hidden',!open);btn.setAttribute('aria-expanded',String(open));btn.textContent=open?'Чек-лист смены · скрыть отметки':'Чек-лист смены · показать отметки';});
@@ -112,8 +136,10 @@
     const color=bad?'var(--bad)':'var(--muted)';
     ['#drNotice','#drShiftAdminNotice'].forEach(sel=>{const el=$(sel);if(el){el.textContent=msg;el.style.color=color;}});
   }
-  function close(){const s=$('#dailyReportsSheet');if(s){s.classList.remove('open');s.setAttribute('aria-hidden','true');}stopLiveUpdates();}
-  function open(){ensureUI();activeView='new';if(!cloudClient||!cloudUser){notice('Сначала войди в аккаунт.',true);return;}try{closeProfileMenu()}catch{}$('#dailyReportsSheet').classList.add('open');$('#dailyReportsSheet').setAttribute('aria-hidden','false');$('#drDate').value=new Date().toISOString().slice(0,10);$('#drChecklist').classList.add('dr-hidden');$('#drToggleChecklist').setAttribute('aria-expanded','false');$('#drToggleChecklist').textContent='Чек-лист смены · показать отметки';load();startLiveUpdates();}
+  function restoreReportsModal(){const sheet=$('#dailyReportsSheet'),shell=$('#stReportsWorkspace .dr-shell');if(sheet&&shell){sheet.appendChild(shell);shell.classList.remove('dr-inline-shell');}}
+  function close(){const s=$('#dailyReportsSheet'),workspace=$('#stReportsWorkspace');if(workspace&&workspace.contains($('#drTitle'))){workspace.classList.add('hidden');$('#shiftTasksWorkspace')?.classList.remove('hidden');$('#drShiftAdminCard')?.classList.add('hidden');document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b.dataset.stSection==='tasks'));stopLiveUpdates();return;}if(s){s.classList.remove('open');s.setAttribute('aria-hidden','true');}stopLiveUpdates();}
+  function open(){ensureUI();restoreReportsModal();$('#stReportsWorkspace')?.classList.add('hidden');activeView='new';if(!cloudClient||!cloudUser){notice('Сначала войди в аккаунт.',true);return;}try{closeProfileMenu()}catch{}$('#dailyReportsSheet').classList.add('open');$('#dailyReportsSheet').setAttribute('aria-hidden','false');$('#drDate').value=new Date().toISOString().slice(0,10);$('#drChecklist').classList.add('dr-hidden');$('#drToggleChecklist').setAttribute('aria-expanded','false');$('#drToggleChecklist').textContent='Чек-лист смены · показать отметки';load();startLiveUpdates();}
+  function showReportsInPanel(){ensureUI();if(!cloudClient||!cloudUser){notice('Сначала войди в аккаунт.',true);return;}try{closeProfileMenu()}catch{}const shell=$('#dailyReportsSheet .dr-shell'),workspace=$('#stReportsWorkspace');if(!shell||!workspace){open();return;}workspace.appendChild(shell);shell.classList.add('dr-inline-shell');$('#dailyReportsSheet').classList.remove('open');$('#dailyReportsSheet').setAttribute('aria-hidden','true');workspace.classList.remove('hidden');$('#shiftTasksWorkspace')?.classList.add('hidden');$('#drShiftAdminCard')?.classList.add('hidden');activeView='new';$('#drDate').value=new Date().toISOString().slice(0,10);$('#drChecklist').classList.add('dr-hidden');$('#drToggleChecklist').setAttribute('aria-expanded','false');$('#drToggleChecklist').textContent='Чек-лист смены · показать отметки';document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b.dataset.stSection==='reports'));load();startLiveUpdates();}
   async function getRole(){
     try{const {data,error}=await cloudClient.rpc('is_current_admin');if(error)throw error;isAdmin=!!data;}catch{isAdmin=false;}
     try{const {data,error}=await cloudClient.rpc('daily_report_my_role');if(error)throw error;userRole=data||currentUserRole||'employee';}catch{userRole=(typeof currentUserRole!=='undefined'&&currentUserRole)||'employee';}
@@ -205,8 +231,8 @@
     try{const {error}=await cloudClient.rpc('daily_report_review',{report_id:id,decision:approve?'approved':'rejected',note:comment});if(error)throw error;notice(approve?'Отчёт одобрен.':'Отчёт отклонён с замечанием.');await load();showView('history');}catch(err){notice(err.message||'Не удалось сохранить решение.',true);}
   }
   function renderCategories(){
-    const box=$('#drCategoryList');if(!box)return;
-    box.innerHTML=cats.map(c=>'<div class="dr-card" data-dr-category="'+esc(c.id)+'"><div class="dr-grid"><label>Смена<select data-cat-shift><option value="day" '+(c.shift_type==='day'?'selected':'')+'>Дневная</option><option value="night" '+(c.shift_type==='night'?'selected':'')+'>Ночная</option></select></label><label>Название<input data-cat-title value="'+esc(c.title)+'" maxlength="180"></label><label>Порядок<input data-cat-position type="number" value="'+c.position+'"></label><label class="dr-check">Активна <input data-cat-enabled type="checkbox" '+(c.enabled?'checked':'')+'></label></div><div class="dr-actions"><button class="dr-btn primary" data-cat-save="'+esc(c.id)+'">Сохранить категорию</button></div></div>').join('');
+    const box=$('#drCategoryList');if(!box)return;box.classList.add('dr-category-list');
+    box.innerHTML=cats.map(c=>'<div class="dr-card dr-category-card" data-dr-category="'+esc(c.id)+'"><div class="dr-grid dr-category-grid"><label>Смена<select data-cat-shift><option value="day" '+(c.shift_type==='day'?'selected':'')+'>Дневная</option><option value="night" '+(c.shift_type==='night'?'selected':'')+'>Ночная</option></select></label><label>Название<input data-cat-title value="'+esc(c.title)+'" maxlength="180"></label><label>Порядок<input data-cat-position type="number" value="'+c.position+'"></label><label class="dr-check">Активна <input data-cat-enabled type="checkbox" '+(c.enabled?'checked':'')+'></label></div><div class="dr-actions"><button class="dr-btn primary" data-cat-save="'+esc(c.id)+'">Сохранить</button></div></div>').join('');
   }
   async function categoryAction(e){
     const b=e.target.closest('[data-cat-save]');if(!b)return;const card=b.closest('[data-dr-category]');
@@ -403,10 +429,23 @@
       const merged=new Map(base.map(x=>[String(x.name||'').trim().toLowerCase(),{...x}]));
       saved.forEach(x=>merged.set(String(x.name||'').trim().toLowerCase(),{...(merged.get(String(x.name||'').trim().toLowerCase())||{}),...x}));
       const rows=[...merged.values()].sort((x,y)=>String(x.name).localeCompare(String(y.name),'ru'));
-      const fields=[['category','Категория','text'],['volume','Объём / вес','number'],['purchase_price','Закупка','number'],['price','Реализация','number'],['warehouse_quantity','Склад','number'],['cold_quantity','Холод','number'],['shelf_quantity','Полки','number'],['total_quantity','Итого','number'],['plan_quantity','План','number'],['total_deviation','Отклонение','number'],['tg_writeoffs','Списания TG','number'],['inventory_value','Стоимость','number']];
-      box.innerHTML=rows.length?'<table class="dr-table" style="min-width:1550px"><thead><tr><th>Название</th>'+fields.map(f=>'<th>'+f[1]+'</th>').join('')+'<th>Действие</th></tr></thead><tbody>'+rows.map(x=>'<tr data-st-inventory-row="'+esc(x.name)+'"><td><strong>'+esc(x.name)+'</strong></td>'+fields.map(f=>'<td><input data-st-inv-field="'+f[0]+'" type="'+f[2]+'" '+(f[2]==='number'?'step="0.001"':'')+' value="'+esc(x[f[0]]??'')+'" style="width:100px;min-width:85px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px"></td>').join('')+'<td><button type="button" class="dr-btn primary" data-st-inv-save>Сохранить</button></td></tr>').join('')+'</tbody></table>':'<div class="dr-card">Товарная база пока пустая. Импортируй Excel или вставь таблицу из буфера.</div>';
-      if(foot)foot.textContent='Всего товаров: '+rows.length+'. Пустые значения сохранены как пустые, а не заменены нулями.';
+      const issueTotals=new Map();
+      try{const {data:ledger,error:ledgerError}=await cloudClient.rpc('shared_product_issues_list',{date_from:null,date_to:null});if(!ledgerError)(ledger?.items||[]).forEach(i=>{const key=String(i.product_name||'').trim().toLowerCase();issueTotals.set(key,(issueTotals.get(key)||0)+Number(i.quantity||0));});}catch{}
+      box.innerHTML=rows.length?'<div class="st-product-grid">'+rows.map(x=>{
+        const key=String(x.name||'').trim().toLowerCase(),qty=Number(x.stock_quantity??x.total_quantity??0),unitCost=Number(x.purchase_price??x.price??0),cost=Number(x.inventory_value??(unitCost*qty)),writtenOff=issueTotals.get(key)||0;
+        return '<article class="dr-card st-product-card" data-st-product="'+esc(x.name)+'" data-unit-cost="'+unitCost+'"><div class="st-product-title">'+esc(x.name)+'</div><div class="st-product-metrics"><div class="st-product-metric"><span>Стоимость</span><b>'+new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:2}).format(cost)+'</b></div><div class="st-product-metric"><span>Количество</span><b>'+esc(qty)+' '+esc(x.stock_unit||'шт')+'</b></div><div class="st-product-metric"><span>Списано</span><b>'+esc(writtenOff)+' '+esc(x.stock_unit||'шт')+'</b></div></div><div class="st-product-edit"><label>Стоимость, ₽<input data-st-cost type="number" min="0" step="0.01" value="'+cost+'"></label><label>Количество<input data-st-qty type="number" min="0" step="0.001" value="'+qty+'"></label></div><button type="button" class="dr-btn primary st-product-save" data-st-product-save>Сохранить</button></article>';
+      }).join('')+'</div>':'<div class="dr-card">Товарная база пока пустая. Импортируй Excel или вставь таблицу из буфера.</div>';
+      if(foot)foot.textContent='Товаров: '+rows.length+'. Списание считается автоматически по журналу покупок общего каталога.';
     }catch(e){box.innerHTML='<div class="dr-card">Не удалось загрузить товарную базу: '+esc(e.message||'')+'.</div>';}
+  }
+  async function saveCompactInventoryItem(button){
+    const card=button.closest('[data-st-product]'),name=card?.dataset.stProduct,foot=$('#stStockFoot');if(!card||!name)return;
+    const cost=Number(card.querySelector('[data-st-cost]')?.value),qty=Number(card.querySelector('[data-st-qty]')?.value);
+    if(!Number.isFinite(cost)||cost<0||!Number.isFinite(qty)||qty<0){if(foot)foot.textContent='Стоимость и количество должны быть неотрицательными числами.';return;}
+    const unitCost=qty>0?cost/qty:Number(card.dataset.unitCost)||0;
+    button.disabled=true;button.textContent='Сохраняю…';
+    try{const item={inventory_value:cost,total_quantity:qty};if(qty>0)item.purchase_price=unitCost;const {error}=await cloudClient.rpc('admin_inventory_update_item',{product_name:name,item});if(error)throw error;if(foot)foot.textContent='Товар «'+name+'» обновлён.';await loadStockTable();}
+    catch(e){if(foot)foot.textContent='Не удалось сохранить товар: '+(e.message||'ошибка');button.disabled=false;button.textContent='Сохранить';}
   }
   async function saveInventoryItem(button){
     const row=button.closest('[data-st-inventory-row]'),name=row?.dataset.stInventoryRow,foot=$('#stStockFoot');
@@ -456,6 +495,7 @@
     if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}
     if(e.target.closest('[data-st-inventory-parse]')){try{const raw=$('#stInventoryPaste')?.value||'';inventoryPreview(inventoryRowsFromMatrix(raw.split(/\r?\n/).map(line=>line.split('\t'))));}catch(err){const p=$('#stInventoryPreview');if(p)p.textContent=err.message||'Не удалось прочитать таблицу.';}return;}
     if(e.target.closest('[data-st-inventory-import]')){inventoryImport();return;}
+    const compactInventorySave=e.target.closest('[data-st-product-save]');if(compactInventorySave){saveCompactInventoryItem(compactInventorySave);return;}
     const inventorySave=e.target.closest('[data-st-inv-save]');if(inventorySave){saveInventoryItem(inventorySave);return;}
     const stockSave=e.target.closest('[data-st-stock-save]');if(stockSave){saveStockRow(stockSave.dataset.stStockSave);return;}
     if(e.target.closest('[data-st-spend-export]')){downloadSharedSpendCsv();return;}
@@ -463,12 +503,13 @@
     if(quick){
       const section=quick.dataset.stSection;
       document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b===quick));
-      const note=$('#stFeatureNotice'),settings=$('#drSettingsView'),workspace=$('#shiftTasksWorkspace'),adminCard=$('#drShiftAdminCard');
+      const note=$('#stFeatureNotice'),settings=$('#drSettingsView'),workspace=$('#shiftTasksWorkspace'),adminCard=$('#drShiftAdminCard'),reportsWorkspace=$('#stReportsWorkspace');
+      if(section!=='reports')reportsWorkspace?.classList.add('hidden');
       if(section==='tasks'){
         note?.classList.remove('visible');settings?.classList.add('dr-hidden');adminCard?.classList.add('hidden');workspace?.classList.remove('hidden');
         $('#shiftPanelSheet')?.scrollTo({top:0,behavior:'smooth'});
       }else if(section==='reports'){
-        note?.classList.remove('visible');settings?.classList.add('dr-hidden');adminCard?.classList.add('hidden');workspace?.classList.add('hidden');open();
+        note?.classList.remove('visible');settings?.classList.add('dr-hidden');adminCard?.classList.add('hidden');workspace?.classList.add('hidden');showReportsInPanel();
       }else if(section==='stock'){
         settings?.classList.add('dr-hidden');adminCard?.classList.add('hidden');workspace?.classList.add('hidden');
         if(note){note.innerHTML='<strong>Единая товарная база PROVODA</strong><p class="small">Все товары и их характеристики. Импортируй Excel целиком или скопируй диапазон ячеек прямо из Excel и вставь ниже. Совпадающие названия обновятся, новые товары добавятся.</p><div class="dr-card" style="margin:12px 0"><label class="small" for="stInventoryFile">Загрузить Excel / CSV</label><input id="stInventoryFile" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt" style="display:block;margin:8px 0;width:100%"><textarea id="stInventoryPaste" rows="5" placeholder="Или вставь сюда таблицу из Excel (Ctrl+C → Ctrl+V)…" style="width:100%;margin-top:8px"></textarea><div class="dr-actions"><button type="button" class="dr-btn" data-st-inventory-parse>Проверить таблицу</button><button type="button" class="dr-btn primary" id="stInventoryImport" data-st-inventory-import disabled>Загрузить товары в общую базу</button><button type="button" class="dr-btn" data-st-stock-refresh>Обновить</button></div><div id="stInventoryPreview" class="small">Выбери файл или вставь данные для предварительной проверки.</div></div><div id="stStockTable" class="dr-table-wrap"><div class="dr-card">Загружаю товарную базу…</div></div><p id="stStockFoot" class="small">Импорт доступен Администратору и СТ.</p>';note.classList.add('visible');}
