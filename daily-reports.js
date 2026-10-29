@@ -320,6 +320,27 @@
       startLiveUpdates();scheduleLiveRefresh();
     }
   });
+  async function loadStockTable(){
+    const box=$('#stStockTable'),foot=$('#stStockFoot');if(!box)return;
+    if(!cloudClient||!cloudUser){box.innerHTML='<div class="dr-card">Войди в аккаунт.</div>';return;}
+    box.innerHTML='<div class="dr-card">Загружаю остатки…</div>';
+    try{
+      const {data,error}=await cloudClient.from('product_catalog').select('name,category,price,available,active,stock_quantity,stock_unit,low_stock_threshold').eq('active',true).order('name');
+      if(error)throw error;
+      const rows=Array.isArray(data)?data:[];
+      box.innerHTML=rows.length?'<table class="dr-table"><thead><tr><th>Товар</th><th>Цена</th><th>Фактический остаток</th><th>Порог</th><th>Статус</th><th></th></tr></thead><tbody>'+rows.map((x,i)=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.price)+' ₽</td><td><div style="display:flex;gap:5px;min-width:145px"><input data-st-stock-qty="'+esc(x.name)+'" type="number" min="0" step="0.001" value="'+(x.stock_quantity==null?'':esc(x.stock_quantity))+'" placeholder="Не задан" style="width:90px;min-width:80px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px"><input data-st-stock-unit="'+esc(x.name)+'" value="'+esc(x.stock_unit||'шт')+'" aria-label="Единица измерения" style="width:55px;min-width:45px;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px"></div></td><td>'+ (x.low_stock_threshold==null?'—':esc(x.low_stock_threshold))+'</td><td class="'+(x.stock_quantity!=null&&x.stock_quantity===0?'warn':x.stock_quantity!=null&&x.low_stock_threshold!=null&&x.stock_quantity<=x.low_stock_threshold?'warn':'good')+'">'+(x.stock_quantity==null?'Не задан':x.stock_quantity===0?'Нет остатка':x.low_stock_threshold!=null&&x.stock_quantity<=x.low_stock_threshold?'Мало':'В норме')+'</td><td><button type="button" class="dr-btn" data-st-stock-save="'+esc(x.name)+'">Сохранить</button></td></tr>').join('')+'</tbody></table>':'<div class="dr-card">В общем каталоге пока нет сохранённых товаров. Добавь товары через каталог, затем укажи фактический остаток.</div>';
+      if(foot)foot.textContent='Загружено позиций: '+rows.length+'. Пустой остаток означает «учёт ещё не задан», а не ноль.';
+    }catch(e){box.innerHTML='<div class="dr-card">Не удалось загрузить остатки: '+esc(e.message||'')+'. Проверь SQL-миграцию и права.</div>';}
+  }
+  async function saveStockRow(name){
+    const qtyEl=document.querySelector('[data-st-stock-qty="'+CSS.escape(name)+'"]'),unitEl=document.querySelector('[data-st-stock-unit="'+CSS.escape(name)+'"]'),foot=$('#stStockFoot');
+    if(!qtyEl)return;
+    const raw=qtyEl.value.trim(),qty=raw===''?null:Number(raw);
+    if(qty!==null&&(!Number.isFinite(qty)||qty<0)){if(foot)foot.textContent='Остаток должен быть числом не меньше нуля.';return;}
+    const unit=(unitEl?.value||'шт').trim()||'шт';
+    try{const {error}=await cloudClient.rpc('shared_stock_set',{product_name:name,new_quantity:qty,new_unit:unit,new_low_stock_threshold:null});if(error)throw error;if(foot)foot.textContent='Остаток для «'+name+'» сохранён.';await loadStockTable();}
+    catch(e){if(foot)foot.textContent='Не удалось сохранить остаток: '+(e.message||'ошибка');}
+  }
   async function loadSharedSpend(){
     const rows=$('#stSpendRows'),foot=$('#stSpendFoot');if(!rows)return;
     if(!cloudClient||!cloudUser){rows.innerHTML='<tr><td colspan="6">Войди в аккаунт.</td></tr>';return;}
@@ -341,15 +362,17 @@
   }
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-st-spend-refresh]')){loadSharedSpend();return;}
+    if(e.target.closest('[data-st-stock-refresh]')){loadStockTable();return;}
+    const stockSave=e.target.closest('[data-st-stock-save]');if(stockSave){saveStockRow(stockSave.dataset.stStockSave);return;}
     if(e.target.closest('[data-st-spend-export]')){downloadSharedSpendCsv();return;}
     const quick=e.target.closest('[data-st-section]');
     if(quick){
       const section=quick.dataset.stSection;
       document.querySelectorAll('#stQuickNav [data-st-section]').forEach(b=>b.classList.toggle('active',b===quick));
       const note=$('#stFeatureNotice'),settings=$('#drSettingsView');
-      if(section==='tasks'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');$('#shiftTasksWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'});}
+      if(section==='tasks'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');const panel=$('#shiftPanelSheet');if(panel)panel.scrollTo({top:0,behavior:'smooth'});setTimeout(()=>$('#shiftTasksWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'}),40);}
       else if(section==='reports'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');open();}
-      else if(section==='stock'){note?.classList.remove('visible');settings?.classList.add('dr-hidden');if(typeof closeShiftPanel==='function')closeShiftPanel();if(typeof openCatalog==='function')openCatalog();else $('#openCatalogBtn')?.click();}
+      else if(section==='stock'){settings?.classList.add('dr-hidden');if(note){note.innerHTML='<strong>Товарная база · фактические остатки</strong><p class="small">Указывай фактический остаток по каждому товару. При выдаче товара через общий каталог количество будет уменьшаться автоматически.</p><div class="dr-actions"><button type="button" class="dr-btn" data-st-stock-refresh>Обновить остатки</button></div><div id="stStockTable" class="dr-table-wrap"><div class="dr-card">Загружаю каталог…</div></div><p id="stStockFoot" class="small">Для изменения остатка нужны права Админа или СТ и установленная SQL-миграция.</p>';note.classList.add('visible');}loadStockTable();}
       else if(section==='roles'){note?.classList.remove('visible');if(isReviewer){settings?.classList.remove('dr-hidden');renderCategories();loadUsers();settings?.scrollIntoView({behavior:'smooth',block:'start'});}else if(note){note.innerHTML='<strong>Недостаточно прав</strong>Назначать дневную и ночную смену может только Админ или СТ.';note.classList.add('visible');}}
       else if(section==='spend'){
         settings?.classList.add('dr-hidden');
