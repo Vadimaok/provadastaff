@@ -60,7 +60,6 @@
   function installTile(){
     const grid=$('#dashboardTiles .feature-grid');if(!grid)return;
     let tile=$('#provodaMessengerTile');
-    if(!enabled){tile?.classList.add('hidden');return;}
     if(!tile){
       tile=document.createElement('button');tile.type='button';tile.id='provodaMessengerTile';tile.className='card feature-card';
       tile.innerHTML='<span class="pm-tile-icon">✉</span><span><h2>Открыть мессенджер</h2><p>Личные чаты с сотрудниками и руководителями</p></span><span class="feature-icon" aria-hidden="true">›</span>';
@@ -70,9 +69,8 @@
     if(tile.dataset.pmBound!=='1'){tile.dataset.pmBound='1';tile.addEventListener('click',open);}
   }
   async function refreshAccess(){
-    if(typeof cloudClient==='undefined'||!cloudClient||typeof cloudUser==='undefined'||!cloudUser){enabled=false;installTile();return;}
-    try{const {data,error}=await cloudClient.rpc('user_get_role_features');if(error)throw error;enabled=data?.internal_chat===true;}
-    catch(e){enabled=false;console.info('Messenger access unavailable:',e?.message||e);}
+    // Мессенджер — постоянная функция приложения: отдельный переключатель доступа не используется.
+    enabled=typeof cloudClient!=='undefined'&&!!cloudClient&&typeof cloudUser!=='undefined'&&!!cloudUser;
     installTile();
   }
   async function open(){
