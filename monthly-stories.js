@@ -141,6 +141,7 @@
   }
 
   let employeeMonthlyStory=null;
+  let employeeStorySharing=false;
   let employeeStoryLoading=false;
   let employeeStoryRefreshPending=false;
   function installEmployeeStoryStyles(){
