@@ -247,14 +247,15 @@
       const flags=await cloudClient.rpc('user_get_role_features');
       if(typeof cloudUser==='undefined'||!cloudUser||cloudUser.id!==requestedUserId)return;
       if(flags.error)throw flags.error;
+      installStorySharingControl();
+      await loadStorySharingPreference();
       if(flags.data?.monthly_stories!==true){hideEmployeeStory();return;}
       const {data,error}=await cloudClient.rpc('user_get_my_monthly_story',{p_month_start:monthNow()+'-01'});
       if(typeof cloudUser==='undefined'||!cloudUser||cloudUser.id!==requestedUserId)return;
       if(error)throw error;
       if(!data||data.enabled!==true){hideEmployeeStory();return;}
       employeeMonthlyStory=data;
-      installEmployeeStoryUI();installStorySharingControl();
-      await loadStorySharingPreference();
+      installEmployeeStoryUI();
       const sharedResult=await cloudClient.rpc('user_list_shared_monthly_stories');
       if(typeof cloudUser==='undefined'||!cloudUser||cloudUser.id!==requestedUserId)return;
       const shared=sharedResult.error?[]:(Array.isArray(sharedResult.data)?sharedResult.data:[]);
