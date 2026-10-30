@@ -139,8 +139,101 @@
       const story=stories.find(item=>item.user_id===userId);if(story)showStory(story);
     }catch(error){setStatus(error?.message||'Не удалось открыть историю.',true);}
   }
+
+  let employeeMonthlyStory=null;
+  let employeeStoryLoading=false;
+  function installEmployeeStoryStyles(){
+    if($('#employeeMonthlyStoryStyles'))return;
+    const style=document.createElement('style');style.id='employeeMonthlyStoryStyles';
+    style.textContent=`
+      #employeeMonthlyStoryStrip{display:flex;align-items:center;gap:13px;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(110deg,rgba(124,92,255,.10),rgba(34,211,238,.045));}
+      #employeeMonthlyStoryStrip .employee-monthly-story-open{display:flex;align-items:center;gap:13px;width:100%;padding:0;border:0;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+      .employee-monthly-story-ring{width:62px;height:62px;flex:0 0 62px;padding:3px;border-radius:50%;background:linear-gradient(135deg,#7c5cff,#22d3ee 52%,#f43f8e);box-shadow:0 5px 18px rgba(34,211,238,.16)}
+      .employee-monthly-story-avatar{display:grid;place-items:center;width:100%;height:100%;overflow:hidden;border:3px solid var(--card);border-radius:50%;background:linear-gradient(145deg,rgba(124,92,255,.3),rgba(34,211,238,.18));font-size:20px;font-weight:850}
+      .employee-monthly-story-avatar img{width:100%;height:100%;object-fit:cover}
+      .employee-monthly-story-copy{display:flex;flex:1;flex-direction:column;gap:4px;min-width:0}
+      .employee-monthly-story-copy strong{font-size:13px;font-weight:800}
+      .employee-monthly-story-copy span{font-size:11px;color:var(--muted)}
+      .employee-monthly-story-chevron{color:var(--muted);font-size:20px}
+      @media(max-width:480px){#employeeMonthlyStoryStrip{padding:10px 12px;border-radius:15px}.employee-monthly-story-ring{width:56px;height:56px;flex-basis:56px}}
+    `;
+    document.head.appendChild(style);
+  }
+  function ensureStoryModal(){
+    if($('#monthlyStoryModal'))return;
+    const modal=document.createElement('div');modal.id='monthlyStoryModal';modal.setAttribute('aria-hidden','true');
+    modal.addEventListener('click',event=>{if(event.target===modal)closeStory();});
+    document.body.appendChild(modal);
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')closeStory();});
+  }
+  function installEmployeeStoryUI(){
+    const dashboard=$('#dashboardTiles');if(!dashboard)return;
+    if(!$('#employeeMonthlyStoryStrip')){
+      const strip=document.createElement('section');strip.id='employeeMonthlyStoryStrip';strip.className='hidden';
+      strip.innerHTML='<button type="button" class="employee-monthly-story-open" id="employeeMonthlyStoryOpen" aria-label="Открыть мои итоги месяца"><div class="employee-monthly-story-ring"><div class="employee-monthly-story-avatar" id="employeeMonthlyStoryAvatar">И</div></div><span class="employee-monthly-story-copy"><strong>Итоги месяца</strong><span id="employeeMonthlyStoryCaption">Твоя статистика за месяц</span></span><span class="employee-monthly-story-chevron" aria-hidden="true">›</span></button>';
+      dashboard.insertAdjacentElement('beforebegin',strip);
+      $('#employeeMonthlyStoryOpen')?.addEventListener('click',async()=>{await loadEmployeeStory(true);if(employeeMonthlyStory)showEmployeeStory(employeeMonthlyStory);});
+    }
+    ensureStoryModal();
+  }
+  function hideEmployeeStory(){
+    const strip=$('#employeeMonthlyStoryStrip');if(strip)strip.classList.add('hidden');
+    employeeMonthlyStory=null;
+  }
+  function employeeStoryMonthLabel(){
+    const [year,month]=monthNow().split('-').map(Number);
+    return new Date(year,month-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+  }
+  async function loadEmployeeStory(force=false){
+    if(employeeStoryLoading)return;
+    if(typeof cloudClient==='undefined'||!cloudClient||typeof cloudUser==='undefined'||!cloudUser){hideEmployeeStory();return;}
+    employeeStoryLoading=true;
+    try{
+      const flags=await cloudClient.rpc('user_get_role_features');
+      if(flags.error)throw flags.error;
+      if(flags.data?.monthly_stories!==true){hideEmployeeStory();return;}
+      const {data,error}=await cloudClient.rpc('user_get_my_monthly_story',{p_month_start:monthNow()+'-01'});
+      if(error)throw error;
+      if(!data||data.enabled!==true){hideEmployeeStory();return;}
+      employeeMonthlyStory=data;
+      installEmployeeStoryUI();
+      const strip=$('#employeeMonthlyStoryStrip');if(strip)strip.classList.remove('hidden');
+      const avatar=$('#employeeMonthlyStoryAvatar');
+      if(avatar){
+        const avatarData=data.avatar_data||cloudUser.user_metadata?.avatar_data;
+        avatar.innerHTML=avatarData?'<img src="'+esc(avatarData)+'" alt="">':esc((data.name||'Сотрудник').trim().slice(0,1).toUpperCase()||'И');
+      }
+      const caption=$('#employeeMonthlyStoryCaption');
+      if(caption)caption.textContent='Твоя статистика · '+employeeStoryMonthLabel();
+    }catch(error){
+      console.info('Monthly employee story unavailable:',error?.message||error);
+      hideEmployeeStory();
+    }finally{employeeStoryLoading=false;}
+  }
+  function showEmployeeStory(story){
+    const modal=$('#monthlyStoryModal');if(!modal)return;
+    const spent=Number(story.spent)||0,budget=Number(story.budget)||0;
+    const done=Number(story.tasks_done)||0,total=Number(story.tasks_total)||0;
+    const spendPct=budget>0?Math.round(spent/budget*100):0;
+    const taskPct=total>0?Math.round(done/total*100):0;
+    modal.innerHTML='<article class="monthly-story-modal-card" role="dialog" aria-modal="true" aria-label="Мои итоги месяца">'+
+      '<header class="monthly-story-modal-top"><div><small>PROVODA STAFF · МОИ ИТОГИ</small><div style="font-size:12px;color:#aab6c8;margin-top:4px">'+esc(employeeStoryMonthLabel())+'</div></div><button class="monthly-story-close" type="button" aria-label="Закрыть" data-monthly-close>×</button></header>'+
+      '<div class="monthly-story-identity">'+avatarMarkup(story)+'<div><h3>'+esc(story.name||'Мои итоги')+'</h3><p>Твоя личная статистика за месяц</p></div></div>'+
+      '<section class="monthly-story-hero"><span>Потрачено за месяц</span><strong>'+money(spent)+'</strong><span>'+(budget>0?'Использовано '+spendPct+'% месячного бюджета':'Месячный бюджет не задан')+'</span><div class="monthly-story-progress"><i style="width:'+Math.min(100,Math.max(0,spendPct))+'%"></i></div></section>'+
+      '<div class="monthly-story-metrics">'+
+      '<div class="monthly-story-metric"><span>Выполнено задач</span><strong>'+done+' / '+total+'</strong><small>'+taskPct+'% выполнено</small><div class="monthly-story-progress"><i style="width:'+Math.min(100,Math.max(0,taskPct))+'%"></i></div></div>'+
+      '<div class="monthly-story-metric"><span>Остаток бюджета</span><strong>'+(budget>0?money(budget-spent):'—')+'</strong><small>'+(budget>0?(budget-spent>=0?'Осталось':'Превышение бюджета'):'Бюджет не задан')+'</small></div>'+
+      '<div class="monthly-story-metric"><span>Сменные отчёты</span><strong>'+Number(story.shift_reports||0)+'</strong><small>Отправлено за месяц</small></div>'+
+      '<div class="monthly-story-metric"><span>Дни с покупками</span><strong>'+Number(story.expense_days||0)+'</strong><small>Активность по расходам</small></div></div>'+
+      '<p class="monthly-story-note">Эти данные видны только в твоём аккаунте. Администратор может отдельно просматривать общие итоги сотрудников в админ-панели.</p></article>';
+    modal.classList.add('open');modal.setAttribute('aria-hidden','false');
+    modal.querySelector('[data-monthly-close]')?.addEventListener('click',closeStory);
+  }
+
   function init(){
-    installStyles();installUI();
+    installStyles();installUI();installEmployeeStoryStyles();installEmployeeStoryUI();
+    window.addEventListener('provoda-user-ready',()=>{if(typeof cloudUser!=='undefined'&&cloudUser)loadEmployeeStory(true);else hideEmployeeStory();});
+    if(typeof cloudUser!=='undefined'&&cloudUser)loadEmployeeStory(true);
     const root=$('#adminDevelopmentView');if(!root)return;
     const observer=new MutationObserver(()=>{if(!$('#adminMonthlyStoriesView'))installUI();});
     observer.observe(root,{childList:true,subtree:true});
