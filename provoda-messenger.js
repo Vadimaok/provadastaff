@@ -4,7 +4,7 @@
   const $=(s,r=document)=>r.querySelector(s);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let enabled=false,users=[],conversations=[],activeUser=null,activeConversation=null,channel=null,poll=null,loading=false;
-  const roleIcon=role=>role||'Сотрудник';
+  const roleIcon=person=>(person.role_label||'Сотрудник')+(person.shift_role?' · '+person.shift_role:'');
   function styles(){
     if($('#provodaMessengerStyles'))return;
     const s=document.createElement('style');s.id='provodaMessengerStyles';
