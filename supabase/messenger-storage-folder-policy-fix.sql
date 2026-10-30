@@ -1,4 +1,7 @@
 -- Fix Storage virtual-folder inserts and enable realtime reaction updates.
+-- The Storage RLS policy calls this helper; authenticated users need EXECUTE permission.
+grant execute on function public.messenger_is_member(uuid) to authenticated;
+
 
 drop policy if exists messenger_media_upload_member on storage.objects;
 
