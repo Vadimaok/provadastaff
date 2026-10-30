@@ -33,6 +33,16 @@
       .pm-bubble.mine{align-self:flex-end;background:linear-gradient(135deg,#6250c9,#3f54a9);border-color:#ffffff18}
       .pm-bubble p{margin:0;font-size:13px;white-space:pre-wrap;line-height:1.45}.pm-bubble time{display:block;margin-top:5px;text-align:right;font-size:9px;color:#c3cce0}
       .pm-image{display:block;max-width:min(100%,360px);max-height:340px;margin:0 0 6px;border-radius:10px;object-fit:contain;background:#080d14}
+      .pm-image{cursor:zoom-in;transition:filter .18s ease}.pm-image:hover{filter:brightness(1.06)}
+      .pm-gallery-shade,.pm-lightbox{position:fixed;inset:0;z-index:1450;display:flex;align-items:center;justify-content:center;background:rgba(2,6,15,.9);backdrop-filter:blur(18px);padding:16px;animation:pmFadeIn .18s ease both}
+      .pm-gallery-card{width:min(480px,100%);max-height:92dvh;overflow:auto;padding:18px;border:1px solid #ffffff22;border-radius:24px;background:#121c2a;color:#eef4ff;box-shadow:0 24px 90px #0009;animation:pmGalleryIn .22s ease both}
+      .pm-gallery-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.pm-gallery-title h3{margin:0;font-size:17px}.pm-gallery-close{width:38px;height:38px;border:1px solid #ffffff22;border-radius:12px;background:#ffffff0a;color:inherit;font-size:21px}
+      .pm-gallery-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pm-gallery-choice{min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px solid #ffffff1f;border-radius:18px;background:#ffffff08;color:inherit;font:inherit;font-size:13px}.pm-gallery-choice:first-child{background:linear-gradient(145deg,#7259f2,#4f46c8);border-color:#a99aff66}.pm-gallery-icon{font-size:30px}.pm-gallery-note{font-size:11px;line-height:1.5;color:#9eabc0;margin:13px 2px 0}
+      .pm-lightbox{z-index:1500;padding:12px;flex-direction:column;gap:12px}.pm-lightbox-image-wrap{display:flex;align-items:center;justify-content:center;min-height:0;flex:1;width:100%;overflow:hidden}.pm-lightbox-image{max-width:100%;max-height:calc(100dvh - 125px);object-fit:contain;border-radius:12px;box-shadow:0 12px 60px #0008}.pm-lightbox-toolbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:9px;width:100%}.pm-lightbox-toolbar button,.pm-lightbox-toolbar a{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 15px;border:1px solid #ffffff25;border-radius:13px;background:#ffffff12;color:#fff;text-decoration:none;font:inherit;font-size:13px}.pm-lightbox-toolbar .pm-lightbox-save{background:linear-gradient(135deg,#7c5cff,#4f46e5);border-color:transparent}.pm-lightbox-close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:1px solid #ffffff30;background:#ffffff16;color:#fff;font-size:25px}
+      @keyframes pmFadeIn{from{opacity:0}to{opacity:1}}@keyframes pmGalleryIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+      body.light-theme .pm-gallery-card{background:#fff;color:#172033;border-color:#17203320}body.light-theme .pm-gallery-note{color:#667085}body.light-theme .pm-gallery-choice{border-color:#17203320;background:#17203308}body.light-theme .pm-gallery-choice:first-child{background:linear-gradient(145deg,#7259f2,#4f46c8);color:#fff}
+      @media(prefers-reduced-motion:reduce){.pm-gallery-shade,.pm-gallery-card,.pm-lightbox{animation:none!important;transition:none!important}}
+
       .pm-compose{display:flex;align-items:flex-end;gap:8px;padding:12px;border-top:1px solid #ffffff16;background:#111a26}
       .pm-compose textarea{flex:1;min-width:0;max-height:120px;min-height:44px;resize:vertical;padding:11px 13px;border:1px solid #ffffff20;border-radius:14px;background:#ffffff0a;color:#fff;font:inherit;font-size:13px}
       .pm-attach,.pm-send{width:44px;height:44px;flex:0 0 44px;border:1px solid #ffffff20;border-radius:14px;background:#ffffff0a;color:#fff;font-size:18px}.pm-send{background:linear-gradient(135deg,#7c5cff,#4f46e5);font-size:16px;font-weight:800}
@@ -80,7 +90,7 @@
   function ensureModal(){
     if($('#provodaMessengerModal'))return;
     const modal=document.createElement('div');modal.id='provodaMessengerModal';modal.setAttribute('aria-hidden','true');
-    modal.innerHTML='<section class="pm-shell" role="dialog" aria-modal="true" aria-label="Внутренний мессенджер"><aside class="pm-sidebar"><header class="pm-sidebar-head"><h2>Мессенджер</h2><button type="button" class="pm-close" data-pm-close aria-label="Закрыть">×</button></header><input class="pm-search" id="pmSearch" type="search" placeholder="Найти сотрудника…"><div class="pm-people" id="pmPeople"><div class="pm-empty">Загружаю пользователей…</div></div></aside><section class="pm-chat"><header class="pm-chat-head"><button type="button" class="pm-back" data-pm-back aria-label="К списку чатов">‹</button><span class="pm-avatar" id="pmChatAvatar">?</span><span class="pm-chat-title"><strong id="pmChatName">Выбери сотрудника</strong><small id="pmChatRole">Личный чат</small></span></header><div class="pm-messages" id="pmMessages"><div class="pm-empty">Выбери сотрудника слева, чтобы начать переписку.</div></div><div class="pm-status" id="pmStatus" role="status" aria-live="polite"></div><div class="pm-reply-bar" id="pmReplyBar"><span class="pm-reply-copy" id="pmReplyCopy"></span><button type="button" class="pm-reply-cancel" id="pmReplyCancel" aria-label="Отменить ответ">×</button></div><form class="pm-compose" id="pmCompose"><input type="file" id="pmFile" accept="image/*" hidden><input type="file" id="pmCamera" accept="image/*" capture="environment" hidden><button class="pm-attach" type="button" id="pmAttach" title="Добавить фото" aria-label="Добавить фото">＋</button><textarea id="pmText" rows="1" maxlength="8000" placeholder="Написать сообщение…" disabled></textarea><button class="pm-send" type="submit" id="pmSend" disabled aria-label="Отправить">➤</button></form></section></section>';
+    modal.innerHTML='<section class="pm-shell" role="dialog" aria-modal="true" aria-label="Внутренний мессенджер"><aside class="pm-sidebar"><header class="pm-sidebar-head"><h2>Мессенджер</h2><button type="button" class="pm-close" data-pm-close aria-label="Закрыть">×</button></header><input class="pm-search" id="pmSearch" type="search" placeholder="Найти сотрудника…"><div class="pm-people" id="pmPeople"><div class="pm-empty">Загружаю пользователей…</div></div></aside><section class="pm-chat"><header class="pm-chat-head"><button type="button" class="pm-back" data-pm-back aria-label="К списку чатов">‹</button><span class="pm-avatar" id="pmChatAvatar">?</span><span class="pm-chat-title"><strong id="pmChatName">Выбери сотрудника</strong><small id="pmChatRole">Личный чат</small></span></header><div class="pm-messages" id="pmMessages"><div class="pm-empty">Выбери сотрудника слева, чтобы начать переписку.</div></div><div class="pm-status" id="pmStatus" role="status" aria-live="polite"></div><div class="pm-reply-bar" id="pmReplyBar"><span class="pm-reply-copy" id="pmReplyCopy"></span><button type="button" class="pm-reply-cancel" id="pmReplyCancel" aria-label="Отменить ответ">×</button></div><form class="pm-compose" id="pmCompose"><input type="file" id="pmFile" accept="image/*" multiple hidden><input type="file" id="pmCamera" accept="image/*" capture="environment" hidden><button class="pm-attach" type="button" id="pmAttach" title="Добавить фото" aria-label="Добавить фото">＋</button><textarea id="pmText" rows="1" maxlength="8000" placeholder="Написать сообщение…" disabled></textarea><button class="pm-send" type="submit" id="pmSend" disabled aria-label="Отправить">➤</button></form></section></section>';
     modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-pm-close]'))close();});
     modal.addEventListener('click',e=>{if(e.target.closest('[data-pm-back]'))backToPeople();});
     const chatPane=modal.querySelector('.pm-chat');
@@ -97,9 +107,9 @@
     $('#pmMessages').addEventListener('pointermove',onMessagePointerMove);
     $('#pmMessages').addEventListener('pointerup',onMessagePointerUp);
     $('#pmMessages').addEventListener('pointercancel',cancelLongPress);
-    $('#pmMessages').addEventListener('click',onMessageClick);
+    $('#pmMessages').addEventListener('click',onMessageClick);$('#pmMessages').addEventListener('click',onImageClick);
     $('#pmSearch').addEventListener('input',renderPeople);
-    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('open')){e.preventDefault();if($('#provodaMessengerModal .pm-shell')?.classList.contains('chat-open'))backToPeople();else close();}});
+    document.addEventListener('keydown',e=>{if(e.key!=='Escape'||!modal.classList.contains('open'))return;e.preventDefault();e.stopImmediatePropagation();close();},true);
   }
   function avatar(person){const content=person.avatar_data?'<img src="'+esc(person.avatar_data)+'" alt="">':esc((person.name||'?').trim().slice(0,1).toUpperCase()||'?');return '<span class="pm-avatar">'+content+'</span>';}
   function setStatus(message,error=false){const el=$('#pmStatus');if(el){el.textContent=message||'';el.style.color=error?'#fda4af':'';}}
@@ -214,8 +224,8 @@
         const mine=m.sender_id===cloudUser.id;
         let imageHtml='';
         if(m.attachment_path){
-          try{const {data:signed,error:signError}=await cloudClient.storage.from('provoda-messenger').createSignedUrl(m.attachment_path,3600);if(!signError&&signed?.signedUrl)imageHtml='<a href="'+esc(signed.signedUrl)+'" target="_blank" rel="noopener"><img class="pm-image" src="'+esc(signed.signedUrl)+'" alt="Фото из сообщения" loading="lazy"></a>';}
-          catch(e){console.info('Messenger image unavailable',e?.message||e);}
+          try{const {data:signed,error:signError}=await cloudClient.storage.from('provoda-messenger').createSignedUrl(m.attachment_path,3600);if(signError)throw signError;if(signed?.signedUrl)imageHtml='<img class="pm-image" src="'+esc(signed.signedUrl)+'" data-photo-url="'+esc(signed.signedUrl)+'" data-photo-name="'+esc(m.attachment_path.split('/').pop()||'provoda-photo.jpg')+'" alt="Фото из сообщения" loading="lazy">';else throw new Error('Не удалось создать ссылку');}
+          catch(e){console.info('Messenger image unavailable',e?.message||e);imageHtml='<button type="button" class="pm-image-retry" data-photo-retry="'+esc(m.id)+'">Фото не открылось · повторить</button>';}
         }
         const date=m.created_at?new Date(m.created_at).toLocaleString('ru-RU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
         const article=document.createElement('article');article.className='pm-bubble'+(mine?' mine':'');
@@ -237,25 +247,56 @@
     finally{$('#pmSend').disabled=false;input.focus();}
   }
   async function sendImage(){
-    const file=$('#pmFile').files?.[0]||$('#pmCamera').files?.[0];if(!file)return;
-    if(!file.type.startsWith('image/')){setStatus('Можно отправлять только изображения.',true);return;}
-    if(file.size>12*1024*1024){setStatus('Фото больше 12 МБ. Выбери файл поменьше.',true);return;}
+    const fileInput=$('#pmFile'),cameraInput=$('#pmCamera'),files=[...(fileInput.files||[]),...(cameraInput.files||[])];if(!files.length)return;
     if(!activeConversation||!activeUser){setStatus('Сначала открой чат.',true);return;}
-    const ext=({ 'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic'})[file.type]||'jpg';
-    const path=activeConversation+'/'+cloudUser.id+'/'+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))+'.'+ext;
-    $('#pmAttach').disabled=true;setStatus('Отправляю фото…');
+    const allowed=new Set(['image/jpeg','image/png','image/webp','image/heic']),selected=files.filter(f=>f.type.startsWith('image/')&&allowed.has(f.type)&&f.size<=12*1024*1024);
+    if(!selected.length){setStatus(files.some(f=>f.size>12*1024*1024)?'Фото больше 12 МБ. Выбери файл поменьше.':'Формат не поддерживается. Используй JPG, PNG, WebP или HEIC.',true);fileInput.value='';cameraInput.value='';return;}
+    if(selected.length<files.length)setStatus('Некоторые фото пропущены: нужен JPG, PNG, WebP или HEIC до 12 МБ.',true);
+    $('#pmAttach').disabled=true;$('#pmSend').disabled=true;const body=$('#pmText').value.trim();let sent=0;
     try{
-      const {error:uploadError}=await cloudClient.storage.from('provoda-messenger').upload(path,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;
-      const {error}=await cloudClient.rpc('messenger_send_message',{p_conversation_id:activeConversation,p_body:$('#pmText').value.trim(),p_attachment_path:path,p_attachment_mime:file.type,p_reply_to_message_id:replyTarget?.id||null,p_forwarded_from_message_id:null});if(error){await cloudClient.storage.from('provoda-messenger').remove([path]);throw error;}
-      $('#pmText').value='';clearReply();await loadMessages();await loadConversations();renderPeople();setStatus('');
-    }catch(e){setStatus(e.message||'Не удалось отправить фото.',true);}
-    finally{$('#pmAttach').disabled=false;$('#pmFile').value='';$('#pmCamera').value='';}
+      for(let i=0;i<selected.length;i++){
+        const file=selected[i],ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic'})[file.type],nonce=(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),path=activeConversation+'/'+cloudUser.id+'/'+nonce+'.'+ext;
+        setStatus('Отправляю фото '+(i+1)+' из '+selected.length+'…');
+        const {data:uploaded,error:uploadError}=await cloudClient.storage.from('provoda-messenger').upload(path,file,{contentType:file.type,upsert:false});
+        if(uploadError)throw new Error('Ошибка хранилища ('+(uploadError.statusCode||uploadError.status||'неизвестно')+'): '+(uploadError.message||'не удалось загрузить фото'));
+        if(!uploaded?.path)throw new Error('Хранилище не подтвердило загрузку фото. Повтори попытку.');
+        const {error:signError}=await cloudClient.storage.from('provoda-messenger').createSignedUrl(path,60);
+        if(signError){await cloudClient.storage.from('provoda-messenger').remove([path]);throw new Error('Фото загрузилось, но не открывается: '+(signError.message||'не удалось создать ссылку'));}
+        const {error}=await cloudClient.rpc('messenger_send_message',{p_conversation_id:activeConversation,p_body:i===0?body:'',p_attachment_path:path,p_attachment_mime:file.type,p_reply_to_message_id:i===0?(replyTarget?.id||null):null,p_forwarded_from_message_id:null});
+        if(error){await cloudClient.storage.from('provoda-messenger').remove([path]);throw new Error('Фото загружено, но сообщение не сохранилось: '+(error.message||'ошибка отправки'));}
+        sent++;
+      }
+      $('#pmText').value='';clearReply();await loadMessages();await loadConversations();renderPeople();setStatus('Отправлено фото: '+sent);
+      setTimeout(()=>{if($('#pmStatus')?.textContent==='Отправлено фото: '+sent)setStatus('');},1800);
+    }catch(e){setStatus((e?.message||'Не удалось отправить фото.')+(sent?' Отправлено: '+sent+'. Остальные фото можно отправить повторно.':''),true);}
+    finally{$('#pmAttach').disabled=false;$('#pmSend').disabled=false;fileInput.value='';cameraInput.value='';}
   }
   function clearReply(){replyTarget=null;const bar=$('#pmReplyBar');bar?.classList.remove('active');if($('#pmReplyCopy'))$('#pmReplyCopy').textContent='';}
   function setReply(message){replyTarget=message;const bar=$('#pmReplyBar');if(bar){$('#pmReplyCopy').textContent='Ответ на: '+(message.body|| (message.attachment_path?'Фотография':'Сообщение'));bar.classList.add('active');}$('#pmText')?.focus();}
   function messageById(id){return activeMessages.find(m=>m.id===id);}
   function closeActionMenu(){document.querySelectorAll('.pm-action-menu,.pm-picker-shade,.pm-forward-picker,.pm-photo-menu').forEach(n=>n.remove());}
-  function showPhotoMenu(){closeActionMenu();const shade=document.createElement('div');shade.className='pm-picker-shade';shade.innerHTML='<div class="pm-picker-card"><h3>Добавить фотографию</h3><button type="button" data-photo-gallery>▧　Выбрать из галереи</button><button type="button" data-photo-camera>◎　Сфотографировать</button><button type="button" data-photo-cancel style="justify-content:center;color:#aab6c8">Отмена</button></div>';shade.addEventListener('click',e=>{if(e.target===shade||e.target.closest('[data-photo-cancel]'))shade.remove();if(e.target.closest('[data-photo-gallery]')){$('#pmFile').click();shade.remove();}if(e.target.closest('[data-photo-camera]')){$('#pmCamera').click();shade.remove();}});$('#provodaMessengerModal').appendChild(shade);}
+  function showPhotoMenu(){
+    closeActionMenu();const shade=document.createElement('div');shade.className='pm-gallery-shade';
+    shade.innerHTML='<section class="pm-gallery-card" role="dialog" aria-modal="true" aria-label="Выбор фотографий"><div class="pm-gallery-title"><h3>Фото и камера</h3><button type="button" data-photo-cancel aria-label="Закрыть" class="pm-gallery-close">×</button></div><div class="pm-gallery-grid"><button type="button" class="pm-gallery-choice" data-photo-camera><span class="pm-gallery-icon">◎</span><strong>Камера</strong><span>Сделать снимок</span></button><button type="button" class="pm-gallery-choice" data-photo-gallery><span class="pm-gallery-icon">▧</span><strong>Галерея</strong><span>Выбрать фото</span></button></div><p class="pm-gallery-note">Откроется системная галерея устройства. Можно выбрать несколько фотографий. Доступ предоставляется только к выбранным изображениям.</p></section>';
+    shade.addEventListener('click',e=>{if(e.target===shade||e.target.closest('[data-photo-cancel]')){shade.remove();return;}if(e.target.closest('[data-photo-gallery]')){shade.remove();$('#pmFile').click();}if(e.target.closest('[data-photo-camera]')){shade.remove();$('#pmCamera').click();}});
+    $('#provodaMessengerModal').appendChild(shade);
+  }
+  function onImageClick(e){
+    const retry=e.target.closest('[data-photo-retry]');
+    if(retry){const msg=messageById(retry.dataset.photoRetry);if(msg?.attachment_path)openPhoto(null,msg.attachment_path.split('/').pop(),msg.attachment_path);return;}
+    const img=e.target.closest('.pm-image');if(img){e.preventDefault();openPhoto(img.dataset.photoUrl||img.src,img.dataset.photoName||'provoda-photo.jpg');}
+  }
+  async function openPhoto(url,name,path){
+    if(path){try{const {data,error}=await cloudClient.storage.from('provoda-messenger').createSignedUrl(path,3600);if(error)throw error;url=data?.signedUrl;}catch(err){setStatus('Не удалось открыть фото: '+(err.message||'ошибка доступа'),true);return;}}
+    if(!url)return;closeActionMenu();const shade=document.createElement('div');shade.className='pm-lightbox';
+    shade.innerHTML='<button type="button" class="pm-lightbox-close" aria-label="Закрыть">×</button><div class="pm-lightbox-image-wrap"><img class="pm-lightbox-image" alt="Фотография" src="'+esc(url)+'"></div><div class="pm-lightbox-toolbar"><button type="button" class="pm-lightbox-save">↓　Сохранить фото</button><a href="'+esc(url)+'" target="_blank" rel="noopener">↗　Открыть отдельно</a></div>';
+    shade.querySelector('.pm-lightbox-close').addEventListener('click',()=>shade.remove());shade.addEventListener('click',e=>{if(e.target===shade)shade.remove();});
+    shade.querySelector('.pm-lightbox-save').addEventListener('click',async e=>{
+      const button=e.currentTarget;button.disabled=true;button.textContent='Подготовка…';
+      try{const response=await fetch(url);if(!response.ok)throw new Error('HTTP '+response.status);const blob=await response.blob(),objectUrl=URL.createObjectURL(blob),a=document.createElement('a');a.href=objectUrl;a.download=(name||'provoda-photo.jpg').replace(/[^a-zA-Z0-9._-]/g,'_');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),1500);button.textContent='✓　Сохранено';}
+      catch(err){button.disabled=false;button.textContent='↓　Сохранить фото';setStatus('Не удалось сохранить фото: '+(err.message||'ошибка загрузки'),true);}
+    });$('#provodaMessengerModal').appendChild(shade);
+  }
   function showMessageMenu(message,x,y){
     closeActionMenu();const menu=document.createElement('div');menu.className='pm-action-menu';menu.innerHTML='<button type="button" data-action-reply>↩　Ответить</button><button type="button" data-action-forward>➦　Переслать</button><div class="pm-emoji-row">'+['❤️','👍','😂','🔥','😮','😢','👏','👎'].map(e=>'<button type="button" data-action-react="'+e+'" aria-label="Реакция '+e+'">'+e+'</button>').join('')+'</div>';
     menu.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;menu.remove();if(b.hasAttribute('data-action-reply'))setReply(message);else if(b.hasAttribute('data-action-forward'))showForwardPicker(message);else if(b.dataset.actionReact)await toggleReaction(message,b.dataset.actionReact);});
