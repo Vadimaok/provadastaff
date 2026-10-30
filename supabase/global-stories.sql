@@ -27,8 +27,14 @@ array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'
 on conflict(id) do update set public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
 
 drop policy if exists global_stories_storage_read on storage.objects;
-create policy global_stories_storage_read on storage.objects for select to authenticated using(bucket_id='provoda-global-stories');
+create policy global_stories_storage_read on storage.objects for select to authenticated using(
+  bucket_id='provoda-global-stories'
+  and exists(select 1 from public.global_stories s where s.storage_path=storage.objects.name and s.expires_at>now())
+);
 drop policy if exists global_stories_storage_admin_insert on storage.objects;
-create policy global_stories_storage_admin_insert on storage.objects for insert to authenticated with check(bucket_id='provoda-global-stories' and public.is_current_admin());
+create policy global_stories_storage_admin_insert on storage.objects for insert to authenticated with check(
+  bucket_id='provoda-global-stories' and public.is_current_admin()
+  and (storage.foldername(name))[1]=(select auth.uid())::text
+);
 drop policy if exists global_stories_storage_admin_delete on storage.objects;
 create policy global_stories_storage_admin_delete on storage.objects for delete to authenticated using(bucket_id='provoda-global-stories' and public.is_current_admin());
