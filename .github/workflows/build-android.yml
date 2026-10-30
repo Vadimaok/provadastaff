@@ -142,28 +142,37 @@ jobs:
           import re
           path = Path('android/app/build.gradle')
           text = path.read_text()
+
+          # Ensure the release signing config exists even when Capacitor has
+          # already generated a signingConfigs block for the debug build.
           if 'signingConfigs {' not in text:
-              match = re.search(r'android\s*\{', text)
-              if not match:
+              android_match = re.search(r'android\\s*\\{', text)
+              if not android_match:
                   raise SystemExit('Could not locate android block in app/build.gradle')
-              block = '''
-              signingConfigs {
+              text = text[:android_match.end()] + '\\n    signingConfigs {\\n    }\\n' + text[android_match.end():]
+
+          if 'storeFile file("provoda-release.jks")' not in text:
+              signing_match = re.search(r'signingConfigs\\s*\\{', text)
+              if not signing_match:
+                  raise SystemExit('Could not create release signing config')
+              release_config = '''
                   release {
                       storeFile file("provoda-release.jks")
                       storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
                       keyAlias System.getenv("ANDROID_KEY_ALIAS")
                       keyPassword System.getenv("ANDROID_KEY_PASSWORD")
                   }
-              }
               '''
-              text = text[:match.end()] + block + text[match.end():]
-          match = re.search(r'buildTypes\s*\{\s*release\s*\{', text)
+              text = text[:signing_match.end()] + release_config + text[signing_match.end():]
+
+          match = re.search(r'buildTypes\\s*\\{\\s*release\\s*\\{', text)
           if not match:
               raise SystemExit('Could not locate release build type in app/build.gradle')
           insert_at = match.end()
-          if 'signingConfig signingConfigs.release' not in text[insert_at:insert_at+250]:
-              text = text[:insert_at] + '\n            signingConfig signingConfigs.release' + text[insert_at:]
+          if 'signingConfig signingConfigs.release' not in text[insert_at:insert_at+300]:
+              text = text[:insert_at] + '\\n            signingConfig signingConfigs.release' + text[insert_at:]
           path.write_text(text)
+          print('Release signing config and release build type linked.')
           PY
           echo "Stable release signing configured."
 
