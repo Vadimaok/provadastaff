@@ -212,7 +212,7 @@ begin
     'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
     'avatar_data',nullif(u.raw_user_meta_data->>'avatar_data',''),
     'role_label',case
-      when coalesce(u.raw_app_meta_data->>'role','')='admin' or coalesce(u.raw_app_meta_data->>'is_admin','')='true' or ur.role='admin' then 'Администратор'
+      when au.user_id is not null then 'Администратор'
       when cr.title is not null then cr.title
       when ur.role='shift_senior' then 'Старший КНЗ'
       when ur.role='employee_knz' then 'Сотрудник КНЗ'
@@ -256,7 +256,7 @@ begin
     'conversation_id',c.id,'user_id',u.id,
     'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
     'avatar_data',nullif(u.raw_user_meta_data->>'avatar_data',''),
-    'role_label',case when coalesce(u.raw_app_meta_data->>'role','')='admin' or coalesce(u.raw_app_meta_data->>'is_admin','')='true' or ur.role='admin' then 'Администратор' when cr.title is not null then cr.title when ur.role='shift_senior' then 'Старший КНЗ' when ur.role='employee_knz' then 'Сотрудник КНЗ' else 'Сотрудник' end,
+    'role_label',case when au.user_id is not null then 'Администратор' when cr.title is not null then cr.title when ur.role='shift_senior' then 'Старший КНЗ' when ur.role='employee_knz' then 'Сотрудник КНЗ' else 'Сотрудник' end,
     'shift_role',case when ur.shift_role='day' then 'Дневная смена' when ur.shift_role='night' then 'Ночная смена' else null end,
     'last_message',coalesce((select nullif(m.body,'') from public.messenger_messages m where m.conversation_id=c.id order by m.created_at desc limit 1),case when exists(select 1 from public.messenger_messages m where m.conversation_id=c.id) then 'Фото' else 'Открыть личный чат' end),
     'last_message_at',(select m.created_at from public.messenger_messages m where m.conversation_id=c.id order by m.created_at desc limit 1)
