@@ -37,7 +37,19 @@
       .pm-compose textarea{flex:1;min-width:0;max-height:120px;min-height:44px;resize:vertical;padding:11px 13px;border:1px solid #ffffff20;border-radius:14px;background:#ffffff0a;color:#fff;font:inherit;font-size:13px}
       .pm-attach,.pm-send{width:44px;height:44px;flex:0 0 44px;border:1px solid #ffffff20;border-radius:14px;background:#ffffff0a;color:#fff;font-size:18px}.pm-send{background:linear-gradient(135deg,#7c5cff,#4f46e5);font-size:16px;font-weight:800}
       .pm-status{min-height:18px;padding:0 14px 7px;color:#aab6c8;font-size:11px}
-      .pm-bubble{position:relative;touch-action:pan-y;transition:transform .16s ease}
+      .pm-bubble{position:relative;touch-action:pan-y;transition:transform .2s cubic-bezier(.2,.8,.2,1),opacity .2s ease;will-change:transform}
+      .pm-bubble.pm-swipe-reply{transform:translateX(16px);opacity:.92}
+      #provodaMessengerModal{opacity:0;transition:opacity .2s ease}
+      #provodaMessengerModal.open{opacity:1}
+      #provodaMessengerModal .pm-shell{transform:translateY(12px) scale(.985);opacity:.96;transition:transform .24s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
+      #provodaMessengerModal.open .pm-shell{transform:translateY(0) scale(1);opacity:1}
+      #provodaMessengerModal.pm-closing{opacity:0}
+      #provodaMessengerModal.pm-closing .pm-shell{transform:translateY(14px) scale(.985);opacity:0}
+      .pm-reply-bar{transform:translateY(8px);opacity:0;transition:transform .2s ease,opacity .2s ease}
+      .pm-reply-bar.active{transform:translateY(0);opacity:1}
+      .pm-chat-head{touch-action:pan-y}
+      .pm-close,.pm-back,.pm-attach,.pm-send,.pm-reply-cancel{min-width:42px;min-height:42px;touch-action:manipulation}
+      @media(prefers-reduced-motion:reduce){#provodaMessengerModal,#provodaMessengerModal .pm-shell,.pm-bubble,.pm-reply-bar{transition:none!important;animation:none!important}}
       .pm-bubble.pm-selected{outline:2px solid #8b7bff;outline-offset:2px}
       .pm-reply-quote{display:block;margin:0 0 7px;padding:7px 9px;border-left:3px solid #a99aff;border-radius:7px;background:#ffffff12;color:#d9d4ff;font-size:11px;line-height:1.4}
       .pm-forwarded{display:block;margin:0 0 5px;color:#c4b5fd;font-size:10px;font-weight:750}
@@ -70,7 +82,11 @@
     const modal=document.createElement('div');modal.id='provodaMessengerModal';modal.setAttribute('aria-hidden','true');
     modal.innerHTML='<section class="pm-shell" role="dialog" aria-modal="true" aria-label="Внутренний мессенджер"><aside class="pm-sidebar"><header class="pm-sidebar-head"><h2>Мессенджер</h2><button type="button" class="pm-close" data-pm-close aria-label="Закрыть">×</button></header><input class="pm-search" id="pmSearch" type="search" placeholder="Найти сотрудника…"><div class="pm-people" id="pmPeople"><div class="pm-empty">Загружаю пользователей…</div></div></aside><section class="pm-chat"><header class="pm-chat-head"><button type="button" class="pm-back" data-pm-back aria-label="К списку чатов">‹</button><span class="pm-avatar" id="pmChatAvatar">?</span><span class="pm-chat-title"><strong id="pmChatName">Выбери сотрудника</strong><small id="pmChatRole">Личный чат</small></span></header><div class="pm-messages" id="pmMessages"><div class="pm-empty">Выбери сотрудника слева, чтобы начать переписку.</div></div><div class="pm-status" id="pmStatus" role="status" aria-live="polite"></div><div class="pm-reply-bar" id="pmReplyBar"><span class="pm-reply-copy" id="pmReplyCopy"></span><button type="button" class="pm-reply-cancel" id="pmReplyCancel" aria-label="Отменить ответ">×</button></div><form class="pm-compose" id="pmCompose"><input type="file" id="pmFile" accept="image/*" hidden><input type="file" id="pmCamera" accept="image/*" capture="environment" hidden><button class="pm-attach" type="button" id="pmAttach" title="Добавить фото" aria-label="Добавить фото">＋</button><textarea id="pmText" rows="1" maxlength="8000" placeholder="Написать сообщение…" disabled></textarea><button class="pm-send" type="submit" id="pmSend" disabled aria-label="Отправить">➤</button></form></section></section>';
     modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-pm-close]'))close();});
-    modal.addEventListener('click',e=>{if(e.target.closest('[data-pm-back]'))$('#provodaMessengerModal .pm-shell').classList.remove('chat-open');});
+    modal.addEventListener('click',e=>{if(e.target.closest('[data-pm-back]'))backToPeople();});
+    const chatPane=modal.querySelector('.pm-chat');
+    chatPane.addEventListener('pointerdown',onChatSwipeStart,{passive:true});
+    chatPane.addEventListener('pointerup',onChatSwipeEnd,{passive:true});
+    chatPane.addEventListener('pointercancel',()=>{chatSwipeStart=null;},{passive:true});
     document.body.appendChild(modal);
     $('#pmCompose').addEventListener('submit',sendMessage);
     $('#pmAttach').addEventListener('click',showPhotoMenu);
@@ -83,7 +99,7 @@
     $('#pmMessages').addEventListener('pointercancel',cancelLongPress);
     $('#pmMessages').addEventListener('click',onMessageClick);
     $('#pmSearch').addEventListener('input',renderPeople);
-    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('open'))close();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('open')){e.preventDefault();if($('#provodaMessengerModal .pm-shell')?.classList.contains('chat-open'))backToPeople();else close();}});
   }
   function avatar(person){const content=person.avatar_data?'<img src="'+esc(person.avatar_data)+'" alt="">':esc((person.name||'?').trim().slice(0,1).toUpperCase()||'?');return '<span class="pm-avatar">'+content+'</span>';}
   function setStatus(message,error=false){const el=$('#pmStatus');if(el){el.textContent=message||'';el.style.color=error?'#fda4af':'';}}
@@ -117,11 +133,36 @@
     $('#provodaMessengerModal .pm-shell').classList.remove('chat-open');$('#pmPeople').innerHTML='<div class="pm-empty">Загружаю пользователей…</div>';
     await Promise.all([loadUsers(),loadConversations()]);
   }
+  function backToPeople(){
+    const shell=$('#provodaMessengerModal .pm-shell');if(!shell)return;
+    shell.classList.add('pm-going-back');
+    shell.classList.remove('chat-open');
+    activeUser=null;activeConversation=null;replyTarget=null;
+    if(channel){cloudClient.removeChannel(channel);channel=null;}if(poll){clearInterval(poll);poll=null;}
+    $('#pmText').value='';$('#pmText').disabled=true;$('#pmSend').disabled=true;clearReply();
+    setTimeout(()=>shell.classList.remove('pm-going-back'),240);
+  }
+  let chatSwipeStart=null;
+  function onChatSwipeStart(e){
+    if(e.pointerType==='mouse'||e.target.closest('.pm-bubble,.pm-compose,.pm-action-menu,.pm-picker-shade'))return;
+    const shell=$('#provodaMessengerModal .pm-shell');
+    if(!shell?.classList.contains('chat-open'))return;
+    if(e.clientX>36&&e.target.closest('.pm-messages'))return;
+    chatSwipeStart={x:e.clientX,y:e.clientY,id:e.pointerId};
+  }
+  function onChatSwipeEnd(e){
+    if(!chatSwipeStart)return;
+    const start=chatSwipeStart;chatSwipeStart=null;
+    const dx=e.clientX-start.x,dy=e.clientY-start.y;
+    if(dx>76&&dx>Math.abs(dy)*1.35)backToPeople();
+  }
   function close(){
     const modal=$('#provodaMessengerModal');if(!modal)return;
-    modal.classList.remove('open');modal.setAttribute('aria-hidden','true');
+    if(modal.classList.contains('pm-closing'))return;
+    modal.classList.add('pm-closing');modal.setAttribute('aria-hidden','true');
     if(channel){cloudClient.removeChannel(channel);channel=null;}if(poll){clearInterval(poll);poll=null;}
-    activeUser=null;activeConversation=null;
+    activeUser=null;activeConversation=null;replyTarget=null;
+    setTimeout(()=>{modal.classList.remove('open','pm-closing');},210);
   }
   async function loadUsers(){
     try{const {data,error}=await cloudClient.rpc('messenger_list_users');if(error)throw error;users=Array.isArray(data)?data:[];renderPeople();}
@@ -221,8 +262,20 @@
   }
   function onMessageContextMenu(e){const article=e.target.closest('.pm-bubble[data-message-id]');if(!article)return;e.preventDefault();e.stopPropagation();const m=messageById(article.dataset.messageId);if(m)showMessageMenu(m,e.clientX,e.clientY);}
   function onMessagePointerDown(e){const article=e.target.closest('.pm-bubble[data-message-id]');if(!article||e.pointerType==='mouse')return;cancelLongPress();pointerStart={x:e.clientX,y:e.clientY,id:article.dataset.messageId,done:false};longPressTimer=setTimeout(()=>{const m=messageById(pointerStart?.id);if(m){pointerStart.done=true;article.classList.add('pm-selected');showMessageMenu(m,e.clientX,e.clientY);setTimeout(()=>article.classList.remove('pm-selected'),900);}},520);}
-  function onMessagePointerMove(e){if(pointerStart&&(Math.abs(e.clientX-pointerStart.x)>12||Math.abs(e.clientY-pointerStart.y)>12))cancelLongPress();}
-  function onMessagePointerUp(e){if(!pointerStart)return;clearTimeout(longPressTimer);const start=pointerStart;pointerStart=null;if(start.done)return;const dx=e.clientX-start.x,dy=e.clientY-start.y;if(Math.abs(dx)>58&&Math.abs(dx)>Math.abs(dy)*1.25){const m=messageById(start.id);if(m)setReply(m);}}
+  function onMessagePointerMove(e){
+    if(!pointerStart)return;
+    const dx=e.clientX-pointerStart.x,dy=e.clientY-pointerStart.y;
+    if(Math.abs(dx)>12||Math.abs(dy)>12)cancelLongPress();
+    if(dx>8&&Math.abs(dx)>Math.abs(dy)*1.15){const article=$('#pmMessages [data-message-id="'+CSS.escape(pointerStart.id)+'"]');article?.classList.add('pm-swipe-reply');}
+  }
+  function onMessagePointerUp(e){
+    if(!pointerStart)return;
+    clearTimeout(longPressTimer);const start=pointerStart;pointerStart=null;
+    const article=$('#pmMessages [data-message-id="'+CSS.escape(start.id)+'"]');article?.classList.remove('pm-swipe-reply');
+    if(start.done)return;
+    const dx=e.clientX-start.x,dy=e.clientY-start.y;
+    if(dx>58&&dx>Math.abs(dy)*1.25){const m=messageById(start.id);if(m)setReply(m);}
+  }
   function cancelLongPress(){if(longPressTimer)clearTimeout(longPressTimer);longPressTimer=null;}
   async function onMessageClick(e){const reaction=e.target.closest('[data-reaction]');if(reaction){e.stopPropagation();const m=messageById(reaction.dataset.messageId);if(m)await toggleReaction(m,reaction.dataset.reaction);}}
   async function toggleReaction(message,emoji){try{const {error}=await cloudClient.rpc('messenger_toggle_reaction',{p_message_id:message.id,p_emoji:emoji});if(error)throw error;await loadMessages();}catch(e){setStatus(e.message||'Не удалось поставить реакцию.',true);}}
