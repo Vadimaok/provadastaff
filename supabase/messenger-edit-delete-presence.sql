@@ -139,3 +139,59 @@ using (
   and split_part(name,'/',2)=(select auth.uid())::text
   and public.messenger_is_member(split_part(name,'/',1)::uuid)
 );
+
+
+-- Include the edit marker in the message payload without changing message history.
+create or replace function public.messenger_list_messages(p_conversation_id uuid,p_limit integer default 100)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := (select auth.uid());
+  v_result jsonb;
+begin
+  if v_user is null or not public.messenger_is_member(p_conversation_id) then
+    raise exception 'Нет доступа к переписке' using errcode='42501';
+  end if;
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id',m.id,
+    'sender_id',m.sender_id,
+    'body',m.body,
+    'attachment_path',m.attachment_path,
+    'attachment_mime',m.attachment_mime,
+    'created_at',m.created_at,
+    'edited_at',m.edited_at,
+    'reply_to_message_id',m.reply_to_message_id,
+    'reply_preview',case when parent.id is null then null else jsonb_build_object(
+      'sender_id',parent.sender_id,
+      'body',left(parent.body,220),
+      'has_attachment',parent.attachment_path is not null
+    ) end,
+    'forwarded_from_message_id',m.forwarded_from_message_id,
+    'reactions',coalesce((
+      select jsonb_agg(jsonb_build_object('emoji',r.emoji,'count',r.cnt,'mine',r.mine))
+      from (
+        select emoji,count(*)::integer cnt,bool_or(user_id=v_user) mine
+        from public.messenger_message_reactions
+        where message_id=m.id
+        group by emoji
+      ) r
+    ),'[]'::jsonb)
+  ) order by m.created_at),'[]'::jsonb)
+  into v_result
+  from (
+    select *
+    from public.messenger_messages
+    where conversation_id=p_conversation_id
+    order by created_at desc
+    limit least(greatest(coalesce(p_limit,100),1),200)
+  ) m
+  left join public.messenger_messages parent on parent.id=m.reply_to_message_id;
+  return v_result;
+end;
+$$;
+revoke all on function public.messenger_list_messages(uuid,integer) from public,anon;
+grant execute on function public.messenger_list_messages(uuid,integer) to authenticated;
