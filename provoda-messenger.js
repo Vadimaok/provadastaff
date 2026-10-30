@@ -3,7 +3,7 @@
   'use strict';
   const $=(s,r=document)=>r.querySelector(s);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let enabled=false,users=[],conversations=[],activeUser=null,activeConversation=null,channel=null,poll=null,loading=false,activeMessages=[],replyTarget=null,longPressTimer=null,pointerStart=null;
+  let enabled=false,users=[],conversations=[],activeUser=null,activeConversation=null,channel=null,poll=null,loading=false,activeMessages=[],replyTarget=null,longPressTimer=null,pointerStart=null,presenceMap={},presenceTimer=null,presenceHeartbeat=null;
   const roleIcon=person=>(person.role_label||'Сотрудник')+(person.shift_role?' · '+person.shift_role:'');
   function styles(){
     if($('#provodaMessengerStyles'))return;
@@ -64,14 +64,16 @@
       .pm-bubble.pm-selected{outline:2px solid #8b7bff;outline-offset:2px}
       .pm-reply-quote{display:block;margin:0 0 7px;padding:7px 9px;border-left:3px solid #a99aff;border-radius:7px;background:#ffffff12;color:#d9d4ff;font-size:11px;line-height:1.4}
       .pm-forwarded{display:block;margin:0 0 5px;color:#c4b5fd;font-size:10px;font-weight:750}
-      .pm-reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-      .pm-reaction{padding:4px 8px;border:1px solid #ffffff24;border-radius:99px;background:#ffffff12;color:inherit;font-size:12px}
+      .pm-reactions{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;align-items:center}
+      .pm-reaction{min-width:25px;padding:2px 6px;border:1px solid #ffffff1c;border-radius:99px;background:#ffffff0d;color:inherit;font-size:10px;line-height:1.25;display:inline-flex;align-items:center;justify-content:center;gap:3px}
       .pm-reaction.mine{border-color:#a99aff;background:#7c5cff35}
       .pm-action-menu,.pm-photo-menu,.pm-forward-picker{position:fixed;z-index:1405;min-width:210px;padding:7px;border:1px solid #ffffff24;border-radius:16px;background:#172131;color:#eef4ff;box-shadow:0 18px 55px #0008;backdrop-filter:blur(18px)}
       .pm-action-menu button,.pm-photo-menu button,.pm-forward-picker button{display:flex;align-items:center;gap:10px;width:100%;padding:11px;border:0;border-radius:10px;background:transparent;color:inherit;text-align:left;font:inherit;font-size:13px}
       .pm-action-menu button:hover,.pm-photo-menu button:hover,.pm-forward-picker button:hover{background:#ffffff12}
       .pm-emoji-row{display:flex;justify-content:space-between;gap:3px;padding:7px 4px 3px;border-top:1px solid #ffffff16;margin-top:5px}
       .pm-emoji-row button{justify-content:center;padding:7px 4px;font-size:19px}
+      .pm-action-menu .pm-menu-divider{height:1px;margin:5px 4px;background:#ffffff18}.pm-online-dot{display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:#64748b;vertical-align:middle}.pm-online-dot.online{background:#22c55e;box-shadow:0 0 0 3px #22c55e20}.pm-chat-title small .pm-online-dot{width:7px;height:7px}
+      .pm-bubble{-webkit-touch-callout:none;user-select:none}.pm-bubble p{user-select:text}
       .pm-reply-bar{display:none;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid #ffffff16;background:#ffffff08}
       .pm-reply-bar.active{display:flex}
       .pm-reply-copy{flex:1;min-width:0;font-size:11px;color:#c4b5fd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -95,6 +97,7 @@
     modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-pm-close]'))close();});
     modal.addEventListener('click',e=>{if(e.target.closest('[data-pm-back]'))backToPeople();});
     const chatPane=modal.querySelector('.pm-chat');
+    let edgeTouch=null;chatPane.addEventListener('touchstart',e=>{const t=e.touches?.[0];if(!t||e.target.closest('.pm-compose,.pm-action-menu,.pm-picker-shade'))return;edgeTouch={x:t.clientX,y:t.clientY};},{passive:true});chatPane.addEventListener('touchend',e=>{if(!edgeTouch)return;const t=e.changedTouches?.[0],s=edgeTouch;edgeTouch=null;if(t&&s.x<=48&&t.clientX-s.x>72&&Math.abs(t.clientY-s.y)<70)backToPeople();},{passive:true});
     chatPane.addEventListener('pointerdown',onChatSwipeStart,{passive:true});
     chatPane.addEventListener('pointerup',onChatSwipeEnd,{passive:true});
     chatPane.addEventListener('pointercancel',()=>{chatSwipeStart=null;},{passive:true});
@@ -142,7 +145,7 @@
     if(!cloudClient||!cloudUser){if(typeof toast==='function')toast('Войди в аккаунт, чтобы открыть мессенджер.');return;}
     ensureModal();$('#provodaMessengerModal').classList.add('open');$('#provodaMessengerModal').setAttribute('aria-hidden','false');
     $('#provodaMessengerModal .pm-shell').classList.remove('chat-open');$('#pmPeople').innerHTML='<div class="pm-empty">Загружаю пользователей…</div>';
-    await Promise.all([loadUsers(),loadConversations()]);
+    await Promise.all([loadUsers(),loadConversations()]);startPresence();
   }
   function backToPeople(){
     const shell=$('#provodaMessengerModal .pm-shell');if(!shell)return;
@@ -157,7 +160,7 @@
   }
   let chatSwipeStart=null;
   function onChatSwipeStart(e){
-    if(e.pointerType==='mouse'||e.target.closest('.pm-bubble,.pm-compose,.pm-action-menu,.pm-picker-shade'))return;
+    if(e.pointerType==='mouse'||e.target.closest('.pm-compose,.pm-action-menu,.pm-picker-shade'))return;
     const shell=$('#provodaMessengerModal .pm-shell');
     if(!shell?.classList.contains('chat-open'))return;
     if(e.clientX>36&&e.target.closest('.pm-messages'))return;
@@ -173,7 +176,7 @@
     const modal=$('#provodaMessengerModal');if(!modal)return;
     if(modal.classList.contains('pm-closing'))return;
     modal.classList.add('pm-closing');modal.setAttribute('aria-hidden','true');
-    if(channel){cloudClient.removeChannel(channel);channel=null;}if(poll){clearInterval(poll);poll=null;}
+    if(channel){cloudClient.removeChannel(channel);channel=null;}if(poll){clearInterval(poll);poll=null;}stopPresence();
     activeUser=null;activeConversation=null;replyTarget=null;
     setTimeout(()=>{modal.classList.remove('open','pm-closing');},210);
   }
@@ -194,7 +197,7 @@
     }).filter(u=>(u.name+' '+u.role_label).toLowerCase().includes(query));
     box.innerHTML=sorted.length?sorted.map(u=>{
       const conv=conversations.find(c=>c.user_id===u.user_id);
-      return '<button type="button" class="pm-person '+(activeUser?.user_id===u.user_id?'active':'')+'" data-pm-user="'+esc(u.user_id)+'">'+avatar(u)+'<span class="pm-person-copy"><strong>'+esc(u.name||'Сотрудник')+'</strong><small>'+esc(roleIcon(u))+'</small><em>'+esc(conv?.last_message||'Открыть личный чат')+'</em></span></button>';
+      const online=!!presenceMap[u.user_id];return '<button type="button" class="pm-person '+(activeUser?.user_id===u.user_id?'active':'')+'" data-pm-user="'+esc(u.user_id)+'">'+avatar(u)+'<span class="pm-person-copy"><strong><i class="pm-online-dot '+(online?'online':'')+'"></i>'+esc(u.name||'Сотрудник')+'</strong><small>'+esc(roleIcon(u))+'</small><em>'+esc(conv?.last_message||'Открыть личный чат')+'</em></span></button>';
     }).join(''):'<div class="pm-empty">Пользователи не найдены.</div>';
     box.querySelectorAll('[data-pm-user]').forEach(b=>b.addEventListener('click',()=>openUser(b.dataset.pmUser)));
   }
@@ -204,7 +207,7 @@
     try{
       const {data,error}=await cloudClient.rpc('messenger_open_conversation',{p_target_user_id:userId});if(error)throw error;
       activeConversation=data;$('#pmChatAvatar').innerHTML=person.avatar_data?'<img src="'+esc(person.avatar_data)+'" alt="">':esc((person.name||'?').slice(0,1).toUpperCase());
-      $('#pmChatName').textContent=person.name||'Сотрудник';$('#pmChatRole').textContent=roleIcon(person);
+      $('#pmChatName').textContent=person.name||'Сотрудник';$('#pmChatRole').innerHTML='<i class="pm-online-dot '+(presenceMap[userId]?'online':'')+'"></i>'+(presenceMap[userId]?'В сети':'Не в сети');
       $('#pmText').disabled=false;$('#pmSend').disabled=false;
       $('#provodaMessengerModal .pm-shell').classList.add('chat-open');
       await loadMessages();
@@ -308,8 +311,8 @@
     });$('#provodaMessengerModal').appendChild(shade);
   }
   function showMessageMenu(message,x,y){
-    closeActionMenu();const menu=document.createElement('div');menu.className='pm-action-menu';menu.innerHTML='<button type="button" data-action-reply>↩　Ответить</button><button type="button" data-action-forward>➦　Переслать</button><div class="pm-emoji-row">'+['❤️','👍','😂','🔥','😮','😢','👏','👎'].map(e=>'<button type="button" data-action-react="'+e+'" aria-label="Реакция '+e+'">'+e+'</button>').join('')+'</div>';
-    menu.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;menu.remove();if(b.hasAttribute('data-action-reply'))setReply(message);else if(b.hasAttribute('data-action-forward'))showForwardPicker(message);else if(b.dataset.actionReact)await toggleReaction(message,b.dataset.actionReact);});
+    closeActionMenu();const menu=document.createElement('div');menu.className='pm-action-menu';const mine=message.sender_id===cloudUser.id;menu.innerHTML='<button type="button" data-action-reply>↩　Ответить</button><button type="button" data-action-forward>➦　Переслать</button>'+(mine?'<button type="button" data-action-edit>✎　Изменить</button><button type="button" data-action-delete>⌫　Удалить</button>':'')+'<div class="pm-menu-divider"></div><div class="pm-emoji-row">'+['❤️','👍','😂','🔥','😮','😢','👏','👎'].map(e=>'<button type="button" data-action-react="'+e+'" aria-label="Реакция '+e+'">'+e+'</button>').join('')+'</div>';
+    menu.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;menu.remove();if(b.hasAttribute('data-action-reply'))setReply(message);else if(b.hasAttribute('data-action-forward'))showForwardPicker(message);else if(b.hasAttribute('data-action-edit'))editMessage(message);else if(b.hasAttribute('data-action-delete'))deleteMessage(message);else if(b.dataset.actionReact)await toggleReaction(message,b.dataset.actionReact);});
     $('#provodaMessengerModal').appendChild(menu);
     if(innerWidth>650){menu.style.left=Math.max(8,Math.min(x,innerWidth-245))+'px';menu.style.top=Math.max(8,Math.min(y,innerHeight-180))+'px';}
   }
@@ -356,6 +359,27 @@
       const target=users.find(u=>u.user_id===userId);if(target){activeUser=target;activeConversation=conv;$('#pmChatName').textContent=target.name||'Сотрудник';$('#pmChatRole').textContent=roleIcon(target);$('#pmChatAvatar').innerHTML=target.avatar_data?'<img src="'+esc(target.avatar_data)+'" alt="">':esc((target.name||'?').slice(0,1).toUpperCase());await loadMessages();}
     }catch(e){setStatus(e.message||'Не удалось переслать сообщение.',true);}
   }
+
+  async function editMessage(message){
+    if(message.sender_id!==cloudUser.id)return;
+    const shade=document.createElement('div');shade.className='pm-picker-shade';const card=document.createElement('div');card.className='pm-picker-card';card.innerHTML='<h3>Изменить сообщение</h3><textarea class="pm-edit-text" maxlength="8000" rows="4"></textarea><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button type="button" data-edit-cancel>Отмена</button><button type="button" data-edit-save>Сохранить</button></div>';
+    const input=card.querySelector('textarea');input.value=message.body||'';card.querySelector('[data-edit-cancel]').onclick=()=>shade.remove();card.querySelector('[data-edit-save]').onclick=async()=>{const body=input.value.trim();if(!body&&!message.attachment_path){setStatus('Сообщение не может быть пустым.',true);return;}const save=card.querySelector('[data-edit-save]');save.disabled=true;try{const {error}=await cloudClient.rpc('messenger_update_message',{p_message_id:message.id,p_body:body});if(error)throw error;shade.remove();await loadMessages();setStatus('Сообщение изменено.');}catch(e){save.disabled=false;setStatus(e.message||'Не удалось изменить сообщение.',true);}};
+    shade.appendChild(card);shade.addEventListener('click',e=>{if(e.target===shade)shade.remove();});$('#provodaMessengerModal').appendChild(shade);input.focus();
+  }
+  async function deleteMessage(message){
+    if(message.sender_id!==cloudUser.id||!confirm('Удалить это сообщение?'))return;
+    try{const {data,error}=await cloudClient.rpc('messenger_delete_message',{p_message_id:message.id});if(error)throw error;if(data?.attachment_path)await cloudClient.storage.from('provoda-messenger').remove([data.attachment_path]);await loadMessages();await loadConversations();renderPeople();setStatus('Сообщение удалено.');}
+    catch(e){setStatus(e.message||'Не удалось удалить сообщение.',true);}
+  }
+  async function refreshPresence(){
+    if(!cloudClient||!cloudUser)return;
+    try{const {data,error}=await cloudClient.rpc('messenger_list_presence');if(error)throw error;const next={};(Array.isArray(data)?data:[]).forEach(p=>{next[p.user_id]=!!p.online;});presenceMap=next;renderPeople();if(activeUser){const online=!!presenceMap[activeUser.user_id];$('#pmChatRole').innerHTML='<i class="pm-online-dot '+(online?'online':'')+'"></i>'+(online?'В сети':'Не в сети');}}
+    catch(e){console.info('Messenger presence unavailable',e?.message||e);}
+  }
+  async function sendPresence(){if(!cloudClient||!cloudUser||document.visibilityState==='hidden')return;try{const {error}=await cloudClient.rpc('messenger_presence_ping');if(error)throw error;}catch(e){console.info('Messenger heartbeat:',e?.message||e);}}
+  function startPresence(){stopPresence();sendPresence();refreshPresence();presenceHeartbeat=setInterval(sendPresence,25000);presenceTimer=setInterval(refreshPresence,20000);document.addEventListener('visibilitychange',onPresenceVisibility);}
+  function stopPresence(){if(presenceHeartbeat)clearInterval(presenceHeartbeat);if(presenceTimer)clearInterval(presenceTimer);presenceHeartbeat=presenceTimer=null;document.removeEventListener('visibilitychange',onPresenceVisibility);}
+  function onPresenceVisibility(){if(document.visibilityState==='visible'){sendPresence();refreshPresence();}}
   function init(){
     styles();ensureModal();
     window.addEventListener('provoda-user-ready',refreshAccess);
