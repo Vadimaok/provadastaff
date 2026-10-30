@@ -10,6 +10,7 @@ on:
       - "index.html"
       - "daily-reports.js"
       - "monthly-stories.js"
+      - "provoda-messenger.js"
       - "supabase/**"
       - "app-version.json"
       - "package.json"
@@ -45,7 +46,7 @@ jobs:
         run: |
           mkdir -p www
           cp index.html www/index.html
-          cp supabase-config.js daily-reports.js monthly-stories.js provoda-logo.svg manifest.webmanifest app-version.json www/
+          cp supabase-config.js daily-reports.js monthly-stories.js provoda-messenger.js provoda-logo.svg manifest.webmanifest app-version.json www/
           echo "Bundled web assets:"
           ls -lh www
 
