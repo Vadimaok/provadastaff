@@ -100,7 +100,7 @@
     }).filter(u=>(u.name+' '+u.role_label).toLowerCase().includes(query));
     box.innerHTML=sorted.length?sorted.map(u=>{
       const conv=conversations.find(c=>c.user_id===u.user_id);
-      return '<button type="button" class="pm-person '+(activeUser?.user_id===u.user_id?'active':'')+'" data-pm-user="'+esc(u.user_id)+'">'+avatar(u)+'<span class="pm-person-copy"><strong>'+esc(u.name||'Сотрудник')+'</strong><small>'+esc(roleIcon(u.role_label))+'</small><em>'+esc(conv?.last_message||'Открыть личный чат')+'</em></span></button>';
+      return '<button type="button" class="pm-person '+(activeUser?.user_id===u.user_id?'active':'')+'" data-pm-user="'+esc(u.user_id)+'">'+avatar(u)+'<span class="pm-person-copy"><strong>'+esc(u.name||'Сотрудник')+'</strong><small>'+esc(roleIcon(u))+'</small><em>'+esc(conv?.last_message||'Открыть личный чат')+'</em></span></button>';
     }).join(''):'<div class="pm-empty">Пользователи не найдены.</div>';
     box.querySelectorAll('[data-pm-user]').forEach(b=>b.addEventListener('click',()=>openUser(b.dataset.pmUser)));
   }
@@ -156,7 +156,7 @@
     if(file.size>12*1024*1024){setStatus('Фото больше 12 МБ. Выбери файл поменьше.',true);return;}
     if(!activeConversation||!activeUser){setStatus('Сначала открой чат.',true);return;}
     const ext=({ 'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic'})[file.type]||'jpg';
-    const path=activeConversation+'/'+cloudUser.id+'/'+crypto.randomUUID()+'.'+ext;
+    const path=activeConversation+'/'+cloudUser.id+'/'+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))+'.'+ext;
     $('#pmAttach').disabled=true;setStatus('Отправляю фото…');
     try{
       const {error:uploadError}=await cloudClient.storage.from('provoda-messenger').upload(path,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;
