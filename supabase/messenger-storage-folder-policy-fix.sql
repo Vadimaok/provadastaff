@@ -1,5 +1,4 @@
--- Allow Supabase Storage to create the virtual folders used by messenger uploads.
--- The actual file remains restricted to the sender's own subfolder and conversation membership.
+-- Fix Storage virtual-folder inserts and enable realtime reaction updates.
 
 drop policy if exists messenger_media_upload_member on storage.objects;
 
@@ -22,3 +21,15 @@ with check (
     )
   )
 );
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname='supabase_realtime'
+      and schemaname='public'
+      and tablename='messenger_message_reactions'
+  ) then
+    alter publication supabase_realtime add table public.messenger_message_reactions;
+  end if;
+end $$;
