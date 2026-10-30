@@ -140,6 +140,8 @@
     activeUser=null;activeConversation=null;replyTarget=null;
     if(channel){cloudClient.removeChannel(channel);channel=null;}if(poll){clearInterval(poll);poll=null;}
     $('#pmText').value='';$('#pmText').disabled=true;$('#pmSend').disabled=true;clearReply();
+    $('#pmChatName').textContent='Выбери сотрудника';$('#pmChatRole').textContent='Личный чат';$('#pmChatAvatar').textContent='?';
+    $('#pmMessages').innerHTML='<div class="pm-empty">Выбери сотрудника слева, чтобы начать переписку.</div>';
     setTimeout(()=>shell.classList.remove('pm-going-back'),240);
   }
   let chatSwipeStart=null;
