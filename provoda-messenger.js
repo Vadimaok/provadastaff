@@ -3,7 +3,7 @@
   'use strict';
   const $=(s,r=document)=>r.querySelector(s);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let enabled=false,users=[],conversations=[],activeUser=null,activeConversation=null,channel=null,poll=null,activeMessages=[],replyTarget=null,longPressTimer=null,pointerStart=null,presenceMap={},presenceTimer=null,presenceHeartbeat=null,messagesLoading=new Set(),messagesRequestSeq=0,lastRenderedConversation=null,syncListTimer=null;
+  let enabled=false,users=[],conversations=[],activeUser=null,activeConversation=null,channel=null,poll=null,activeMessages=[],replyTarget=null,longPressTimer=null,pointerStart=null,presenceMap={},presenceTimer=null,presenceHeartbeat=null,messagesLoading=new Set(),messagesRequestSeq=0,lastRenderedConversation=null,lastMessagesSignature=null,syncListTimer=null;
   const roleIcon=person=>(person.role_label||'Сотрудник')+(person.shift_role?' · '+person.shift_role:'');
   function styles(){
     if($('#provodaMessengerStyles'))return;
@@ -151,7 +151,7 @@
     const shell=$('#provodaMessengerModal .pm-shell');if(!shell)return;
     shell.classList.add('pm-going-back');
     shell.classList.remove('chat-open');
-    activeUser=null;activeConversation=null;replyTarget=null;messagesRequestSeq++;lastRenderedConversation=null;
+    activeUser=null;activeConversation=null;replyTarget=null;messagesRequestSeq++;lastRenderedConversation=null;lastMessagesSignature=null;
     if(channel){cloudClient.removeChannel(channel);channel=null;}if(poll){clearInterval(poll);poll=null;}
     $('#pmText').value='';$('#pmText').disabled=true;$('#pmSend').disabled=true;clearReply();
     $('#pmChatName').textContent='Выбери сотрудника';$('#pmChatRole').textContent='Личный чат';$('#pmChatAvatar').textContent='?';
@@ -207,7 +207,7 @@
     activeUser=person;setStatus('Открываю чат…');
     try{
       const {data,error}=await cloudClient.rpc('messenger_open_conversation',{p_target_user_id:userId});if(error)throw error;
-      activeConversation=data;messagesRequestSeq++;lastRenderedConversation=null;$('#pmChatAvatar').innerHTML=person.avatar_data?'<img src="'+esc(person.avatar_data)+'" alt="">':esc((person.name||'?').slice(0,1).toUpperCase());
+      activeConversation=data;messagesRequestSeq++;lastRenderedConversation=null;lastMessagesSignature=null;$('#pmChatAvatar').innerHTML=person.avatar_data?'<img src="'+esc(person.avatar_data)+'" alt="">':esc((person.name||'?').slice(0,1).toUpperCase());
       $('#pmChatName').textContent=person.name||'Сотрудник';$('#pmChatRole').innerHTML='<i class="pm-online-dot '+(presenceMap[userId]?'online':'')+'"></i>'+(presenceMap[userId]?'В сети':'Не в сети');
       $('#pmText').disabled=false;$('#pmSend').disabled=false;
       $('#provodaMessengerModal .pm-shell').classList.add('chat-open');
@@ -228,6 +228,9 @@
       const {data,error}=await cloudClient.rpc('messenger_list_messages',{p_conversation_id:conversationId,p_limit:150});if(error)throw error;
       if(activeConversation!==conversationId||requestId!==messagesRequestSeq)return;
       const messages=Array.isArray(data)?data:[];activeMessages=messages;
+      const signature=JSON.stringify(messages.map(m=>[m.id,m.body,m.edited_at,m.attachment_path,m.reply_preview,m.forwarded_from_message_id,(m.reactions||[]).map(r=>[r.emoji,r.count,!!r.mine]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))]));
+      if(signature===lastMessagesSignature&&lastRenderedConversation===conversationId)return;
+      lastMessagesSignature=signature;
       box.innerHTML=messages.length?'':'<div class="pm-empty">Это начало переписки. Напиши первое сообщение.</div>';
       for(const m of messages){
         const mine=m.sender_id===cloudUser.id;
@@ -245,7 +248,7 @@
       }
       if(stickToBottom)box.scrollTop=box.scrollHeight;else box.scrollTop=oldTop+Math.max(0,box.scrollHeight-oldHeight);lastRenderedConversation=conversationId;
     }catch(e){if(activeConversation===conversationId)setStatus(e.message||'Не удалось загрузить сообщения.',true);}
-    finally{messagesLoading.delete(conversationId);}
+    finally{messagesLoading.delete(conversationId);if(activeConversation===conversationId&&requestId!==messagesRequestSeq)Promise.resolve().then(()=>loadMessages());}
   }
   async function sendMessage(event){
     event.preventDefault();if(!activeConversation)return;
