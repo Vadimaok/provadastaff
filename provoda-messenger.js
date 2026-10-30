@@ -262,13 +262,14 @@
         if(sessionError)throw new Error('Не удалось проверить авторизацию: '+sessionError.message);
         const token=sessionData?.session?.access_token;
         if(!token)throw new Error('Сессия истекла. Войди в приложение заново.');
-        const base=String(cloudClient.supabaseUrl||'').replace(/[/]+$/,'');
-        if(!base||!cloudClient.supabaseKey)throw new Error('Не удалось определить адрес хранилища Supabase.');
-        const objectUrl=base+'/storage/v1/object/provoda-messenger/'+path.split('/').map(encodeURIComponent).join('/');
-        const response=await fetch(objectUrl,{method:'POST',headers:{'Authorization':'Bearer '+token,'apikey':cloudClient.supabaseKey,'Content-Type':file.type,'x-upsert':'false'},body:file});
-        const responseText=await response.text();let responseData={};try{responseData=responseText?JSON.parse(responseText):{};}catch(_){}
-        if(!response.ok)throw new Error('Хранилище '+response.status+': '+(responseData.message||responseData.error||responseText||'не удалось загрузить файл'));
-        const uploaded=responseData;
+        // Use the Supabase Storage SDK so browser File uploads are sent as multipart/form-data.
+        // This also preserves SDK URL encoding and returns structured Storage errors instead of proxy HTML.
+        const {data:uploaded,error:uploadError}=await cloudClient.storage.from('provoda-messenger').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false});
+        if(uploadError){
+          const details=[uploadError.message,uploadError.error,uploadError.statusCode?'HTTP '+uploadError.statusCode:''].filter(Boolean).join(' · ');
+          throw new Error('Не удалось загрузить фото в хранилище'+(details?': '+details:''));
+        }
+        if(!uploaded?.path)throw new Error('Хранилище не подтвердило загрузку фотографии.');
         const {error:signError}=await cloudClient.storage.from('provoda-messenger').createSignedUrl(path,60);
         if(signError){await cloudClient.storage.from('provoda-messenger').remove([path]);throw new Error('Фото загрузилось, но не открывается: '+(signError.message||'не удалось создать ссылку'));}
         const {error}=await cloudClient.rpc('messenger_send_message',{p_conversation_id:activeConversation,p_body:i===0?body:'',p_attachment_path:path,p_attachment_mime:file.type,p_reply_to_message_id:i===0?(replyTarget?.id||null):null,p_forwarded_from_message_id:null});
