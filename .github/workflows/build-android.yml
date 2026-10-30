@@ -165,7 +165,7 @@ jobs:
               '''
               text = text[:signing_match.end()] + release_config + text[signing_match.end():]
 
-          match = re.search(r'buildTypes\s*\{\s*release\s*\{, text)
+          match = re.search(r'buildTypes\s*\{\s*release\s*\{', text)
           if not match:
               raise SystemExit('Could not locate release build type in app/build.gradle')
           insert_at = match.end()
@@ -214,6 +214,7 @@ jobs:
           (colors/'ic_launcher_background.xml').write_text('''<?xml version="1.0" encoding="utf-8"?>
           <resources><color name="ic_launcher_background">#1d202b</color></resources>
           ''',encoding='utf-8')
+          PY
 
       - name: Set app version
         shell: bash
