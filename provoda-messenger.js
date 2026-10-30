@@ -66,13 +66,13 @@
     tile.addEventListener('click',open);grid.appendChild(tile);
   }
   async function refreshAccess(){
-    if(!window.cloudClient||!window.cloudUser){enabled=false;installTile();return;}
+    if(!cloudClient||!cloudUser){enabled=false;installTile();return;}
     try{const {data,error}=await cloudClient.rpc('user_get_role_features');if(error)throw error;enabled=data?.internal_chat===true;}
     catch(e){enabled=false;console.info('Messenger access unavailable:',e?.message||e);}
     installTile();
   }
   async function open(){
-    if(!window.cloudClient||!window.cloudUser){if(typeof toast==='function')toast('Войди в аккаунт, чтобы открыть мессенджер.');return;}
+    if(!cloudClient||!cloudUser){if(typeof toast==='function')toast('Войди в аккаунт, чтобы открыть мессенджер.');return;}
     ensureModal();$('#provodaMessengerModal').classList.add('open');$('#provodaMessengerModal').setAttribute('aria-hidden','false');
     $('#provodaMessengerModal .pm-shell').classList.remove('chat-open');$('#pmPeople').innerHTML='<div class="pm-empty">Загружаю пользователей…</div>';
     await Promise.all([loadUsers(),loadConversations()]);
@@ -169,7 +169,7 @@
     styles();ensureModal();
     window.addEventListener('provoda-user-ready',refreshAccess);
     window.addEventListener('provoda-user-deactivated',()=>{enabled=false;installTile();close();});
-    if(window.cloudUser)refreshAccess();
+    if(cloudUser)refreshAccess();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
