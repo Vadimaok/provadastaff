@@ -110,7 +110,7 @@
     $('#pmMessages').addEventListener('pointercancel',cancelLongPress);
     $('#pmMessages').addEventListener('click',onMessageClick);$('#pmMessages').addEventListener('click',onImageClick);
     $('#pmSearch').addEventListener('input',renderPeople);
-    document.addEventListener('keydown',e=>{if(e.key!=='Escape'||!modal.classList.contains('open'))return;e.preventDefault();e.stopImmediatePropagation();close();},true);
+    document.addEventListener('keydown',e=>{if(e.key!=='Escape'||!modal.classList.contains('open'))return;e.preventDefault();e.stopImmediatePropagation();const shell=$('#provodaMessengerModal .pm-shell');if(shell?.classList.contains('chat-open')||activeConversation){backToPeople();}else{setStatus('');$('#pmMessages').innerHTML='<div class="pm-empty">Начните общаться — выберите сотрудника в списке слева.</div>'; }},true);
   }
   function avatar(person){const content=person.avatar_data?'<img src="'+esc(person.avatar_data)+'" alt="">':esc((person.name||'?').trim().slice(0,1).toUpperCase()||'?');return '<span class="pm-avatar">'+content+'</span>';}
   function setStatus(message,error=false){const el=$('#pmStatus');if(el){el.textContent=message||'';el.style.color=error?'#fda4af':'';}}
@@ -152,7 +152,7 @@
     if(channel){cloudClient.removeChannel(channel);channel=null;}if(poll){clearInterval(poll);poll=null;}
     $('#pmText').value='';$('#pmText').disabled=true;$('#pmSend').disabled=true;clearReply();
     $('#pmChatName').textContent='Выбери сотрудника';$('#pmChatRole').textContent='Личный чат';$('#pmChatAvatar').textContent='?';
-    $('#pmMessages').innerHTML='<div class="pm-empty">Выбери сотрудника слева, чтобы начать переписку.</div>';
+    $('#pmMessages').innerHTML='<div class="pm-empty">Начните общаться — выберите сотрудника в списке слева.</div>';
     setTimeout(()=>shell.classList.remove('pm-going-back'),240);
   }
   let chatSwipeStart=null;
@@ -258,9 +258,17 @@
       for(let i=0;i<selected.length;i++){
         const file=selected[i],ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic'})[file.type],nonce=(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),path=activeConversation+'/'+cloudUser.id+'/'+nonce+'.'+ext;
         setStatus('Отправляю фото '+(i+1)+' из '+selected.length+'…');
-        const {data:uploaded,error:uploadError}=await cloudClient.storage.from('provoda-messenger').upload(path,file,{contentType:file.type,upsert:false});
-        if(uploadError)throw new Error('Ошибка хранилища ('+(uploadError.statusCode||uploadError.status||'неизвестно')+'): '+(uploadError.message||'не удалось загрузить фото'));
-        if(!uploaded?.path)throw new Error('Хранилище не подтвердило загрузку фото. Повтори попытку.');
+        const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();
+        if(sessionError)throw new Error('Не удалось проверить авторизацию: '+sessionError.message);
+        const token=sessionData?.session?.access_token;
+        if(!token)throw new Error('Сессия истекла. Войди в приложение заново.');
+        const base=String(cloudClient.supabaseUrl||'').replace(/[/]+$/,'');
+        if(!base||!cloudClient.supabaseKey)throw new Error('Не удалось определить адрес хранилища Supabase.');
+        const objectUrl=base+'/storage/v1/object/provoda-messenger/'+path.split('/').map(encodeURIComponent).join('/');
+        const response=await fetch(objectUrl,{method:'POST',headers:{'Authorization':'Bearer '+token,'apikey':cloudClient.supabaseKey,'Content-Type':file.type,'x-upsert':'false'},body:file});
+        const responseText=await response.text();let responseData={};try{responseData=responseText?JSON.parse(responseText):{};}catch(_){}
+        if(!response.ok)throw new Error('Хранилище '+response.status+': '+(responseData.message||responseData.error||responseText||'не удалось загрузить файл'));
+        const uploaded=responseData;
         const {error:signError}=await cloudClient.storage.from('provoda-messenger').createSignedUrl(path,60);
         if(signError){await cloudClient.storage.from('provoda-messenger').remove([path]);throw new Error('Фото загрузилось, но не открывается: '+(signError.message||'не удалось создать ссылку'));}
         const {error}=await cloudClient.rpc('messenger_send_message',{p_conversation_id:activeConversation,p_body:i===0?body:'',p_attachment_path:path,p_attachment_mime:file.type,p_reply_to_message_id:i===0?(replyTarget?.id||null):null,p_forwarded_from_message_id:null});
