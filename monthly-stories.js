@@ -10,7 +10,7 @@
   function installStyles(){
     if($('#monthlyStoriesStyles'))return;
     const style=document.createElement('style');style.id='monthlyStoriesStyles';
-    style.textContent=\`
+    style.textContent=`
       .monthly-story-nav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
       .monthly-story-nav button{padding:9px 13px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025);color:var(--muted);font-size:12px;font-weight:750}
       .monthly-story-nav button.active{background:rgba(124,92,255,.13);border-color:rgba(124,92,255,.42);color:var(--text)}
@@ -52,7 +52,7 @@
       .monthly-story-note{margin-top:10px;color:#8e9bb0;font-size:10px;line-height:1.45}
       @media(max-width:420px){.monthly-story-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.monthly-story-ring{width:72px;height:72px}.monthly-story-modal-card{padding:17px;border-radius:23px}.monthly-story-metric{padding:11px}.monthly-story-metric strong{font-size:18px}}
       body.light-theme .monthly-story-nav button{background:rgba(28,41,64,.035)}
-    \`;
+    `;
     document.head.appendChild(style);
   }
 
