@@ -2673,21 +2673,24 @@ async function initCloudAuth(){
 /* Admin panel uses server-checked Supabase RPCs; UI visibility is not the security boundary. */
 async function notificationCategory(n){
  const k=String(n?.kind||'').toLowerCase(),t=String(n?.title||'').toLowerCase(),b=String(n?.body||'').toLowerCase();
+ if(k.includes('new_message')||k.includes('message'))return 'messenger';
  if(k.includes('shift')||t.includes('смен'))return 'shifts';
  if(k.includes('report')||k.includes('task_approved')||k.includes('task_rejected')||t.includes('отчёт')||t.includes('отчет')||t.includes('одобрен')||t.includes('отклон'))return 'reports';
  if(k.includes('task')||t.includes('задач'))return 'tasks';
  return 'important';
 }
-function notificationCategoryLabel(c){return ({tasks:'Задача',reports:'Отчёт',shifts:'Смена',important:'Важное'})[c]||'Важное';}
+function notificationCategoryLabel(c){return ({tasks:'Задача',reports:'Отчёт',shifts:'Смена',messenger:'Мессенджер',important:'Важное'})[c]||'Важное';}
 function notificationTarget(n){
  const c=notificationCategory(n),k=String(n?.kind||'').toLowerCase();
+ if(c==='messenger')return 'messenger';
  if(c==='shifts')return 'shift';
  if(c==='reports'||k.includes('approved')||k.includes('rejected'))return 'reports';
  if(c==='tasks')return 'tasks';
  return 'settings';
 }
-function openNotificationTarget(target){
+function openNotificationTarget(target,senderId){
  closeSettings();
+ if(target==='messenger'){if(window.openProvodaMessengerWithUser)window.openProvodaMessengerWithUser(senderId);else if(window.openProvodaMessenger)window.openProvodaMessenger();return;}
  if(target==='tasks'){const b=document.querySelector('#openKnzTasksBtn');if(b){b.click();return;}toast('Открой раздел «Мои задачи» из главного меню.');return;}
  if(target==='shift'||target==='reports'){const b=document.querySelector('#openDailyReportsBtn');if(b){b.click();return;}toast('Открой раздел «Сменные отчёты» из меню приложения.');return;}
  openSettings();
@@ -2708,7 +2711,7 @@ function renderNotificationCenter(){
  if(unreadEl)unreadEl.textContent='Непрочитанных: '+unread;
  updateNotificationBell();
  const rows=notificationCenterRows.filter(n=>filter==='all'||(filter==='unread'?!n.read_at:notificationCategory(n)===filter));
- box.innerHTML=rows.length?rows.map(n=>{const cat=notificationCategory(n),target=notificationTarget(n);return '<article class="notification-center-item '+(!n.read_at?'unread':'')+'"><div class="notification-copy"><span class="notification-type">'+notificationCategoryLabel(cat)+'</span><strong>'+escapeHtml(n.title||'Уведомление')+(!n.read_at?'<span class="notification-unread-dot" aria-label="Непрочитано"></span>':'')+'</strong><p>'+escapeHtml(n.body||'')+'</p><time>'+escapeHtml(n.created_at?new Date(n.created_at).toLocaleString('ru-RU'):'')+(n.read_at?' · Прочитано':' · Новое')+'</time></div><button class="notification-open" type="button" data-notification-target="'+target+'">Открыть</button></article>';}).join(''):'<div class="admin-empty">Уведомлений в этой категории нет.</div>';
+ box.innerHTML=rows.length?rows.map(n=>{const cat=notificationCategory(n),target=notificationTarget(n);return '<article class="notification-center-item '+(!n.read_at?'unread':'')+'"><div class="notification-copy"><span class="notification-type">'+notificationCategoryLabel(cat)+'</span><strong>'+escapeHtml(n.title||'Уведомление')+(!n.read_at?'<span class="notification-unread-dot" aria-label="Непрочитано"></span>':'')+'</strong><p>'+escapeHtml(n.body||'')+'</p><time>'+escapeHtml(n.created_at?new Date(n.created_at).toLocaleString('ru-RU'):'')+(n.read_at?' · Прочитано':' · Новое')+'</time></div><button class="notification-open" type="button" data-notification-target="'+target+'" data-notification-sender="'+escapeHtml(n.metadata?.sender_id||'')+'">Открыть</button></article>';}).join(''):'<div class="admin-empty">Уведомлений в этой категории нет.</div>';
 }
 async function loadNotificationCenter(){
  const box=document.querySelector('#notificationCenterList'),status=document.querySelector('#notificationCenterStatus');
@@ -3648,7 +3651,7 @@ document.querySelectorAll('[data-close-notification-center]').forEach(el=>el.add
 document.querySelector('#refreshNotificationCenterBtn')?.addEventListener('click',loadNotificationCenter);
 document.querySelector('#markNotificationsReadBtn')?.addEventListener('click',markNotificationCenterRead);
 document.querySelector('#notificationCenterFilter')?.addEventListener('change',renderNotificationCenter);
-document.querySelector('#notificationCenterList')?.addEventListener('click',e=>{const b=e.target.closest('[data-notification-target]');if(b)openNotificationTarget(b.dataset.notificationTarget);});
+document.querySelector('#notificationCenterList')?.addEventListener('click',e=>{const b=e.target.closest('[data-notification-target]');if(b)openNotificationTarget(b.dataset.notificationTarget,b.dataset.notificationSender||null);});
 document.querySelector('#settingsLogoutBtn').addEventListener('click',signOut);
 document.querySelector('#settingsCsvBtn').addEventListener('click',exportCSV);
 document.querySelector('#settingsBackupBtn').addEventListener('click',exportBackup);
