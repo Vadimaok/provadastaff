@@ -190,11 +190,14 @@
     employeeMonthlyStory=null;
   }
   function renderEmployeeStoryStrip(shared){
-    const strip=$('#employeeMonthlyStoryStrip');if(!strip||!employeeMonthlyStory)return;
+    const strip=$('#employeeMonthlyStoryStrip');if(!strip)return;
     const own=employeeMonthlyStory;
     const avatar=(item)=>item.avatar_data?'<img src="'+esc(item.avatar_data)+'" alt="">':esc((item.name||'Сотрудник').trim().slice(0,1).toUpperCase()||'С');
     const item=(item,id,subtitle)=>'<button type="button" class="employee-monthly-story-item" data-employee-story="'+esc(id)+'"><span class="employee-monthly-story-ring"><span class="employee-monthly-story-avatar">'+avatar(item)+'</span></span><span class="employee-monthly-story-copy"><strong>'+esc(item.name||'Сотрудник')+'</strong><span>'+esc(subtitle)+'</span></span></button>';
-    strip.innerHTML=item(own,'self','Мои итоги')+(shared||[]).map(person=>item(person,person.user_id,person.role_label||'Сотрудник')).join('');
+    const ownItem=own?item(own,'self','Мои итоги'):'';
+    const sharedItems=(shared||[]).map(person=>item(person,person.user_id,person.role_label||'Сотрудник')).join('');
+    if(!ownItem&&!sharedItems){strip.classList.add('hidden');return;}
+    strip.innerHTML=ownItem+sharedItems;
     strip.classList.remove('hidden');
   }
   async function openSharedEmployeeStory(userId){
@@ -253,12 +256,12 @@
       const {data,error}=await cloudClient.rpc('user_get_my_monthly_story',{p_month_start:monthNow()+'-01'});
       if(typeof cloudUser==='undefined'||!cloudUser||cloudUser.id!==requestedUserId)return;
       if(error)throw error;
-      if(!data||data.enabled!==true){hideEmployeeStory();return;}
-      employeeMonthlyStory=data;
-      installEmployeeStoryUI();
+      employeeMonthlyStory=data?.enabled===true?data:null;
+      if(employeeMonthlyStory)installEmployeeStoryUI();
       const sharedResult=await cloudClient.rpc('user_list_shared_monthly_stories');
       if(typeof cloudUser==='undefined'||!cloudUser||cloudUser.id!==requestedUserId)return;
       const shared=sharedResult.error?[]:(Array.isArray(sharedResult.data)?sharedResult.data:[]);
+      if(employeeMonthlyStory||shared.length)installEmployeeStoryUI();
       renderEmployeeStoryStrip(shared);
     }catch(error){
       console.info('Monthly employee story unavailable:',error?.message||error);
