@@ -147,8 +147,13 @@
     if($('#employeeMonthlyStoryStyles'))return;
     const style=document.createElement('style');style.id='employeeMonthlyStoryStyles';
     style.textContent=`
-      #employeeMonthlyStoryStrip{display:flex;align-items:center;gap:13px;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(110deg,rgba(124,92,255,.10),rgba(34,211,238,.045));}
-      #employeeMonthlyStoryStrip .employee-monthly-story-open{display:flex;align-items:center;gap:13px;width:100%;padding:0;border:0;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+      #employeeMonthlyStoryStrip{display:flex;align-items:center;gap:12px;overflow-x:auto;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(110deg,rgba(124,92,255,.10),rgba(34,211,238,.045));scrollbar-width:none}
+      #employeeMonthlyStoryStrip::-webkit-scrollbar{display:none}
+      .employee-monthly-story-item{display:flex;flex:0 0 78px;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:var(--text);text-align:center;cursor:pointer}
+      .employee-monthly-story-item .employee-monthly-story-ring{width:62px;height:62px}
+      .employee-monthly-story-item .employee-monthly-story-copy{width:100%;gap:2px;text-align:center}
+      .employee-monthly-story-item .employee-monthly-story-copy strong{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+      .employee-monthly-story-item .employee-monthly-story-copy span{font-size:10px}
       .employee-monthly-story-ring{width:62px;height:62px;flex:0 0 62px;padding:3px;border-radius:50%;background:linear-gradient(135deg,#7c5cff,#22d3ee 52%,#f43f8e);box-shadow:0 5px 18px rgba(34,211,238,.16)}
       .employee-monthly-story-avatar{display:grid;place-items:center;width:100%;height:100%;overflow:hidden;border:3px solid var(--card);border-radius:50%;background:linear-gradient(145deg,rgba(124,92,255,.3),rgba(34,211,238,.18));font-size:20px;font-weight:850}
       .employee-monthly-story-avatar img{width:100%;height:100%;object-fit:cover}
@@ -170,16 +175,63 @@
   function installEmployeeStoryUI(){
     const dashboard=$('#dashboardTiles');if(!dashboard)return;
     if(!$('#employeeMonthlyStoryStrip')){
-      const strip=document.createElement('section');strip.id='employeeMonthlyStoryStrip';strip.className='hidden';
-      strip.innerHTML='<button type="button" class="employee-monthly-story-open" id="employeeMonthlyStoryOpen" aria-label="Открыть мои итоги месяца"><div class="employee-monthly-story-ring"><div class="employee-monthly-story-avatar" id="employeeMonthlyStoryAvatar">И</div></div><span class="employee-monthly-story-copy"><strong>Итоги месяца</strong><span id="employeeMonthlyStoryCaption">Твоя статистика за месяц</span></span><span class="employee-monthly-story-chevron" aria-hidden="true">›</span></button>';
+      const strip=document.createElement('section');strip.id='employeeMonthlyStoryStrip';strip.className='hidden';strip.setAttribute('aria-label','Итоги месяца сотрудников');
       dashboard.insertAdjacentElement('beforebegin',strip);
-      $('#employeeMonthlyStoryOpen')?.addEventListener('click',async()=>{await loadEmployeeStory(true);if(employeeMonthlyStory)showEmployeeStory(employeeMonthlyStory);});
+      strip.addEventListener('click',async event=>{
+        const button=event.target.closest('[data-employee-story]');if(!button)return;
+        if(button.dataset.employeeStory==='self'){await loadEmployeeStory(true);if(employeeMonthlyStory)showEmployeeStory(employeeMonthlyStory,true);return;}
+        await openSharedEmployeeStory(button.dataset.employeeStory);
+      });
     }
     ensureStoryModal();
   }
   function hideEmployeeStory(){
     const strip=$('#employeeMonthlyStoryStrip');if(strip)strip.classList.add('hidden');
     employeeMonthlyStory=null;
+  }
+  function renderEmployeeStoryStrip(shared){
+    const strip=$('#employeeMonthlyStoryStrip');if(!strip||!employeeMonthlyStory)return;
+    const own=employeeMonthlyStory;
+    const avatar=(item)=>item.avatar_data?'<img src="'+esc(item.avatar_data)+'" alt="">':esc((item.name||'Сотрудник').trim().slice(0,1).toUpperCase()||'С');
+    const item=(item,id,subtitle)=>'<button type="button" class="employee-monthly-story-item" data-employee-story="'+esc(id)+'"><span class="employee-monthly-story-ring"><span class="employee-monthly-story-avatar">'+avatar(item)+'</span></span><span class="employee-monthly-story-copy"><strong>'+esc(item.name||'Сотрудник')+'</strong><span>'+esc(subtitle)+'</span></span></button>';
+    strip.innerHTML=item(own,'self','Мои итоги')+(shared||[]).map(person=>item(person,person.user_id,person.role_label||'Сотрудник')).join('');
+    strip.classList.remove('hidden');
+  }
+  async function openSharedEmployeeStory(userId){
+    try{
+      const {data,error}=await cloudClient.rpc('user_get_shared_monthly_story',{p_target_user_id:userId,p_month_start:monthNow()+'-01'});
+      if(error)throw error;
+      if(!data||data.enabled!==true)throw new Error('Сотрудник закрыл доступ к итогам.');
+      showEmployeeStory(data,false);
+    }catch(error){console.info('Shared monthly story:',error?.message||error);if(typeof toast==='function')toast(error?.message||'Не удалось открыть итоги сотрудника.');}
+  }
+  function installStorySharingControl(){
+    const settings=document.querySelector('#settingsSheet .settings-group-card');if(!settings||$('#monthlyStorySharingCard'))return;
+    const card=document.createElement('section');card.id='monthlyStorySharingCard';card.className='settings-group-card';
+    card.innerHTML='<div class="settings-group-heading"><span class="settings-group-icon">◎</span><div><h3>Доступ к моей сторис</h3><p>Разреши коллегам видеть твои итоги месяца. Можно отключить в любой момент.</p></div></div><label class="admin-feature-toggle" style="margin-top:12px"><span><strong>Поделиться моими итогами</strong><small>Другие сотрудники увидят твою аватарку и статистику за месяц</small></span><input id="monthlyStoryShareToggle" type="checkbox"></label><p id="monthlyStoryShareStatus" class="settings-hint" role="status" aria-live="polite"></p>';
+    settings.insertAdjacentElement('afterend',card);
+    $('#monthlyStoryShareToggle')?.addEventListener('change',async event=>{
+      const toggle=event.target;toggle.disabled=true;
+      const status=$('#monthlyStoryShareStatus');
+      try{
+        const {data,error}=await cloudClient.rpc('user_set_monthly_story_sharing',{p_enabled:toggle.checked});
+        if(error)throw error;
+        employeeStorySharing=data?.is_enabled===true;
+        if(status)status.textContent=employeeStorySharing?'Твои итоги доступны другим сотрудникам.':'Доступ к твоим итогам закрыт.';
+      }catch(error){toggle.checked=!toggle.checked;if(status)status.textContent=error?.message||'Не удалось изменить доступ.';}
+      finally{toggle.disabled=false;}
+      await loadEmployeeStory(true);
+    });
+  }
+  async function loadStorySharingPreference(){
+    const toggle=$('#monthlyStoryShareToggle');if(!toggle||!cloudClient)return;
+    try{
+      const {data,error}=await cloudClient.rpc('user_get_monthly_story_sharing');if(error)throw error;
+      employeeStorySharing=data?.is_enabled===true;
+      toggle.checked=employeeStorySharing;toggle.disabled=data?.available!==true;
+      const status=$('#monthlyStoryShareStatus');
+      if(status)status.textContent=data?.available===true?(employeeStorySharing?'Твои итоги доступны другим сотрудникам.':'Сейчас твои итоги видны только тебе.'):'Сторис отключены администратором.';
+    }catch(error){toggle.disabled=true;const status=$('#monthlyStoryShareStatus');if(status)status.textContent=error?.message||'Не удалось проверить доступ.';}
   }
   function employeeStoryMonthLabel(){
     const [year,month]=monthNow().split('-').map(Number);
@@ -200,15 +252,12 @@
       if(error)throw error;
       if(!data||data.enabled!==true){hideEmployeeStory();return;}
       employeeMonthlyStory=data;
-      installEmployeeStoryUI();
-      const strip=$('#employeeMonthlyStoryStrip');if(strip)strip.classList.remove('hidden');
-      const avatar=$('#employeeMonthlyStoryAvatar');
-      if(avatar){
-        const avatarData=data.avatar_data||cloudUser.user_metadata?.avatar_data;
-        avatar.innerHTML=avatarData?'<img src="'+esc(avatarData)+'" alt="">':esc((data.name||'Сотрудник').trim().slice(0,1).toUpperCase()||'И');
-      }
-      const caption=$('#employeeMonthlyStoryCaption');
-      if(caption)caption.textContent='Твоя статистика · '+employeeStoryMonthLabel();
+      installEmployeeStoryUI();installStorySharingControl();
+      await loadStorySharingPreference();
+      const sharedResult=await cloudClient.rpc('user_list_shared_monthly_stories');
+      if(typeof cloudUser==='undefined'||!cloudUser||cloudUser.id!==requestedUserId)return;
+      const shared=sharedResult.error?[]:(Array.isArray(sharedResult.data)?sharedResult.data:[]);
+      renderEmployeeStoryStrip(shared);
     }catch(error){
       console.info('Monthly employee story unavailable:',error?.message||error);
       hideEmployeeStory();
@@ -217,14 +266,14 @@
       if(employeeStoryRefreshPending){employeeStoryRefreshPending=false;if(typeof cloudUser!=='undefined'&&cloudUser)setTimeout(()=>loadEmployeeStory(true),0);}
     }
   }
-  function showEmployeeStory(story){
+  function showEmployeeStory(story,isOwn=true){
     const modal=$('#monthlyStoryModal');if(!modal)return;
     const spent=Number(story.spent)||0,budget=Number(story.budget)||0;
     const done=Number(story.tasks_done)||0,total=Number(story.tasks_total)||0;
     const spendPct=budget>0?Math.round(spent/budget*100):0;
     const taskPct=total>0?Math.round(done/total*100):0;
     modal.innerHTML='<article class="monthly-story-modal-card" role="dialog" aria-modal="true" aria-label="Мои итоги месяца">'+
-      '<header class="monthly-story-modal-top"><div><small>PROVODA STAFF · МОИ ИТОГИ</small><div style="font-size:12px;color:#aab6c8;margin-top:4px">'+esc(employeeStoryMonthLabel())+'</div></div><button class="monthly-story-close" type="button" aria-label="Закрыть" data-monthly-close>×</button></header>'+
+      '<header class="monthly-story-modal-top"><div><small>PROVODA STAFF · '+(isOwn?'МОИ ИТОГИ':'ИТОГИ СОТРУДНИКА')+'</small><div style="font-size:12px;color:#aab6c8;margin-top:4px">'+esc(employeeStoryMonthLabel())+'</div></div><button class="monthly-story-close" type="button" aria-label="Закрыть" data-monthly-close>×</button></header>'+
       '<div class="monthly-story-identity">'+avatarMarkup(story)+'<div><h3>'+esc(story.name||'Мои итоги')+'</h3><p>Твоя личная статистика за месяц</p></div></div>'+
       '<section class="monthly-story-hero"><span>Потрачено за месяц</span><strong>'+money(spent)+'</strong><span>'+(budget>0?'Использовано '+spendPct+'% месячного бюджета':'Месячный бюджет не задан')+'</span><div class="monthly-story-progress"><i style="width:'+Math.min(100,Math.max(0,spendPct))+'%"></i></div></section>'+
       '<div class="monthly-story-metrics">'+
@@ -232,13 +281,13 @@
       '<div class="monthly-story-metric"><span>Остаток бюджета</span><strong>'+(budget>0?money(budget-spent):'—')+'</strong><small>'+(budget>0?(budget-spent>=0?'Осталось':'Превышение бюджета'):'Бюджет не задан')+'</small></div>'+
       '<div class="monthly-story-metric"><span>Сменные отчёты</span><strong>'+Number(story.shift_reports||0)+'</strong><small>Отправлено за месяц</small></div>'+
       '<div class="monthly-story-metric"><span>Дни с покупками</span><strong>'+Number(story.expense_days||0)+'</strong><small>Активность по расходам</small></div></div>'+
-      '<p class="monthly-story-note">Эти данные видны только в твоём аккаунте. Администратор может отдельно просматривать общие итоги сотрудников в админ-панели.</p></article>';
+      '<p class="monthly-story-note">'+(isOwn?'Твои итоги видны только тебе, пока ты не включишь «Поделиться моими итогами» в настройках.':'Сотрудник самостоятельно открыл доступ к этой статистике.')+'</p></article>';
     modal.classList.add('open');modal.setAttribute('aria-hidden','false');
     modal.querySelector('[data-monthly-close]')?.addEventListener('click',closeStory);
   }
 
   function init(){
-    installStyles();installUI();installEmployeeStoryStyles();installEmployeeStoryUI();
+    installStyles();installUI();installEmployeeStoryStyles();installEmployeeStoryUI();installStorySharingControl();
     window.addEventListener('provoda-user-ready',()=>{if(typeof cloudUser!=='undefined'&&cloudUser)loadEmployeeStory(true);else hideEmployeeStory();});
     if(typeof cloudUser!=='undefined'&&cloudUser)loadEmployeeStory(true);
     window.setInterval(()=>{if(document.visibilityState==='visible'&&typeof cloudUser!=='undefined'&&cloudUser)loadEmployeeStory(true);},60000);
