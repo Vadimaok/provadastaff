@@ -838,6 +838,21 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
 .knz-task-rejected{border-color:rgba(225,75,75,.32)!important}
 @media(max-width:600px){#toast,#toast2{bottom:calc(22px + env(safe-area-inset-bottom));min-width:0;width:calc(100vw - 32px);border-radius:14px}#knzRejectedBanner{width:calc(100% - 24px);margin:12px auto 16px;padding:15px 14px 15px 17px}}
 
+/* Main-screen notification bell and notification center */
+.notification-bell{position:relative;overflow:visible;flex:0 0 42px}
+.notification-bell svg{transition:transform .2s ease}
+.notification-bell-count{position:absolute;right:-6px;top:-6px;min-width:19px;height:19px;padding:0 5px;display:grid;place-items:center;border-radius:99px;background:#ef4444;color:#fff;border:2px solid #101720;font-size:10px;font-weight:850;line-height:1}
+.notification-bell-count.hidden{display:none!important}
+.notification-bell.has-task-alert{color:#fff;border-color:rgba(59,130,246,.75);background:linear-gradient(135deg,rgba(37,99,235,.28),rgba(220,38,38,.24));animation:provoda-bell-pulse 1.35s ease-in-out infinite;box-shadow:0 0 0 1px rgba(59,130,246,.18),0 0 18px rgba(59,130,246,.22)}
+.notification-bell.has-task-alert svg{filter:drop-shadow(0 0 5px rgba(96,165,250,.85))}
+@keyframes provoda-bell-pulse{0%,100%{border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,.22),0 0 10px rgba(59,130,246,.18)}50%{border-color:#ef4444;box-shadow:0 0 0 1px rgba(239,68,68,.28),0 0 18px rgba(239,68,68,.32)}}
+.notification-center-sheet{z-index:120}
+.notification-center-panel{max-width:680px}
+.notification-center-panel>.settings-group-card{border:0;padding:0;background:transparent;box-shadow:none}
+.notification-center-panel .settings-group-heading{display:none}
+.notification-center-panel .settings-subsection{padding:0}
+.notification-center-panel .notification-center-list{display:grid;gap:9px;max-height:58vh;overflow:auto}
+@media(prefers-reduced-motion:reduce){.notification-bell.has-task-alert{animation:none}}
 /* Dashboard tile customization */
 .dashboard-tiles{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:0 auto;max-width:760px}
 .dashboard-tiles>.hero{grid-column:1/-1;min-width:0}
@@ -1163,7 +1178,7 @@ try {
 <div class="wrap">
   <header class="top">
     <div class="brand"><img class="brand-mark" src="./provoda-logo.svg?v=1" alt=""><div class="brand-copy"><b>Provoda staff</b><span id="monthLabel">—</span></div></div>
-    <div class="actions">
+    <div class="actions"><button class="icon notification-bell" id="notificationBellBtn" type="button" aria-label="Открыть уведомления" title="Уведомления"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="notification-bell-count hidden" id="notificationBellCount">0</span></button>
       <button class="icon" id="importBtn" title="Импортировать резервную копию JSON" aria-label="Импортировать резервную копию"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v3h14v-3"/></svg></button>
       <button class="icon" id="exportBtn" title="Скачать резервную копию JSON" aria-label="Скачать резервную копию"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M5 16v4h14v-4"/></svg></button>
       <input type="file" id="importFile" accept="application/json,.json" class="hidden">
@@ -1235,6 +1250,10 @@ try {
 </div>
 
 <div id="tileArrangeBar" class="tile-arrange-bar" role="status" aria-live="polite"><span>Перетаскивай плитки за ручку ↕</span><button type="button" id="finishTileArrangeBtn">Готово</button></div>
+<div class="sheet notification-center-sheet" id="notificationCenterSheet" aria-hidden="true"><div class="scrim" data-close-notification-center></div><div class="panel notification-center-panel" role="dialog" aria-modal="true" aria-labelledby="notificationCenterTitle"><div class="grab"></div><div class="sheet-heading"><div><h2 id="notificationCenterTitle">Уведомления</h2><p class="settings-subtitle">Задачи, отчёты и важные события аккаунта.</p></div><button class="ghost" type="button" data-close-notification-center aria-label="Закрыть уведомления">×</button></div><section class="settings-group-card" aria-labelledby="settingsNotificationCenterTitle">
+      <div class="settings-group-heading"><span class="settings-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span><div><h3 id="settingsNotificationCenterTitle">Центр уведомлений</h3><p>Задачи, отчёты и важные события аккаунта.</p></div></div>
+      <section class="settings-subsection"><div class="notification-center-controls"><select id="notificationCenterFilter" aria-label="Категория уведомлений"><option value="all">Все категории</option><option value="tasks">Задачи</option><option value="reports">Отчёты</option><option value="shifts">Смены</option><option value="important">Важные события</option><option value="unread">Только непрочитанные</option></select><span id="notificationUnreadCount" class="recent-count">Непрочитанных: —</span></div><div class="admin-inline-actions"><button type="button" class="ghost" id="refreshNotificationCenterBtn">Обновить историю</button><button type="button" class="ghost" id="markNotificationsReadBtn">Отметить прочитанными</button></div><div id="notificationCenterStatus" class="settings-hint" role="status" aria-live="polite">Нажми «Обновить историю», чтобы загрузить уведомления.</div><div id="notificationCenterList" class="notification-center-list"></div></section>
+    </section></div></div>
 <button class="fab" id="addBtn">+ Добавить</button>
 
 <div class="sheet" id="sheet" aria-hidden="true">
@@ -1541,10 +1560,6 @@ try {
       </section>
     </section>
 
-    <section class="settings-group-card" aria-labelledby="settingsNotificationCenterTitle">
-      <div class="settings-group-heading"><span class="settings-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span><div><h3 id="settingsNotificationCenterTitle">Центр уведомлений</h3><p>Задачи, отчёты и важные события аккаунта.</p></div></div>
-      <section class="settings-subsection"><div class="notification-center-controls"><select id="notificationCenterFilter" aria-label="Категория уведомлений"><option value="all">Все категории</option><option value="tasks">Задачи</option><option value="reports">Отчёты</option><option value="shifts">Смены</option><option value="important">Важные события</option><option value="unread">Только непрочитанные</option></select><span id="notificationUnreadCount" class="recent-count">Непрочитанных: —</span></div><div class="admin-inline-actions"><button type="button" class="ghost" id="refreshNotificationCenterBtn">Обновить историю</button><button type="button" class="ghost" id="markNotificationsReadBtn">Отметить прочитанными</button></div><div id="notificationCenterStatus" class="settings-hint" role="status" aria-live="polite">Нажми «Обновить историю», чтобы загрузить уведомления.</div><div id="notificationCenterList" class="notification-center-list"></div></section>
-    </section>
     <section class="settings-group-card" aria-labelledby="settingsCloudStatusTitle">
       <div class="settings-group-heading"><span class="settings-group-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18a4 4 0 0 1-.4-8A6.5 6.5 0 0 1 18 8a4.5 4.5 0 0 1 .5 9H6Z"/><path d="m9 13 3-3 3 3M12 10v7"/></svg></span><div><h3 id="settingsCloudStatusTitle">Состояние облака</h3><p>Проверка связи с сервером и времени последней проверки.</p></div></div>
       <section class="settings-subsection"><div class="admin-detail-head"><strong id="cloudHealthStatus" role="status" aria-live="polite">Проверка не выполнялась</strong><button type="button" class="ghost" id="checkCloudHealthBtn">Проверить связь</button></div><p id="cloudHealthDetails" class="settings-hint">Проверка связи не изменяет расходы и не перезаписывает данные.</p></section>
@@ -2669,10 +2684,21 @@ function openNotificationTarget(target){
  if(target==='shift'||target==='reports'){const b=document.querySelector('#openDailyReportsBtn');if(b){b.click();return;}toast('Открой раздел «Сменные отчёты» из меню приложения.');return;}
  openSettings();
 }
+function updateNotificationBell(){
+ const bell=document.querySelector('#notificationBellBtn'),badge=document.querySelector('#notificationBellCount');
+ if(!bell||!badge)return;
+ const unread=notificationCenterRows.filter(n=>!n.read_at).length;
+ const taskAlerts=notificationCenterRows.filter(n=>!n.read_at&&notificationCategory(n)==='tasks').length;
+ badge.textContent=unread>99?'99+':String(unread);
+ badge.classList.toggle('hidden',unread===0);
+ bell.classList.toggle('has-task-alert',taskAlerts>0);
+ bell.setAttribute('aria-label',taskAlerts?'Есть новые задачи · открыть уведомления':unread?'Есть непрочитанные уведомления':'Открыть уведомления');
+}
 function renderNotificationCenter(){
  const box=document.querySelector('#notificationCenterList'),filter=document.querySelector('#notificationCenterFilter')?.value||'all';
  const unread=notificationCenterRows.filter(n=>!n.read_at).length,unreadEl=document.querySelector('#notificationUnreadCount');
  if(unreadEl)unreadEl.textContent='Непрочитанных: '+unread;
+ updateNotificationBell();
  const rows=notificationCenterRows.filter(n=>filter==='all'||(filter==='unread'?!n.read_at:notificationCategory(n)===filter));
  box.innerHTML=rows.length?rows.map(n=>{const cat=notificationCategory(n),target=notificationTarget(n);return '<article class="notification-center-item '+(!n.read_at?'unread':'')+'"><div class="notification-copy"><span class="notification-type">'+notificationCategoryLabel(cat)+'</span><strong>'+escapeHtml(n.title||'Уведомление')+(!n.read_at?'<span class="notification-unread-dot" aria-label="Непрочитано"></span>':'')+'</strong><p>'+escapeHtml(n.body||'')+'</p><time>'+escapeHtml(n.created_at?new Date(n.created_at).toLocaleString('ru-RU'):'')+(n.read_at?' · Прочитано':' · Новое')+'</time></div><button class="notification-open" type="button" data-notification-target="'+target+'">Открыть</button></article>';}).join(''):'<div class="admin-empty">Уведомлений в этой категории нет.</div>';
 }
@@ -2684,6 +2710,7 @@ async function loadNotificationCenter(){
   const {data,error}=await cloudClient.rpc('user_list_notifications',{limit_rows:100});if(error)throw error;
   notificationCenterRows=Array.isArray(data)?data:[];
   renderNotificationCenter();
+  updateNotificationBell();
   if(status)status.textContent='История обновлена · '+notificationCenterRows.length+' уведомлений.';
  }catch(e){if(status)status.textContent=(e.message||'Не удалось загрузить уведомления')+'. Для центра уведомлений выполни supabase/admin-performance-audit.sql.';}
 }
@@ -3608,6 +3635,8 @@ document.querySelector('#refreshDeviceSessionsBtn')?.addEventListener('click',re
 document.querySelector('#checkCloudHealthBtn')?.addEventListener('click',checkCloudHealth);
 window.addEventListener('online',()=>{const status=document.querySelector('#cloudHealthStatus');if(status)checkCloudHealth();});
 window.addEventListener('offline',()=>{const status=document.querySelector('#cloudHealthStatus'),details=document.querySelector('#cloudHealthDetails');if(status){status.textContent='Нет подключения к интернету';status.style.color='var(--bad)';}if(details)details.textContent='Соединение будет проверено после восстановления сети.';});
+document.querySelector('#notificationBellBtn')?.addEventListener('click',()=>{const sheet=document.querySelector('#notificationCenterSheet');sheet?.classList.add('open');sheet?.setAttribute('aria-hidden','false');loadNotificationCenter();});
+document.querySelectorAll('[data-close-notification-center]').forEach(el=>el.addEventListener('click',()=>{const sheet=document.querySelector('#notificationCenterSheet');sheet?.classList.remove('open');sheet?.setAttribute('aria-hidden','true');}));
 document.querySelector('#refreshNotificationCenterBtn')?.addEventListener('click',loadNotificationCenter);
 document.querySelector('#markNotificationsReadBtn')?.addEventListener('click',markNotificationCenterRead);
 document.querySelector('#notificationCenterFilter')?.addEventListener('change',renderNotificationCenter);
