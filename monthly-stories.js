@@ -228,7 +228,7 @@
     try{
       const {data,error}=await cloudClient.rpc('user_get_monthly_story_sharing');if(error)throw error;
       employeeStorySharing=data?.is_enabled===true;
-      $('#monthlyStorySharingCard')?.classList.toggle('hidden',data?.can_share===false);
+      $('#monthlyStorySharingCard')?.classList.toggle('hidden',data?.can_share===false||data?.available!==true);
       toggle.checked=employeeStorySharing;toggle.disabled=data?.available!==true||data?.can_share===false;
       const status=$('#monthlyStoryShareStatus');
       if(status)status.textContent=data?.available===true?(employeeStorySharing?'Твои итоги доступны другим сотрудникам.':'Сейчас твои итоги видны только тебе.'):'Сторис отключены администратором.';
