@@ -176,7 +176,7 @@
     const modal=$('#provodaMessengerModal');if(!modal)return;
     if(modal.classList.contains('pm-closing'))return;
     modal.classList.add('pm-closing');modal.setAttribute('aria-hidden','true');
-    if(channel){cloudClient.removeChannel(channel);channel=null;}if(poll){clearInterval(poll);poll=null;}stopPresence();
+    if(channel){cloudClient.removeChannel(channel);channel=null;}if(poll){clearInterval(poll);poll=null;}
     activeUser=null;activeConversation=null;replyTarget=null;
     setTimeout(()=>{modal.classList.remove('open','pm-closing');},210);
   }
