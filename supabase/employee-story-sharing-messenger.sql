@@ -135,9 +135,9 @@ begin
   end if;
   if public.is_current_admin() then raise exception 'Для просмотра историй сотрудников используй панель администратора'; end if;
   v_story := public._provoda_monthly_story_payload(p_target_user_id,p_month_start);
-  return v_story;
+  return v_story - 'email';
 end;
-$$;
+$;
 
 create or replace function public.user_get_my_monthly_story(p_month_start date default date_trunc('month',current_date)::date)
 returns jsonb language plpgsql stable security definer set search_path = ''
