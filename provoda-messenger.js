@@ -31,7 +31,7 @@
       .pm-empty{margin:auto;max-width:280px;text-align:center;color:#94a3b8;font-size:13px;line-height:1.5}
       .pm-bubble{max-width:min(78%,520px);padding:10px 12px;border:1px solid #ffffff12;border-radius:16px;background:#ffffff0c;overflow-wrap:anywhere;align-self:flex-start}
       .pm-bubble.mine{align-self:flex-end;background:linear-gradient(135deg,#6250c9,#3f54a9);border-color:#ffffff18}
-      .pm-bubble p{margin:0;font-size:13px;white-space:pre-wrap;line-height:1.45}.pm-bubble time{display:block;margin-top:5px;text-align:right;font-size:9px;color:#c3cce0}
+      .pm-bubble p{margin:0;font-size:13px;white-space:pre-wrap;line-height:1.45}.pm-bubble time{display:block;margin-top:5px;text-align:right;font-size:9px;color:#c3cce0}.pm-edited{display:block;margin-top:4px;text-align:right;font-size:9px;color:#b7aaff}
       .pm-image{display:block;max-width:min(100%,360px);max-height:340px;margin:0 0 6px;border-radius:10px;object-fit:contain;background:#080d14}
       .pm-image{cursor:zoom-in;transition:filter .18s ease}.pm-image:hover{filter:brightness(1.06)}
       .pm-image-retry{display:block;max-width:100%;padding:10px 12px;border:1px solid #fb718555;border-radius:12px;background:#fb71851a;color:#fecdd3;text-align:left;font:inherit;font-size:12px;cursor:pointer}
@@ -236,7 +236,7 @@
         const replyHtml=m.reply_preview?'<div class="pm-reply-quote">'+(m.reply_preview.sender_id===cloudUser.id?'Вы':'Ответ')+': '+esc(m.reply_preview.body|| (m.reply_preview.has_attachment?'Фотография':''))+'</div>':'';
         const reactions=(m.reactions||[]).map(r=>'<button type="button" class="pm-reaction '+(r.mine?'mine':'')+'" data-reaction="'+esc(r.emoji)+'" data-message-id="'+esc(m.id)+'">'+esc(r.emoji)+' '+esc(r.count)+'</button>').join('');
         article.dataset.messageId=m.id;
-        article.innerHTML=(m.forwarded_from_message_id?'<span class="pm-forwarded">↗ Пересланное сообщение</span>':'')+replyHtml+imageHtml+(m.body?'<p>'+esc(m.body)+'</p>':'')+(reactions?'<div class="pm-reactions">'+reactions+'</div>':'')+'<time>'+esc(date)+'</time>';box.appendChild(article);
+        article.innerHTML=(m.forwarded_from_message_id?'<span class="pm-forwarded">↗ Пересланное сообщение</span>':'')+replyHtml+imageHtml+(m.body?'<p>'+esc(m.body)+'</p>':'')+(m.edited_at?'<small class="pm-edited">изменено</small>':'')+(reactions?'<div class="pm-reactions">'+reactions+'</div>':'')+'<time>'+esc(date)+'</time>';box.appendChild(article);
       }
       box.scrollTop=box.scrollHeight;
     }catch(e){setStatus(e.message||'Не удалось загрузить сообщения.',true);}
@@ -382,9 +382,9 @@
   function onPresenceVisibility(){if(document.visibilityState==='visible'){sendPresence();refreshPresence();}}
   function init(){
     styles();ensureModal();
-    window.addEventListener('provoda-user-ready',refreshAccess);
-    window.addEventListener('provoda-user-deactivated',()=>{enabled=false;installHeaderButton();close();});
-    refreshAccess();
+    window.addEventListener('provoda-user-ready',()=>{refreshAccess();startPresence();});
+    window.addEventListener('provoda-user-deactivated',()=>{enabled=false;installHeaderButton();stopPresence();presenceMap={};close();});
+    refreshAccess();if(typeof cloudUser!=='undefined'&&cloudUser)startPresence();
     window.setInterval(()=>{if(typeof cloudUser!=='undefined'&&cloudUser)refreshAccess();},12000);
     window.openProvodaMessenger=open;
     window.openProvodaMessengerWithUser=async userId=>{await open();const person=users.find(u=>u.user_id===userId);if(person)await openUser(userId);};
