@@ -9,9 +9,9 @@
     if($('#provodaMessengerStyles'))return;
     const s=document.createElement('style');s.id='provodaMessengerStyles';
     s.textContent=`
-      #provodaMessengerTile{width:100%;display:flex;align-items:center;gap:14px;text-align:left;cursor:pointer}
-      #provodaMessengerTile .pm-tile-icon{width:48px;height:48px;display:grid;place-items:center;flex:0 0 48px;border-radius:16px;background:linear-gradient(135deg,rgba(124,92,255,.25),rgba(34,211,238,.16));font-size:23px}
-      #provodaMessengerTile h2{margin:0 0 4px;font-size:15px}#provodaMessengerTile p{margin:0;color:var(--muted);font-size:12px}
+      .pm-header-button{position:relative;flex:0 0 42px;display:grid;place-items:center;color:var(--text,#eef4ff)}
+      .pm-header-button svg{width:20px;height:20px;transition:transform .2s ease}
+      .pm-header-button:hover svg{transform:scale(1.08)}
       #provodaMessengerModal{position:fixed;inset:0;z-index:1300;display:none;background:rgba(2,6,15,.84);backdrop-filter:blur(14px);padding:14px}
       #provodaMessengerModal.open{display:flex;align-items:center;justify-content:center}
       .pm-shell{width:min(920px,100%);height:min(780px,calc(100dvh - 28px));display:grid;grid-template-columns:320px minmax(0,1fr);overflow:hidden;border:1px solid rgba(148,163,184,.22);border-radius:25px;background:#111925;box-shadow:0 28px 90px rgba(0,0,0,.5);color:#eef4ff}
@@ -57,21 +57,29 @@
   }
   function avatar(person){const content=person.avatar_data?'<img src="'+esc(person.avatar_data)+'" alt="">':esc((person.name||'?').trim().slice(0,1).toUpperCase()||'?');return '<span class="pm-avatar">'+content+'</span>';}
   function setStatus(message,error=false){const el=$('#pmStatus');if(el){el.textContent=message||'';el.style.color=error?'#fda4af':'';}}
-  function installTile(){
-    const grid=$('#dashboardTiles .feature-grid');if(!grid)return;
-    let tile=$('#provodaMessengerTile');
-    if(!tile){
-      tile=document.createElement('button');tile.type='button';tile.id='provodaMessengerTile';tile.className='card feature-card';
-      tile.innerHTML='<span class="pm-tile-icon">✉</span><span><h2>Открыть мессенджер</h2><p>Личные чаты с сотрудниками и руководителями</p></span><span class="feature-icon" aria-hidden="true">›</span>';
-      grid.appendChild(tile);
+  function installHeaderButton(){
+    // Убираем старую плитку из главного экрана, если она осталась в DOM после обновления.
+    $('#provodaMessengerTile')?.remove();
+    const bell=$('#notificationBellBtn');
+    if(!bell)return;
+    let button=$('#provodaMessengerHeaderBtn');
+    if(!button){
+      button=document.createElement('button');
+      button.type='button';
+      button.id='provodaMessengerHeaderBtn';
+      button.className='icon pm-header-button';
+      button.setAttribute('aria-label','Открыть мессенджер');
+      button.title='Мессенджер';
+      button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>';
+      button.addEventListener('click',open);
+      bell.insertAdjacentElement('afterend',button);
     }
-    tile.classList.remove('hidden');
-    if(tile.dataset.pmBound!=='1'){tile.dataset.pmBound='1';tile.addEventListener('click',open);}
+    button.classList.toggle('hidden',!enabled);
   }
   async function refreshAccess(){
     // Мессенджер — постоянная функция приложения: отдельный переключатель доступа не используется.
     enabled=typeof cloudClient!=='undefined'&&!!cloudClient&&typeof cloudUser!=='undefined'&&!!cloudUser;
-    installTile();
+    installHeaderButton();
   }
   async function open(){
     if(!cloudClient||!cloudUser){if(typeof toast==='function')toast('Войди в аккаунт, чтобы открыть мессенджер.');return;}
@@ -170,7 +178,7 @@
   function init(){
     styles();ensureModal();
     window.addEventListener('provoda-user-ready',refreshAccess);
-    window.addEventListener('provoda-user-deactivated',()=>{enabled=false;installTile();close();});
+    window.addEventListener('provoda-user-deactivated',()=>{enabled=false;installHeaderButton();close();});
     refreshAccess();
     window.setInterval(()=>{if(typeof cloudUser!=='undefined'&&cloudUser)refreshAccess();},12000);
   }
