@@ -89,7 +89,8 @@ returns jsonb language sql stable security definer set search_path = ''
 as $$
   select jsonb_build_object(
     'available',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='monthly_stories'),false),
-    'is_enabled',coalesce((select s.is_enabled from public.monthly_story_shares s where s.user_id=(select auth.uid())),false)
+    'is_enabled',coalesce((select s.is_enabled from public.monthly_story_shares s where s.user_id=(select auth.uid())),false),
+    'can_share',not public.is_current_admin()
   );
 $$;
 
@@ -181,7 +182,8 @@ grant select on public.messenger_conversations,public.messenger_messages to auth
 create or replace function public.messenger_is_member(p_conversation_id uuid)
 returns boolean language sql stable security definer set search_path = ''
 as $$
-  select exists(select 1 from public.messenger_conversations c where c.id=p_conversation_id and (select auth.uid()) in (c.participant_a,c.participant_b));
+  select coalesce((select f.is_enabled from public.role_feature_flags f where f.role='internal_chat'),false)
+    and exists(select 1 from public.messenger_conversations c where c.id=p_conversation_id and (select auth.uid()) in (c.participant_a,c.participant_b));
 $$;
 revoke all on function public.messenger_is_member(uuid) from public,anon;
 grant execute on function public.messenger_is_member(uuid) to authenticated;
@@ -243,6 +245,7 @@ as $$
 declare v_user uuid := (select auth.uid()); v_result jsonb;
 begin
   if v_user is null then raise exception 'Нужна авторизация' using errcode='42501'; end if;
+  if not coalesce((select f.is_enabled from public.role_feature_flags f where f.role='internal_chat'),false) then return '[]'::jsonb; end if;
   select coalesce(jsonb_agg(jsonb_build_object(
     'conversation_id',c.id,'user_id',u.id,
     'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
