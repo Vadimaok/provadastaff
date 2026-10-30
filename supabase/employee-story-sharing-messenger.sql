@@ -133,7 +133,6 @@ begin
   if not exists(select 1 from public.monthly_story_shares s where s.user_id=p_target_user_id and s.is_enabled) then
     raise exception 'Сотрудник не открыл доступ к своим итогам' using errcode='42501';
   end if;
-  if public.is_current_admin() then raise exception 'Для просмотра историй сотрудников используй панель администратора'; end if;
   v_story := public._provoda_monthly_story_payload(p_target_user_id,p_month_start);
   return v_story - 'email';
 end;
