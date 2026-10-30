@@ -78,6 +78,7 @@
     $('#pmReplyCancel').addEventListener('click',clearReply);
     $('#pmMessages').addEventListener('contextmenu',onMessageContextMenu);
     $('#pmMessages').addEventListener('pointerdown',onMessagePointerDown);
+    $('#pmMessages').addEventListener('pointermove',onMessagePointerMove);
     $('#pmMessages').addEventListener('pointerup',onMessagePointerUp);
     $('#pmMessages').addEventListener('pointercancel',cancelLongPress);
     $('#pmMessages').addEventListener('click',onMessageClick);
@@ -220,6 +221,7 @@
   }
   function onMessageContextMenu(e){const article=e.target.closest('.pm-bubble[data-message-id]');if(!article)return;e.preventDefault();e.stopPropagation();const m=messageById(article.dataset.messageId);if(m)showMessageMenu(m,e.clientX,e.clientY);}
   function onMessagePointerDown(e){const article=e.target.closest('.pm-bubble[data-message-id]');if(!article||e.pointerType==='mouse')return;cancelLongPress();pointerStart={x:e.clientX,y:e.clientY,id:article.dataset.messageId,done:false};longPressTimer=setTimeout(()=>{const m=messageById(pointerStart?.id);if(m){pointerStart.done=true;article.classList.add('pm-selected');showMessageMenu(m,e.clientX,e.clientY);setTimeout(()=>article.classList.remove('pm-selected'),900);}},520);}
+  function onMessagePointerMove(e){if(pointerStart&&(Math.abs(e.clientX-pointerStart.x)>12||Math.abs(e.clientY-pointerStart.y)>12))cancelLongPress();}
   function onMessagePointerUp(e){if(!pointerStart)return;clearTimeout(longPressTimer);const start=pointerStart;pointerStart=null;if(start.done)return;const dx=e.clientX-start.x,dy=e.clientY-start.y;if(Math.abs(dx)>58&&Math.abs(dx)>Math.abs(dy)*1.25){const m=messageById(start.id);if(m)setReply(m);}}
   function cancelLongPress(){if(longPressTimer)clearTimeout(longPressTimer);longPressTimer=null;}
   async function onMessageClick(e){const reaction=e.target.closest('[data-reaction]');if(reaction){e.stopPropagation();const m=messageById(reaction.dataset.messageId);if(m)await toggleReaction(m,reaction.dataset.reaction);}}
