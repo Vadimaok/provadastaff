@@ -80,7 +80,7 @@
       .pm-reply-cancel{width:30px;height:30px;border-radius:9px;background:#ffffff12;color:inherit}
       .pm-picker-shade{position:fixed;inset:0;z-index:1404;background:#02061788;display:flex;align-items:flex-end;justify-content:center;padding:14px}
       .pm-picker-card{width:min(440px,100%);padding:16px;border:1px solid #ffffff20;border-radius:22px;background:#172131;color:#eef4ff;box-shadow:0 20px 70px #0009}
-      .pm-picker-card h3{margin:0 0 12px;font-size:16px}
+      .pm-picker-card h3{margin:0 0 12px;font-size:16px}.pm-picker-card textarea{display:block;width:100%;box-sizing:border-box;resize:vertical;padding:12px;border:1px solid #ffffff24;border-radius:12px;background:#ffffff0a;color:inherit;font:inherit;font-size:13px;outline:none}.pm-picker-card button{padding:10px 14px;border:1px solid #ffffff20;border-radius:11px;background:#ffffff0b;color:inherit;font:inherit;font-size:12px}.pm-picker-card button[data-edit-save]{background:#6554d9;border-color:#8778ff;color:#fff}.pm-picker-card button.pm-danger-button{background:#b42335;border-color:#e45b6c;color:#fff}.pm-picker-card button:disabled{opacity:.55}
       body.light-theme .pm-action-menu,body.light-theme .pm-photo-menu,body.light-theme .pm-forward-picker,body.light-theme .pm-picker-card{background:#fff;color:#172033;border-color:#17203320}
       body.light-theme .pm-reply-quote{color:#51439a;background:#6250c910}
       @media(min-width:651px){.pm-action-menu{min-width:225px}}
@@ -367,9 +367,10 @@
     shade.appendChild(card);shade.addEventListener('click',e=>{if(e.target===shade)shade.remove();});$('#provodaMessengerModal').appendChild(shade);input.focus();
   }
   async function deleteMessage(message){
-    if(message.sender_id!==cloudUser.id||!confirm('Удалить это сообщение?'))return;
-    try{const {data,error}=await cloudClient.rpc('messenger_delete_message',{p_message_id:message.id});if(error)throw error;if(data?.attachment_path)await cloudClient.storage.from('provoda-messenger').remove([data.attachment_path]);await loadMessages();await loadConversations();renderPeople();setStatus('Сообщение удалено.');}
-    catch(e){setStatus(e.message||'Не удалось удалить сообщение.',true);}
+    if(message.sender_id!==cloudUser.id)return;
+    const shade=document.createElement('div');shade.className='pm-picker-shade';const card=document.createElement('div');card.className='pm-picker-card';card.innerHTML='<h3>Удалить сообщение?</h3><p style="margin:0;color:#aebbd0;font-size:13px;line-height:1.5">Сообщение исчезнет из переписки у обоих участников.</p><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button type="button" data-delete-cancel>Отмена</button><button type="button" data-delete-confirm class="pm-danger-button">Удалить</button></div>';
+    card.querySelector('[data-delete-cancel]').onclick=()=>shade.remove();card.querySelector('[data-delete-confirm]').onclick=async()=>{const b=card.querySelector('[data-delete-confirm]');b.disabled=true;try{const {data,error}=await cloudClient.rpc('messenger_delete_message',{p_message_id:message.id});if(error)throw error;if(data?.attachment_path)await cloudClient.storage.from('provoda-messenger').remove([data.attachment_path]);shade.remove();await loadMessages();await loadConversations();renderPeople();setStatus('Сообщение удалено.');}catch(e){b.disabled=false;setStatus(e.message||'Не удалось удалить сообщение.',true);}};
+    shade.appendChild(card);shade.addEventListener('click',e=>{if(e.target===shade)shade.remove();});$('#provodaMessengerModal').appendChild(shade);
   }
   async function refreshPresence(){
     if(!cloudClient||!cloudUser)return;
