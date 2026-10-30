@@ -158,3 +158,5 @@ end;
 $$;
 revoke all on function public.user_list_notifications(integer) from public,anon;
 grant execute on function public.user_list_notifications(integer) to authenticated;
+
+revoke all on function public.notify_messenger_message() from public,anon,authenticated;
