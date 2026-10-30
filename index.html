@@ -2671,7 +2671,7 @@ async function initCloudAuth(){
 
 
 /* Admin panel uses server-checked Supabase RPCs; UI visibility is not the security boundary. */
-async function notificationCategory(n){
+function notificationCategory(n){
  const k=String(n?.kind||'').toLowerCase(),t=String(n?.title||'').toLowerCase(),b=String(n?.body||'').toLowerCase();
  if(k.includes('new_message')||k.includes('message'))return 'messenger';
  if(k.includes('shift')||t.includes('смен'))return 'shifts';
@@ -3871,6 +3871,6 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
 
 <script src="./monthly-stories.js?v=7"></script>
 <script src="./global-stories.js?v=2"></script>
-<script src="./provoda-messenger.js?v=7"></script>
+<script src="./provoda-messenger.js?v=8"></script>
 </body>
 </html>
