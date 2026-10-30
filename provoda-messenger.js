@@ -34,6 +34,7 @@
       .pm-bubble p{margin:0;font-size:13px;white-space:pre-wrap;line-height:1.45}.pm-bubble time{display:block;margin-top:5px;text-align:right;font-size:9px;color:#c3cce0}
       .pm-image{display:block;max-width:min(100%,360px);max-height:340px;margin:0 0 6px;border-radius:10px;object-fit:contain;background:#080d14}
       .pm-image{cursor:zoom-in;transition:filter .18s ease}.pm-image:hover{filter:brightness(1.06)}
+      .pm-image-retry{display:block;max-width:100%;padding:10px 12px;border:1px solid #fb718555;border-radius:12px;background:#fb71851a;color:#fecdd3;text-align:left;font:inherit;font-size:12px;cursor:pointer}
       .pm-gallery-shade,.pm-lightbox{position:fixed;inset:0;z-index:1450;display:flex;align-items:center;justify-content:center;background:rgba(2,6,15,.9);backdrop-filter:blur(18px);padding:16px;animation:pmFadeIn .18s ease both}
       .pm-gallery-card{width:min(480px,100%);max-height:92dvh;overflow:auto;padding:18px;border:1px solid #ffffff22;border-radius:24px;background:#121c2a;color:#eef4ff;box-shadow:0 24px 90px #0009;animation:pmGalleryIn .22s ease both}
       .pm-gallery-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.pm-gallery-title h3{margin:0;font-size:17px}.pm-gallery-close{width:38px;height:38px;border:1px solid #ffffff22;border-radius:12px;background:#ffffff0a;color:inherit;font-size:21px}
@@ -274,7 +275,7 @@
   function clearReply(){replyTarget=null;const bar=$('#pmReplyBar');bar?.classList.remove('active');if($('#pmReplyCopy'))$('#pmReplyCopy').textContent='';}
   function setReply(message){replyTarget=message;const bar=$('#pmReplyBar');if(bar){$('#pmReplyCopy').textContent='Ответ на: '+(message.body|| (message.attachment_path?'Фотография':'Сообщение'));bar.classList.add('active');}$('#pmText')?.focus();}
   function messageById(id){return activeMessages.find(m=>m.id===id);}
-  function closeActionMenu(){document.querySelectorAll('.pm-action-menu,.pm-picker-shade,.pm-forward-picker,.pm-photo-menu').forEach(n=>n.remove());}
+  function closeActionMenu(){document.querySelectorAll('.pm-action-menu,.pm-picker-shade,.pm-forward-picker,.pm-photo-menu,.pm-gallery-shade,.pm-lightbox').forEach(n=>n.remove());}
   function showPhotoMenu(){
     closeActionMenu();const shade=document.createElement('div');shade.className='pm-gallery-shade';
     shade.innerHTML='<section class="pm-gallery-card" role="dialog" aria-modal="true" aria-label="Выбор фотографий"><div class="pm-gallery-title"><h3>Фото и камера</h3><button type="button" data-photo-cancel aria-label="Закрыть" class="pm-gallery-close">×</button></div><div class="pm-gallery-grid"><button type="button" class="pm-gallery-choice" data-photo-camera><span class="pm-gallery-icon">◎</span><strong>Камера</strong><span>Сделать снимок</span></button><button type="button" class="pm-gallery-choice" data-photo-gallery><span class="pm-gallery-icon">▧</span><strong>Галерея</strong><span>Выбрать фото</span></button></div><p class="pm-gallery-note">Откроется системная галерея устройства. Можно выбрать несколько фотографий. Доступ предоставляется только к выбранным изображениям.</p></section>';
