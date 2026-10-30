@@ -110,7 +110,7 @@
     try{
       const {data,error}=await cloudClient.rpc('messenger_open_conversation',{p_target_user_id:userId});if(error)throw error;
       activeConversation=data;$('#pmChatAvatar').innerHTML=person.avatar_data?'<img src="'+esc(person.avatar_data)+'" alt="">':esc((person.name||'?').slice(0,1).toUpperCase());
-      $('#pmChatName').textContent=person.name||'Сотрудник';$('#pmChatRole').textContent=person.role_label||'Сотрудник';
+      $('#pmChatName').textContent=person.name||'Сотрудник';$('#pmChatRole').textContent=roleIcon(person);
       $('#pmText').disabled=false;$('#pmSend').disabled=false;
       $('#provodaMessengerModal .pm-shell').classList.add('chat-open');
       await loadMessages();
