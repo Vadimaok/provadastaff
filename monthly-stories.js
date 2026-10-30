@@ -274,7 +274,7 @@
     const taskPct=total>0?Math.round(done/total*100):0;
     modal.innerHTML='<article class="monthly-story-modal-card" role="dialog" aria-modal="true" aria-label="Мои итоги месяца">'+
       '<header class="monthly-story-modal-top"><div><small>PROVODA STAFF · '+(isOwn?'МОИ ИТОГИ':'ИТОГИ СОТРУДНИКА')+'</small><div style="font-size:12px;color:#aab6c8;margin-top:4px">'+esc(employeeStoryMonthLabel())+'</div></div><button class="monthly-story-close" type="button" aria-label="Закрыть" data-monthly-close>×</button></header>'+
-      '<div class="monthly-story-identity">'+avatarMarkup(story)+'<div><h3>'+esc(story.name||'Мои итоги')+'</h3><p>Твоя личная статистика за месяц</p></div></div>'+
+      '<div class="monthly-story-identity">'+avatarMarkup(story)+'<div><h3>'+esc(story.name||'Мои итоги')+'</h3><p>Статистика за месяц</p></div></div>'+
       '<section class="monthly-story-hero"><span>Потрачено за месяц</span><strong>'+money(spent)+'</strong><span>'+(budget>0?'Использовано '+spendPct+'% месячного бюджета':'Месячный бюджет не задан')+'</span><div class="monthly-story-progress"><i style="width:'+Math.min(100,Math.max(0,spendPct))+'%"></i></div></section>'+
       '<div class="monthly-story-metrics">'+
       '<div class="monthly-story-metric"><span>Выполнено задач</span><strong>'+done+' / '+total+'</strong><small>'+taskPct+'% выполнено</small><div class="monthly-story-progress"><i style="width:'+Math.min(100,Math.max(0,taskPct))+'%"></i></div></div>'+
