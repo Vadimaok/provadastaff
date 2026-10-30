@@ -53,6 +53,7 @@ body.light-theme .category-row:hover,body.light-theme .category-row:focus-visibl
 @media(min-width:680px){.grid{grid-template-columns:1.05fr .95fr}.panel{max-width:620px;margin:0 auto;border-radius:28px;bottom:24px}}
 
 /* Cloud accounts */
+.auth-recovery-link{display:block;width:100%;margin:12px 0 0;padding:10px;border:0;background:transparent;color:#a9c5ff;font:inherit;font-size:14px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;border-radius:10px}.auth-recovery-link:focus-visible{outline:2px solid #a9c5ff;outline-offset:2px}
 #authGate{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;background:#0b0f14;overflow:auto}
 #authGate.hidden{display:none!important}
 #authGate,#authGate *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -1172,6 +1173,7 @@ try {
       <button class="save" id="loginBtn">Войти</button>
       <button class="ghost" id="signupBtn">Создать аккаунт</button>
     </div>
+    <button class="auth-recovery-link" id="recoverPasswordBtn" type="button">Восстановить пароль</button>
     <div id="authStatus" role="status" aria-live="polite">Подключение к облаку…</div>
   </div>
 </div>
@@ -2560,6 +2562,25 @@ async function signIn(){
       : (message||'Не удалось выполнить вход. Попробуй ещё раз.'),true);
   }finally{authBusy(false);}
 }
+async function recoverPassword(){
+  if(!cloudClient){authMessage('Облако ещё не подключилось. Обнови страницу и попробуй снова.',true);return;}
+  const email=document.querySelector('#authEmail').value.trim();
+  if(!email){authMessage('Сначала введи электронную почту, на которую зарегистрирован аккаунт.',true);document.querySelector('#authEmail')?.focus();return;}
+  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){authMessage('Проверь адрес электронной почты.',true);document.querySelector('#authEmail')?.focus();return;}
+  authBusy(true);authMessage('Отправляю ссылку для восстановления…');
+  try{
+    const redirectTo=window.location.origin+window.location.pathname;
+    const {error}=await cloudClient.auth.resetPasswordForEmail(email,{redirectTo});
+    if(error)throw error;
+    authMessage('Если для этой почты есть аккаунт, на неё отправлена ссылка для восстановления пароля. Проверь также папку «Спам».');
+  }catch(error){
+    console.error('Password recovery failed:',error);
+    const message=String(error?.message||'');
+    authMessage(/fetch|network|load failed|failed to fetch|timeout/i.test(message)
+      ? 'Не удалось связаться с сервером. Проверь интернет и попробуй ещё раз.'
+      : (message||'Не удалось отправить ссылку. Попробуй ещё раз.'),true);
+  }finally{authBusy(false);}
+}
 async function signUp(){
   if(!cloudClient){authMessage('Облако ещё не подключилось. Подожди пару секунд и попробуй снова.',true);return;}
   const email=document.querySelector('#authEmail').value.trim();
@@ -2624,6 +2645,7 @@ async function signOut(){
 async function initCloudAuth(){
   document.querySelector('#loginBtn').addEventListener('click',signIn);
   document.querySelector('#signupBtn').addEventListener('click',signUp);
+  document.querySelector('#recoverPasswordBtn')?.addEventListener('click',recoverPassword);
   ['#authEmail','#authPassword'].forEach(selector=>document.querySelector(selector)?.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();document.querySelector('#loginBtn')?.click();}}));
   const passwordInput=document.querySelector('#authPassword');
   const passwordToggle=document.querySelector('#toggleAuthPassword');
