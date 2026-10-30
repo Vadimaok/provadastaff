@@ -106,7 +106,7 @@ begin
     'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
     'avatar_data',nullif(u.raw_user_meta_data->>'avatar_data',''),
     'role_label',case
-      when coalesce(u.raw_app_meta_data->>'role','')='admin' or coalesce(u.raw_app_meta_data->>'is_admin','')='true' or ur.role='admin' then 'Администратор'
+      when au.user_id is not null then 'Администратор'
       when cr.title is not null then cr.title
       when ur.role='shift_senior' then 'Старший КНЗ'
       when ur.role='employee_knz' then 'Сотрудник КНЗ'
@@ -115,10 +115,10 @@ begin
   into v_result
   from public.monthly_story_shares s
   join auth.users u on u.id=s.user_id and u.deleted_at is null
+  left join public.admin_users au on au.user_id=u.id
   left join public.user_roles ur on ur.user_id=u.id
   left join public.custom_roles cr on cr.id=ur.custom_role_id and cr.is_active
-  where s.is_enabled and u.id<>v_user
-    and not (coalesce(u.raw_app_meta_data->>'role','')='admin' or coalesce(u.raw_app_meta_data->>'is_admin','')='true' or ur.role='admin');
+  where s.is_enabled and u.id<>v_user and au.user_id is null;
   return v_result;
 end;
 $$;
@@ -179,6 +179,11 @@ alter table public.messenger_messages enable row level security;
 revoke all on public.messenger_conversations,public.messenger_messages from anon,authenticated;
 grant select on public.messenger_conversations,public.messenger_messages to authenticated;
 
+drop policy if exists messenger_messages_member_read on public.messenger_messages;
+drop policy if exists messenger_media_upload_member on storage.objects;
+drop policy if exists messenger_media_read_member on storage.objects;
+drop function if exists public.messenger_is_member(uuid,uuid);
+
 create or replace function public.messenger_is_member(p_conversation_id uuid)
 returns boolean language sql stable security definer set search_path = ''
 as $$
@@ -216,6 +221,7 @@ begin
   ) order by lower(coalesce(u.raw_user_meta_data->>'display_name',u.raw_user_meta_data->>'username',u.email))), '[]'::jsonb)
   into v_result
   from auth.users u
+  left join public.admin_users au on au.user_id=u.id
   left join public.user_roles ur on ur.user_id=u.id
   left join public.custom_roles cr on cr.id=ur.custom_role_id and cr.is_active
   where u.id<>v_user and u.deleted_at is null;
@@ -258,6 +264,7 @@ begin
   into v_result
   from public.messenger_conversations c
   join auth.users u on u.id=case when c.participant_a=v_user then c.participant_b else c.participant_a end
+  left join public.admin_users au on au.user_id=u.id
   left join public.user_roles ur on ur.user_id=u.id
   left join public.custom_roles cr on cr.id=ur.custom_role_id and cr.is_active
   where v_user in(c.participant_a,c.participant_b) and u.deleted_at is null;
