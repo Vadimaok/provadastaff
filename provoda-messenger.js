@@ -213,7 +213,7 @@
       $('#provodaMessengerModal .pm-shell').classList.add('chat-open');
       await loadMessages();
       if(channel){cloudClient.removeChannel(channel);channel=null;}
-      const conversationId=activeConversation;channel=cloudClient.channel('provoda-messenger-'+conversationId).on('postgres_changes',{event:'*',schema:'public',table:'messenger_messages',filter:'conversation_id=eq.'+conversationId},()=>{if(activeConversation!==conversationId)return;loadMessages();loadConversations().then(renderPeople);}).subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setStatus('Связь обновлений прервалась. Включена авто-синхронизация.',true);}else if(status==='SUBSCRIBED'){setStatus('');}});
+      const conversationId=activeConversation;channel=cloudClient.channel('provoda-messenger-'+conversationId).on('postgres_changes',{event:'*',schema:'public',table:'messenger_messages',filter:'conversation_id=eq.'+conversationId},()=>{if(activeConversation!==conversationId)return;loadMessages();loadConversations().then(renderPeople);}).on('postgres_changes',{event:'*',schema:'public',table:'messenger_message_reactions'},()=>{if(activeConversation===conversationId)loadMessages();}).subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setStatus('Связь обновлений прервалась. Включена авто-синхронизация.',true);}else if(status==='SUBSCRIBED'){setStatus('');}});
       if(poll)clearInterval(poll);poll=setInterval(()=>{if(activeConversation===conversationId&&document.visibilityState==='visible')loadMessages();},4000);
       setStatus('');
     }catch(e){setStatus(e.message||'Не удалось открыть чат.',true);}
@@ -274,7 +274,7 @@
         // This also preserves SDK URL encoding and returns structured Storage errors instead of proxy HTML.
         const {data:uploaded,error:uploadError}=await cloudClient.storage.from('provoda-messenger').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false});
         if(uploadError){
-          const details=[uploadError.message,uploadError.error,uploadError.statusCode?'HTTP '+uploadError.statusCode:''].filter(Boolean).join(' · ');
+          const details=[uploadError.message,uploadError.code||uploadError.error,uploadError.statusCode?'Storage '+uploadError.statusCode:'',uploadError.status&&uploadError.status!==uploadError.statusCode?'HTTP '+uploadError.status:''].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' · ');
           throw new Error('Не удалось загрузить фото в хранилище'+(details?': '+details:''));
         }
         if(!uploaded?.path)throw new Error('Хранилище не подтвердило загрузку фотографии.');
