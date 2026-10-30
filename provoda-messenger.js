@@ -178,7 +178,7 @@
         const replyHtml=m.reply_preview?'<div class="pm-reply-quote">'+(m.reply_preview.sender_id===cloudUser.id?'Вы':'Ответ')+': '+esc(m.reply_preview.body|| (m.reply_preview.has_attachment?'Фотография':''))+'</div>':'';
         const reactions=(m.reactions||[]).map(r=>'<button type="button" class="pm-reaction '+(r.mine?'mine':'')+'" data-reaction="'+esc(r.emoji)+'" data-message-id="'+esc(m.id)+'">'+esc(r.emoji)+' '+esc(r.count)+'</button>').join('');
         article.dataset.messageId=m.id;
-        article.innerHTML+(m.forwarded_from_message_id?'<span class="pm-forwarded">↗ Пересланное сообщение</span>':'')+replyHtml+imageHtml+(m.body?'<p>'+esc(m.body)+'</p>':'')+(reactions?'<div class="pm-reactions">'+reactions+'</div>':'')+'<time>'+esc(date)+'</time>';box.appendChild(article);
+        article.innerHTML=(m.forwarded_from_message_id?'<span class="pm-forwarded">↗ Пересланное сообщение</span>':'')+replyHtml+imageHtml+(m.body?'<p>'+esc(m.body)+'</p>':'')+(reactions?'<div class="pm-reactions">'+reactions+'</div>':'')+'<time>'+esc(date)+'</time>';box.appendChild(article);
       }
       box.scrollTop=box.scrollHeight;
     }catch(e){setStatus(e.message||'Не удалось загрузить сообщения.',true);}
