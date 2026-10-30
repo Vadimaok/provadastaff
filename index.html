@@ -1617,7 +1617,7 @@ try {
         <button class="settings-danger-button" id="clearExpenseDataBtn" type="button">Удалить все покупки и историю</button>
       </section>
     </section>
-    <section class="settings-group-card" aria-labelledby="settingsAppVersionTitle"><div class="settings-group-heading"><span class="settings-group-icon">↻</span><div><h3 id="settingsAppVersionTitle">Версия и обновления</h3><p>Версия Provoda Staff и актуальные исправления.</p></div></div><div class="settings-subsection update-settings-card"><div class="update-version-head"><img class="update-version-logo" src="./provoda-logo.svg?v=3" alt=""><div class="update-version-copy"><strong>Provoda Staff</strong><span id="settingsInstalledVersion">Установленная версия: проверяем…</span><span id="settingsLatestVersion">Последняя версия: проверяем…</span></div></div><span id="settingsVersionBadge" class="update-version-badge">Проверка версии…</span><div class="update-settings-actions"><button type="button" class="ghost" id="settingsCheckUpdatesBtn">Проверить обновления</button><button type="button" class="save" id="settingsOpenReleasesBtn">Все версии</button></div><p class="settings-hint">На Android и Windows появится предложение обновиться, если версия устарела.</p></div></section>
+    
     <div id="settingsStatus" class="settings-status" role="status" aria-live="polite"></div>
   </div>
 </div>
@@ -3313,8 +3313,6 @@ const PROVODA_RELEASES_URL='https://github.com/Vadimaok/provadastaff/releases/la
 function provodaInstalledVersion(){const p=new URLSearchParams(location.search);if(p.get('androidVersion'))return {version:p.get('androidVersion'),platform:'android'};if(p.get('desktopVersion'))return {version:p.get('desktopVersion'),platform:'windows'};return {version:'Веб-версия',platform:'web'};}
 function provodaVersionOlder(a,b){const x=String(a||'0').split('.').map(n=>parseInt(n,10)||0),y=String(b||'0').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<3;i++){if((x[i]||0)<(y[i]||0))return true;if((x[i]||0)>(y[i]||0))return false;}return false;}
 async function refreshSettingsVersion(){const inst=provodaInstalledVersion(),a=document.querySelector('#settingsInstalledVersion'),b=document.querySelector('#settingsLatestVersion'),badge=document.querySelector('#settingsVersionBadge');if(a)a.textContent='Установленная версия: '+inst.version;const r=await fetch((window.Capacitor?.isNativePlatform?.()?'https://raw.githubusercontent.com/Vadimaok/provadastaff/main/app-version.json':'./app-version.json')+'?fresh='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('Не удалось проверить версию');const d=await r.json();if(b)b.textContent='Последняя версия: '+(d.latestVersion||'—');const old=inst.platform!=='web'&&provodaVersionOlder(inst.version,d.latestVersion);if(badge){badge.textContent=old?'Доступно обновление':'Версия актуальна';badge.classList.toggle('outdated',old);}return d;}
-document.querySelector('#settingsCheckUpdatesBtn')?.addEventListener('click',async()=>{try{await refreshSettingsVersion();toast('Проверка версии завершена');}catch{toast('Не удалось проверить обновление');}});
-document.querySelector('#settingsOpenReleasesBtn')?.addEventListener('click',()=>window.open(PROVODA_RELEASES_URL,'_blank','noopener'));
 
 function updateVisualChoiceStates(a=readAppearance()){document.querySelectorAll('[data-wallpaper-choice]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.wallpaperChoice===a.wallpaper)));document.querySelectorAll('[data-accent-choice]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.accentChoice===a.accent)));}
 
@@ -3842,7 +3840,7 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
      shade.style.cssText='position:fixed;inset:0;z-index:100002;display:grid;place-items:center;padding:18px;background:rgba(3,7,18,.88);backdrop-filter:blur(12px)';
      const panel=document.createElement('div');panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
      panel.style.cssText='width:min(460px,100%);max-height:82vh;overflow:auto;padding:22px;border:1px solid #5145a966;border-radius:24px;background:#111827;color:#eef4ff;box-shadow:0 28px 90px #0009;font:14px/1.55 system-ui,sans-serif';
-     panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div style="font-size:11px;letter-spacing:.14em;color:#a5b4fc;font-weight:850">PROVODA STAFF</div><h2 style="margin:5px 0 0;font-size:22px">Что изменилось</h2></div><button id="provodaChangelogClose" type="button" aria-label="Закрыть" style="border:1px solid #ffffff22;background:#ffffff0d;color:#fff;border-radius:12px;padding:8px 12px;font-size:18px">×</button></div><div style="height:3px;border-radius:99px;background:linear-gradient(90deg,#7c5cff,#22d3ee);margin:16px 0"></div>'+changes.map(([v,t])=>'<article style="padding:13px 0;border-bottom:1px solid #ffffff14"><span style="display:inline-block;border:1px solid #818cf855;background:#6366f11c;color:#c7d2fe;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:800">Версия '+v+'</span><p style="margin:8px 0 0;color:#dbe4f2">'+t+'</p></article>').join('')+'<a href="'+releases+'" target="_blank" rel="noopener" style="display:block;margin-top:16px;color:#a5b4fc">Открыть релизы проекта и скачать актуальный APK ↗</a>';
+     panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div style="font-size:11px;letter-spacing:.14em;color:#a5b4fc;font-weight:850">PROVODA STAFF</div><h2 style="margin:5px 0 0;font-size:22px">Что изменилось</h2></div><button id="provodaChangelogClose" type="button" aria-label="Закрыть" style="border:1px solid #ffffff22;background:#ffffff0d;color:#fff;border-radius:12px;padding:8px 12px;font-size:18px">×</button></div><div style="height:3px;border-radius:99px;background:linear-gradient(90deg,#7c5cff,#22d3ee);margin:16px 0"></div>'+changes.map(([v,t])=>'<article style="padding:13px 0;border-bottom:1px solid #ffffff14"><span style="display:inline-block;border:1px solid #818cf855;background:#6366f11c;color:#c7d2fe;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:800">Версия '+v+'</span><p style="margin:8px 0 0;color:#dbe4f2">'+t+'</p></article>').join('');
      shade.appendChild(panel);document.body.appendChild(shade);
      panel.querySelector('#provodaChangelogClose')?.addEventListener('click',()=>shade.remove());
      shade.addEventListener('click',e=>{if(e.target===shade)shade.remove()});
@@ -3862,9 +3860,7 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
  document.addEventListener('DOMContentLoaded',()=>{setTimeout(checkSettingsVersion,500);setTimeout(check,1600);});
  window.addEventListener('load',()=>setTimeout(check,2500),{once:true});
  setInterval(check,15000);
- document.querySelector('#settingsCheckUpdatesBtn')?.addEventListener('click',()=>{checkSettingsVersion();check()});
- document.querySelector('#settingsOpenReleasesBtn')?.addEventListener('click',()=>window.open(releases,'_blank','noopener'));
-})();
+ })();
 </script>
 
 
