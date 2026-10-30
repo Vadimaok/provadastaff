@@ -142,6 +142,7 @@
 
   let employeeMonthlyStory=null;
   let employeeStoryLoading=false;
+  let employeeStoryRefreshPending=false;
   function installEmployeeStoryStyles(){
     if($('#employeeMonthlyStoryStyles'))return;
     const style=document.createElement('style');style.id='employeeMonthlyStoryStyles';
@@ -185,14 +186,17 @@
     return new Date(year,month-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
   }
   async function loadEmployeeStory(force=false){
-    if(employeeStoryLoading)return;
+    if(employeeStoryLoading){employeeStoryRefreshPending=true;return;}
     if(typeof cloudClient==='undefined'||!cloudClient||typeof cloudUser==='undefined'||!cloudUser){hideEmployeeStory();return;}
+    const requestedUserId=cloudUser.id;
     employeeStoryLoading=true;
     try{
       const flags=await cloudClient.rpc('user_get_role_features');
+      if(typeof cloudUser==='undefined'||!cloudUser||cloudUser.id!==requestedUserId)return;
       if(flags.error)throw flags.error;
       if(flags.data?.monthly_stories!==true){hideEmployeeStory();return;}
       const {data,error}=await cloudClient.rpc('user_get_my_monthly_story',{p_month_start:monthNow()+'-01'});
+      if(typeof cloudUser==='undefined'||!cloudUser||cloudUser.id!==requestedUserId)return;
       if(error)throw error;
       if(!data||data.enabled!==true){hideEmployeeStory();return;}
       employeeMonthlyStory=data;
@@ -208,7 +212,10 @@
     }catch(error){
       console.info('Monthly employee story unavailable:',error?.message||error);
       hideEmployeeStory();
-    }finally{employeeStoryLoading=false;}
+    }finally{
+      employeeStoryLoading=false;
+      if(employeeStoryRefreshPending){employeeStoryRefreshPending=false;if(typeof cloudUser!=='undefined'&&cloudUser)setTimeout(()=>loadEmployeeStory(true),0);}
+    }
   }
   function showEmployeeStory(story){
     const modal=$('#monthlyStoryModal');if(!modal)return;
@@ -234,6 +241,7 @@
     installStyles();installUI();installEmployeeStoryStyles();installEmployeeStoryUI();
     window.addEventListener('provoda-user-ready',()=>{if(typeof cloudUser!=='undefined'&&cloudUser)loadEmployeeStory(true);else hideEmployeeStory();});
     if(typeof cloudUser!=='undefined'&&cloudUser)loadEmployeeStory(true);
+    window.setInterval(()=>{if(document.visibilityState==='visible'&&typeof cloudUser!=='undefined'&&cloudUser)loadEmployeeStory(true);},60000);
     const root=$('#adminDevelopmentView');if(!root)return;
     const observer=new MutationObserver(()=>{if(!$('#adminMonthlyStoriesView'))installUI();});
     observer.observe(root,{childList:true,subtree:true});
