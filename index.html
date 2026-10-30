@@ -1162,6 +1162,38 @@ try {
 @media(max-width:900px){#adminPanelSheet .admin-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){#adminPanelSheet .admin-overview-head{align-items:flex-start;flex-direction:column}#adminPanelSheet .admin-overview-head button{width:100%}#adminPanelSheet .admin-overview-grid{gap:8px}#adminPanelSheet .admin-overview-metric{padding:13px;border-radius:14px}#adminPanelSheet .admin-overview-columns{grid-template-columns:minmax(0,1fr)}#adminPanelSheet .admin-overview-metric strong{margin:8px 0 6px}}
 </style>
+<style id="provoda-mobile-touch-polish">
+/* Compact, aligned touch controls for Android and small screens */
+@media (max-width: 600px) {
+  body { padding-left: 10px; padding-right: 10px; }
+  .wrap { width: 100%; min-width: 0; }
+  .top { gap: 8px; align-items: center; }
+  .brand { min-width: 0; gap: 8px; }
+  .brand b { font-size: 18px; }
+  .brand-mark { width: 38px; height: 38px; border-radius: 11px; }
+  .actions { flex: 0 0 auto; gap: 6px; align-items: center; }
+  .actions .ghost { padding: 8px 10px; min-height: 40px; }
+  button, .icon, .ghost, .save { touch-action: manipulation; }
+  .icon { width: 40px; height: 40px; border-radius: 12px; }
+  .card, .hero { min-width: 0; }
+  .admin-inline-actions, .notification-center-controls { flex-wrap: wrap; }
+  .admin-inline-actions button { max-width: 100%; }
+  #addBtn.fab { right: max(12px, env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom)); min-width: 124px; height: 46px; min-height: 46px; padding: 0 16px; border-radius: 15px; }
+  #notificationBellBtn, #provodaMessengerHeaderBtn { width: 40px; height: 40px; min-width: 40px; min-height: 40px; padding: 0; border-radius: 12px; flex: 0 0 40px; }
+  #provodaMessengerHeaderBtn { margin-left: 0; }
+  .sheet .panel { max-height: calc(92dvh - env(safe-area-inset-top)); }
+}
+@media (max-width: 380px) {
+  .brand b { font-size: 16px; }
+  .brand span { font-size: 11px; }
+  .actions { gap: 4px; }
+  .actions .ghost { padding: 7px 8px; font-size: 12px; }
+  #addBtn.fab { min-width: 116px; padding-inline: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
 </head>
 <body><div id="provodaBootSplash" role="status" aria-label="Загрузка Provoda Staff"><div class="pbs-card"><img src="./provoda-logo.svg" alt=""><div class="pbs-title">Provoda Staff</div><div class="pbs-sub">Безопасный запуск приложения</div><div class="pbs-spinner" aria-hidden="true"></div></div></div>
 <div id="authGate" role="dialog" aria-modal="true" aria-labelledby="authTitle">
