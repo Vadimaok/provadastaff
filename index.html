@@ -53,6 +53,7 @@ body.light-theme .category-row:hover,body.light-theme .category-row:focus-visibl
 @media(min-width:680px){.grid{grid-template-columns:1.05fr .95fr}.panel{max-width:620px;margin:0 auto;border-radius:28px;bottom:24px}}
 
 /* Cloud accounts */
+.recovery-panel{margin-top:14px;padding:16px;border:1px solid rgba(148,163,184,.22);border-radius:18px;background:rgba(255,255,255,.035);text-align:left}.recovery-panel.hidden{display:none!important}.recovery-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:16px}.recovery-close{width:34px;height:34px;padding:0;border-radius:10px;background:rgba(148,163,184,.12);color:inherit;font-size:24px;line-height:1}.recovery-help{margin:8px 0 12px;color:var(--muted);font-size:13px;line-height:1.5}.recovery-field{margin:10px 0}.recovery-action{width:100%;margin-top:8px}.recovery-status{margin-top:10px;font-size:13px;line-height:1.45;overflow-wrap:anywhere}.recovery-status:empty{display:none}.recovery-status.error{color:var(--bad)}
 .auth-recovery-link{display:block;width:100%;margin:12px 0 0;padding:10px;border:0;background:transparent;color:#a9c5ff;font:inherit;font-size:14px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;border-radius:10px}.auth-recovery-link:focus-visible{outline:2px solid #a9c5ff;outline-offset:2px}
 #authGate{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;background:#0b0f14;overflow:auto}
 #authGate.hidden{display:none!important}
@@ -1174,6 +1175,21 @@ try {
       <button class="ghost" id="signupBtn">Создать аккаунт</button>
     </div>
     <button class="auth-recovery-link" id="recoverPasswordBtn" type="button">Восстановить пароль</button>
+    <div id="passwordRecoveryPanel" class="recovery-panel hidden" aria-live="polite">
+      <div class="recovery-heading"><strong id="recoveryTitle">Восстановление пароля</strong><button type="button" id="closeRecoveryBtn" class="recovery-close" aria-label="Закрыть восстановление">×</button></div>
+      <p id="recoveryHelp" class="recovery-help">Укажи почту аккаунта. Мы отправим код подтверждения.</p>
+      <label class="field recovery-field" id="recoveryEmailField"><span>Электронная почта</span><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
+      <button class="save recovery-action" id="sendRecoveryCodeBtn" type="button">Отправить код</button>
+      <div id="recoveryCodeStep" class="hidden">
+        <label class="field recovery-field"><span>Код из письма</span><input id="recoveryCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Введи код из письма"></label>
+        <label class="field recovery-field"><span>Новый пароль</span><input id="recoveryNewPassword" type="password" autocomplete="new-password" minlength="6" placeholder="Не менее 6 символов"></label>
+        <label class="field recovery-field"><span>Повтори новый пароль</span><input id="recoveryConfirmPassword" type="password" autocomplete="new-password" minlength="6" placeholder="Повтори пароль"></label>
+        <button class="save recovery-action" id="confirmRecoveryBtn" type="button">Подтвердить код и сменить пароль</button>
+        <button class="ghost recovery-action" id="resendRecoveryCodeBtn" type="button">Отправить код повторно</button>
+      </div>
+      <button class="ghost recovery-action" id="backToLoginBtn" type="button">Вернуться ко входу</button>
+      <div id="recoveryStatus" class="recovery-status" role="status" aria-live="polite"></div>
+    </div>
     <div id="authStatus" role="status" aria-live="polite">Подключение к облаку…</div>
   </div>
 </div>
@@ -2581,6 +2597,75 @@ async function recoverPassword(){
       : (message||'Не удалось отправить ссылку. Попробуй ещё раз.'),true);
   }finally{authBusy(false);}
 }
+function recoveryStatus(message,isError=false){
+  const el=document.querySelector('#recoveryStatus');
+  if(el){el.textContent=message;el.classList.toggle('error',isError);}
+}
+function recoveryPanel(show=true){
+  const panel=document.querySelector('#passwordRecoveryPanel');
+  if(!panel)return;
+  panel.classList.toggle('hidden',!show);
+  if(show){
+    const email=document.querySelector('#authEmail')?.value.trim()||'';
+    const recoveryEmail=document.querySelector('#recoveryEmail');
+    if(recoveryEmail&&!recoveryEmail.value)recoveryEmail.value=email;
+    document.querySelector('#recoveryEmail')?.focus();
+    recoveryStatus('');
+  }
+}
+function recoveryBusy(busy){
+  ['#sendRecoveryCodeBtn','#confirmRecoveryBtn','#resendRecoveryCodeBtn'].forEach(sel=>{const el=document.querySelector(sel);if(el)el.disabled=busy;});
+}
+function validRecoveryEmail(){
+  const el=document.querySelector('#recoveryEmail');
+  const email=el?.value.trim()||'';
+  if(!email){recoveryStatus('Введи почту, привязанную к аккаунту.',true);el?.focus();return null;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){recoveryStatus('Проверь адрес электронной почты.',true);el?.focus();return null;}
+  return email;
+}
+async function sendRecoveryCode(){
+  if(!cloudClient){recoveryStatus('Облако не подключено. Обнови страницу и попробуй снова.',true);return;}
+  const email=validRecoveryEmail();if(!email)return;
+  recoveryBusy(true);recoveryStatus('Отправляем письмо с кодом…');
+  try{
+    const {error}=await cloudClient.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+    if(error)throw error;
+    document.querySelector('#recoveryCodeStep')?.classList.remove('hidden');
+    document.querySelector('#recoveryTitle').textContent='Введи код из письма';
+    document.querySelector('#recoveryHelp').textContent='Проверь входящие и папку «Спам». Код должен прийти на указанную почту.';
+    recoveryStatus('Запрос принят. Если письмо не пришло, проверь SMTP и шаблон Reset Password в Supabase: в письме должен отображаться код {{ .Token }}. Если там только кнопка-ссылка, нужен шаблон с кодом.');
+    document.querySelector('#recoveryCode')?.focus();
+  }catch(error){
+    console.error('Password recovery request failed:',error);
+    recoveryStatus(String(error?.message||'Не удалось отправить письмо. Проверь подключение и настройки почты Supabase.'),true);
+  }finally{recoveryBusy(false);}
+}
+async function confirmRecoveryCode(){
+  if(!cloudClient){recoveryStatus('Облако не подключено. Обнови страницу и попробуй снова.',true);return;}
+  const email=validRecoveryEmail();if(!email)return;
+  const token=document.querySelector('#recoveryCode')?.value.trim()||'';
+  const password=document.querySelector('#recoveryNewPassword')?.value||'';
+  const confirm=document.querySelector('#recoveryConfirmPassword')?.value||'';
+  if(!token){recoveryStatus('Введи код из письма.',true);document.querySelector('#recoveryCode')?.focus();return;}
+  if(password.length<6){recoveryStatus('Новый пароль должен содержать минимум 6 символов.',true);document.querySelector('#recoveryNewPassword')?.focus();return;}
+  if(password!==confirm){recoveryStatus('Пароли не совпадают. Проверь оба поля.',true);document.querySelector('#recoveryConfirmPassword')?.focus();return;}
+  recoveryBusy(true);recoveryStatus('Проверяем код и меняем пароль…');
+  try{
+    const {error:verifyError}=await cloudClient.auth.verifyOtp({email,token,type:'recovery'});
+    if(verifyError)throw verifyError;
+    const {error:updateError}=await cloudClient.auth.updateUser({password});
+    if(updateError)throw updateError;
+    recoveryStatus('Пароль успешно изменён. Теперь можешь войти с новым паролем.');
+    document.querySelector('#authPassword').value='';
+    document.querySelector('#recoveryNewPassword').value='';
+    document.querySelector('#recoveryConfirmPassword').value='';
+    document.querySelector('#recoveryCode').value='';
+    setTimeout(()=>recoveryPanel(false),2500);
+  }catch(error){
+    console.error('Password recovery confirmation failed:',error);
+    recoveryStatus(String(error?.message||'Не удалось подтвердить код. Проверь его и попробуй запросить новый.'),true);
+  }finally{recoveryBusy(false);}
+}
 async function signUp(){
   if(!cloudClient){authMessage('Облако ещё не подключилось. Подожди пару секунд и попробуй снова.',true);return;}
   const email=document.querySelector('#authEmail').value.trim();
@@ -2645,7 +2730,14 @@ async function signOut(){
 async function initCloudAuth(){
   document.querySelector('#loginBtn').addEventListener('click',signIn);
   document.querySelector('#signupBtn').addEventListener('click',signUp);
-  document.querySelector('#recoverPasswordBtn')?.addEventListener('click',recoverPassword);
+  document.querySelector('#recoverPasswordBtn')?.addEventListener('click',()=>recoveryPanel(true));
+  document.querySelector('#closeRecoveryBtn')?.addEventListener('click',()=>recoveryPanel(false));
+  document.querySelector('#backToLoginBtn')?.addEventListener('click',()=>recoveryPanel(false));
+  document.querySelector('#sendRecoveryCodeBtn')?.addEventListener('click',sendRecoveryCode);
+  document.querySelector('#resendRecoveryCodeBtn')?.addEventListener('click',sendRecoveryCode);
+  document.querySelector('#confirmRecoveryBtn')?.addEventListener('click',confirmRecoveryCode);
+  document.querySelector('#recoveryEmail')?.addEventListener('keydown',event=>{if(event.key==='Enter')sendRecoveryCode();});
+  document.querySelector('#recoveryConfirmPassword')?.addEventListener('keydown',event=>{if(event.key==='Enter')confirmRecoveryCode();});
   ['#authEmail','#authPassword'].forEach(selector=>document.querySelector(selector)?.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();document.querySelector('#loginBtn')?.click();}}));
   const passwordInput=document.querySelector('#authPassword');
   const passwordToggle=document.querySelector('#toggleAuthPassword');
