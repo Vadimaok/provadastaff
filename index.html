@@ -2396,15 +2396,20 @@ async function pollTaskNotifications(){
     if(lastSeenTaskNotificationIds.size>200)lastSeenTaskNotificationIds=new Set([...lastSeenTaskNotificationIds].slice(-100));
   }catch(e){console.info('Task notification check failed:',e?.message||e);}
 }
+let notificationCenterRefreshTimer=null;
 function startTaskNotificationPolling(){
   if(adminNotificationTimer)clearInterval(adminNotificationTimer);
+  if(notificationCenterRefreshTimer)clearInterval(notificationCenterRefreshTimer);
   lastSeenTaskNotificationIds=new Set();
   pollTaskNotifications();
+  void loadNotificationCenter();
   adminNotificationTimer=setInterval(pollTaskNotifications,5000);
+  notificationCenterRefreshTimer=setInterval(()=>{if(cloudUser&&cloudClient)void loadNotificationCenter();},20000);
 }
 function stopTaskNotificationPolling(){
   if(adminNotificationTimer)clearInterval(adminNotificationTimer);
-  adminNotificationTimer=null;lastSeenTaskNotificationIds=new Set();
+  if(notificationCenterRefreshTimer)clearInterval(notificationCenterRefreshTimer);
+  adminNotificationTimer=null;notificationCenterRefreshTimer=null;lastSeenTaskNotificationIds=new Set();
 }
 // Use the platform fetch without replacing Supabase's AbortSignal. Some mobile WebViews
 // abort auth requests when a second controller is layered over the SDK's own signal.
