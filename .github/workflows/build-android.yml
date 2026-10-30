@@ -122,6 +122,51 @@ jobs:
           PY
 
 
+      - name: Configure stable Android release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing GitHub Actions secret: $name. Add all four Android signing secrets before building a distributable APK."
+              exit 1
+            fi
+          done
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/provoda-release.jks
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('android/app/build.gradle')
+          text = path.read_text()
+          if 'signingConfigs {' not in text:
+              match = re.search(r'android\\s*\\{', text)
+              if not match:
+                  raise SystemExit('Could not locate android block in app/build.gradle')
+              block = '''
+              signingConfigs {
+                  release {
+                      storeFile file("provoda-release.jks")
+                      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                  }
+              }
+              '''
+              text = text[:match.end()] + block + text[match.end():]
+          match = re.search(r'buildTypes\\s*\\{\\s*release\\s*\\{', text)
+          if not match:
+              raise SystemExit('Could not locate release build type in app/build.gradle')
+          insert_at = match.end()
+          if 'signingConfig signingConfigs.release' not in text[insert_at:insert_at+250]:
+              text = text[:insert_at] + '\\n            signingConfig signingConfigs.release' + text[insert_at:]
+          path.write_text(text)
+          PY
+          echo "Stable release signing configured."
+
       - name: Apply Provoda Staff launcher icon
         run: |
           python -m pip install --quiet cairosvg pillow
@@ -177,9 +222,17 @@ jobs:
           path.write_text(content)
           PY
 
-      - name: Build debug APK
+      - name: Build signed release APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
+
+      - name: Verify APK signature
+        run: |
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
+          "$APKSIGNER" verify --print-certs "$APK"
 
       - name: Publish APK to GitHub Release
         env:
@@ -188,13 +241,13 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Provoda Staff $VERSION" --notes "Provoda Staff installers for version $VERSION." || gh release view "$TAG" >/dev/null
-          cp android/app/build/outputs/apk/debug/app-debug.apk Provoda-Staff-Android.apk
+          cp android/app/build/outputs/apk/release/app-release.apk Provoda-Staff-Android.apk
           gh release upload "$TAG" Provoda-Staff-Android.apk --clobber
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Provoda-Staff-Android
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
