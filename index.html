@@ -2566,7 +2566,7 @@ async function recoverPassword(){
   if(!cloudClient){authMessage('Облако ещё не подключилось. Обнови страницу и попробуй снова.',true);return;}
   const email=document.querySelector('#authEmail').value.trim();
   if(!email){authMessage('Сначала введи электронную почту, на которую зарегистрирован аккаунт.',true);document.querySelector('#authEmail')?.focus();return;}
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){authMessage('Проверь адрес электронной почты.',true);document.querySelector('#authEmail')?.focus();return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){authMessage('Проверь адрес электронной почты.',true);document.querySelector('#authEmail')?.focus();return;}
   authBusy(true);authMessage('Отправляю ссылку для восстановления…');
   try{
     const redirectTo=window.location.origin+window.location.pathname;
