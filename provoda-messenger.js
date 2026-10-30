@@ -115,7 +115,7 @@
       $('#provodaMessengerModal .pm-shell').classList.add('chat-open');
       await loadMessages();
       if(channel){cloudClient.removeChannel(channel);channel=null;}
-      channel=cloudClient.channel('provoda-messenger-'+activeConversation).on('postgres_changes',{event:'INSERT',schema:'public',table:'messenger_messages',filter:'conversation_id=eq.'+activeConversation},()=>loadMessages()).subscribe();
+      channel=cloudClient.channel('provoda-messenger-'+activeConversation).on('postgres_changes',{event:'INSERT',schema:'public',table:'messenger_messages',filter:'conversation_id=eq.'+activeConversation},()=>{loadMessages();loadConversations().then(renderPeople);}).subscribe();
       if(poll)clearInterval(poll);poll=setInterval(()=>{if(activeConversation&&document.visibilityState==='visible')loadMessages();},12000);
       setStatus('');
     }catch(e){setStatus(e.message||'Не удалось открыть чат.',true);}
