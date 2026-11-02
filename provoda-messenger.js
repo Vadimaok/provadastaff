@@ -36,8 +36,13 @@
       .pm-image{cursor:zoom-in;transition:filter .18s ease}.pm-image:hover{filter:brightness(1.06)}
       .pm-image-retry{display:block;max-width:100%;padding:10px 12px;border:1px solid #fb718555;border-radius:12px;background:#fb71851a;color:#fecdd3;text-align:left;font:inherit;font-size:12px;cursor:pointer}
       .pm-gallery-shade,.pm-lightbox{position:fixed;inset:0;z-index:1450;display:flex;align-items:center;justify-content:center;background:rgba(2,6,15,.9);backdrop-filter:blur(18px);padding:16px;animation:pmFadeIn .18s ease both}
-      .pm-gallery-card{width:min(480px,100%);max-height:92dvh;overflow:auto;padding:18px;border:1px solid #ffffff22;border-radius:24px;background:#121c2a;color:#eef4ff;box-shadow:0 24px 90px #0009;animation:pmGalleryIn .22s ease both}
-      .pm-gallery-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.pm-gallery-title h3{margin:0;font-size:17px}.pm-gallery-close{width:38px;height:38px;border:1px solid #ffffff22;border-radius:12px;background:#ffffff0a;color:inherit;font-size:21px}
+      .pm-gallery-card{position:relative;box-sizing:border-box;width:min(480px,100%);max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;padding:18px;border:1px solid #ffffff22;border-radius:24px;background:#121c2a;color:#eef4ff;box-shadow:0 24px 90px #0009;animation:pmGalleryIn .22s ease both}
+      .pm-gallery-title{position:sticky;top:-18px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-18px -18px 14px;padding:14px 18px;background:#121c2a;border-bottom:1px solid #ffffff14;border-radius:24px 24px 0 0}.pm-gallery-title h3{margin:0;font-size:17px;line-height:1.35}.pm-gallery-close{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;min-width:44px;min-height:44px;border:1px solid #ffffff35;border-radius:14px;background:#29364a;color:#fff;font-size:27px;font-weight:500;line-height:1;box-shadow:0 3px 12px #0004;cursor:pointer;touch-action:manipulation}
+      .pm-gallery-close:focus-visible,.pm-lightbox-close:focus-visible,.pm-close:focus-visible,.pm-back:focus-visible{outline:3px solid #a99aff;outline-offset:3px}
+      .pm-gallery-close:active,.pm-lightbox-close:active{transform:scale(.96)}
+      .pm-gallery-shade{z-index:1600;padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));overflow:auto}
+      .pm-lightbox{z-index:1700;padding:calc(64px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));overflow:auto}
+      .pm-lightbox-close{position:fixed!important;top:calc(12px + env(safe-area-inset-top))!important;right:12px!important;z-index:1800!important;display:grid;place-items:center;width:48px!important;height:48px!important;min-width:48px;min-height:48px;border-radius:50%;border:2px solid #ffffff65!important;background:#202c40!important;color:#fff!important;font-size:29px!important;line-height:1;box-shadow:0 4px 20px #0008;cursor:pointer;touch-action:manipulation}
       .pm-gallery-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pm-gallery-choice{min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px solid #ffffff1f;border-radius:18px;background:#ffffff08;color:inherit;font:inherit;font-size:13px}.pm-gallery-choice:first-child{background:linear-gradient(145deg,#7259f2,#4f46c8);border-color:#a99aff66}.pm-gallery-icon{font-size:30px}.pm-gallery-note{font-size:11px;line-height:1.5;color:#9eabc0;margin:13px 2px 0}
       .pm-lightbox{z-index:1500;padding:12px;flex-direction:column;gap:12px}.pm-lightbox-image-wrap{display:flex;align-items:center;justify-content:center;min-height:0;flex:1;width:100%;overflow:hidden}.pm-lightbox-image{max-width:100%;max-height:calc(100dvh - 125px);object-fit:contain;border-radius:12px;box-shadow:0 12px 60px #0008}.pm-lightbox-toolbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:9px;width:100%}.pm-lightbox-toolbar button,.pm-lightbox-toolbar a{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 15px;border:1px solid #ffffff25;border-radius:13px;background:#ffffff12;color:#fff;text-decoration:none;font:inherit;font-size:13px}.pm-lightbox-toolbar .pm-lightbox-save{background:linear-gradient(135deg,#7c5cff,#4f46e5);border-color:transparent}.pm-lightbox-close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:1px solid #ffffff30;background:#ffffff16;color:#fff;font-size:25px}
       @keyframes pmFadeIn{from{opacity:0}to{opacity:1}}@keyframes pmGalleryIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -277,7 +282,18 @@
         // This also preserves SDK URL encoding and returns structured Storage errors instead of proxy HTML.
         const {data:uploaded,error:uploadError}=await cloudClient.storage.from('provoda-messenger').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false});
         if(uploadError){
-          const details=[uploadError.message,uploadError.code||uploadError.error,uploadError.statusCode?'Storage '+uploadError.statusCode:'',uploadError.status&&uploadError.status!==uploadError.statusCode?'HTTP '+uploadError.status:''].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' · ');
+          let serverDetails='';
+          try{
+            const response=uploadError.context;
+            if(response&&typeof response.clone==='function'){
+              const raw=await response.clone().text();
+              if(raw){
+                try{const parsed=JSON.parse(raw);serverDetails=parsed.message||parsed.error||parsed.msg||raw;}
+                catch{serverDetails=raw;}
+              }
+            }else if(typeof response==='string')serverDetails=response;
+          }catch{}
+          const details=[uploadError.message,serverDetails,uploadError.code||uploadError.error,uploadError.statusCode?'Storage '+uploadError.statusCode:'',uploadError.status&&uploadError.status!==uploadError.statusCode?'HTTP '+uploadError.status:''].filter(Boolean).map(v=>String(v).trim()).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' · ');
           throw new Error('Не удалось загрузить фото в хранилище'+(details?': '+details:''));
         }
         if(!uploaded?.path)throw new Error('Хранилище не подтвердило загрузку фотографии.');
