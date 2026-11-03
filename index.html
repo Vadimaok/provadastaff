@@ -3912,9 +3912,21 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
   function openMenu(x,y){const m=ensureMenu();m.replaceChildren();m.append(item('← Назад',()=>{if(history.length>1)history.back();}));m.append(item('→ Вперёд',()=>history.forward()));m.append(item('↻ Обновить страницу',()=>location.reload()));if(isAdmin()){const f=item(adminF12Enabled?'✓ F12 разрешён для администратора':'F12 · Разрешить инструменты разработчика',()=>{adminF12Enabled=!adminF12Enabled;showToast(adminF12Enabled?'F12 разрешён. Теперь нажми клавишу F12 на клавиатуре.':'Доступ к F12 снова заблокирован.');closeMenu();});f.style.marginTop='5px';f.style.borderTop='1px solid rgba(148,163,184,.16)';m.append(f);}m.style.display='block';const r=m.getBoundingClientRect();m.style.left=Math.max(8,Math.min(x,innerWidth-r.width-8))+'px';m.style.top=Math.max(8,Math.min(y,innerHeight-r.height-8))+'px';}
   document.addEventListener('contextmenu',e=>{e.preventDefault();openMenu(e.clientX,e.clientY);});
   document.addEventListener('click',e=>{if(menu&&!menu.contains(e.target))closeMenu();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();if(e.key==='F12'&&!(isAdmin()&&adminF12Enabled)){e.preventDefault();e.stopImmediatePropagation();showToast('Инструменты разработчика доступны только администратору через меню ПКМ.');}if((e.ctrlKey||e.metaKey)&&['u','s'].includes(e.key.toLowerCase())){e.preventDefault();e.stopImmediatePropagation();}if((e.ctrlKey||e.metaKey)&&e.shiftKey&&['i','j','c'].includes(e.key.toLowerCase())&&!(isAdmin()&&adminF12Enabled)){e.preventDefault();e.stopImmediatePropagation();}},true);
-  document.addEventListener('copy',e=>{if(!editable(e))e.preventDefault();},true);document.addEventListener('cut',e=>{if(!editable(e))e.preventDefault();},true);document.addEventListener('selectstart',e=>{if(!editable(e))e.preventDefault();},true);
-  const style=document.createElement('style');style.textContent='body,body *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}input,textarea,select,[contenteditable="true"],[data-allow-copy]{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default}#provodaContextMenu *{-webkit-user-select:none!important;user-select:none!important}';document.head.appendChild(style);
+  document.addEventListener('keydown',e=>{
+   if(e.key==='Escape')closeMenu();
+   const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey,devtoolsAllowed=isAdmin()&&adminF12Enabled;
+   if(e.key==='F12'&&!devtoolsAllowed){e.preventDefault();e.stopImmediatePropagation();showToast('Инструменты разработчика доступны только администратору через меню ПКМ.');return;}
+   if(mod&&['u','s','p'].includes(key)){e.preventDefault();e.stopImmediatePropagation();return;}
+   if(mod&&key==='a'&&!editable(e)){e.preventDefault();e.stopImmediatePropagation();return;}
+   if(mod&&e.shiftKey&&['i','j','c','k'].includes(key)&&!devtoolsAllowed){e.preventDefault();e.stopImmediatePropagation();return;}
+   if(mod&&e.shiftKey&&key==='s'){e.preventDefault();e.stopImmediatePropagation();return;}
+  },true);
+  document.addEventListener('copy',e=>{if(!editable(e)){e.preventDefault();e.stopImmediatePropagation();}},true);
+  document.addEventListener('cut',e=>{if(!editable(e)){e.preventDefault();e.stopImmediatePropagation();}},true);
+  document.addEventListener('selectstart',e=>{if(!editable(e)){e.preventDefault();}},true);
+  document.addEventListener('dragstart',e=>{if(!editable(e)){e.preventDefault();}},true);
+  document.addEventListener('drop',e=>{if(!editable(e)&&e.dataTransfer?.types?.includes('text/plain'))e.preventDefault();},true);
+  const style=document.createElement('style');style.textContent='html{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}body,body *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none;-webkit-user-drag:none}input,textarea,select,[contenteditable="true"],[data-allow-copy]{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default;-webkit-user-drag:auto}img,svg,video,canvas{-webkit-user-drag:none;user-drag:none}#provodaContextMenu *{-webkit-user-select:none!important;user-select:none!important}';document.head.appendChild(style);
 })();
 </script>
 
