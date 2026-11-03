@@ -171,7 +171,11 @@
       button.addEventListener('click',open);
       bell.insertAdjacentElement('afterend',button);
     }
-    button.classList.toggle('hidden',!enabled);
+    button.classList.remove('hidden');
+    button.style.setProperty('display',enabled?'grid':'none','important');
+    button.style.setProperty('visibility','visible','important');
+    button.style.setProperty('opacity','1','important');
+    button.style.setProperty('z-index','10','important');
   }
   async function refreshAccess(){
     // Мессенджер — постоянная функция приложения: отдельный переключатель доступа не используется.
