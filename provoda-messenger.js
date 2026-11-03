@@ -93,7 +93,13 @@
       @media(max-width:650px){.pm-picker-shade{align-items:flex-end;padding:10px}.pm-action-menu{position:fixed;left:10px!important;right:10px;bottom:10px;top:auto!important;width:auto;border-radius:20px}.pm-action-menu button{padding:13px}.pm-emoji-row button{font-size:22px}}
       body.light-theme #provodaMessengerModal{background:rgba(25,35,55,.45)}body.light-theme .pm-shell{background:#fff;color:#172033}body.light-theme .pm-sidebar{background:#f7f9fd;border-color:#17203318}body.light-theme .pm-person{color:#172033}body.light-theme .pm-person:hover,body.light-theme .pm-person.active{background:#1720330a}body.light-theme .pm-person-copy small,body.light-theme .pm-person-copy em,body.light-theme .pm-chat-title small{color:#667085}body.light-theme .pm-chat{background:#f2f5fb}body.light-theme .pm-bubble{background:#fff;color:#172033;border-color:#17203315}body.light-theme .pm-bubble.mine{background:#6250c9;color:#fff}body.light-theme .pm-compose{background:#fff;border-color:#17203315}body.light-theme .pm-compose textarea{background:#f8f9fc;color:#172033;border-color:#17203320}body.light-theme .pm-close,body.light-theme .pm-back,body.light-theme .pm-chat-close,body.light-theme .pm-attach{color:#172033;border-color:#17203325;background:#eef1f8}
       @media(max-width:650px){#provodaMessengerModal{padding:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}.pm-shell{width:100%;height:100%;min-height:0;max-height:100%;border:0;border-radius:0;grid-template-columns:minmax(0,1fr);overflow:hidden}.pm-sidebar{grid-column:1;grid-row:1;border-right:0;min-height:0}.pm-chat{display:none;grid-column:1;grid-row:1;min-height:0;overflow:hidden}.pm-shell.chat-open .pm-sidebar{display:none}.pm-shell.chat-open .pm-chat{display:flex}.pm-sidebar-head,.pm-chat-head{min-height:64px;gap:8px;padding-left:12px;padding-right:12px}.pm-chat-head{padding-top:max(10px,env(safe-area-inset-top));}.pm-chat-head .pm-avatar{width:36px;height:36px;flex-basis:36px}.pm-chat-title strong{font-size:13px}.pm-chat-title small{font-size:10px}.pm-back,.pm-chat-close{flex-basis:44px;width:44px;height:44px}.pm-messages{padding:14px 12px}.pm-bubble{max-width:88%}}
-    `;
+      /* Full-screen messenger: stable viewport-sized layout on desktop and mobile. */
+      #provodaMessengerModal{box-sizing:border-box;padding:0;width:100%;height:100%;height:100dvh;overflow:hidden}
+      #provodaMessengerModal.open{align-items:stretch;justify-content:stretch}
+      #provodaMessengerModal .pm-shell{box-sizing:border-box;position:relative;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;border:0;border-radius:0;overflow:hidden;grid-template-columns:320px minmax(0,1fr)}
+      #provodaMessengerModal .pm-chat{min-width:0;min-height:0;overflow:hidden}
+      #provodaMessengerModal .pm-messages{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto}
+      #provodaMessengerModal .pm-compose{flex-shrink:0}
       /* Mobile layout hardening: keep every chat region inside the viewport. */
       @media(max-width:650px){
         #provodaMessengerModal{box-sizing:border-box;inset:0;width:100%;height:100%;height:100dvh;min-height:0;overflow:hidden;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
@@ -118,6 +124,7 @@
         #provodaMessengerModal .pm-compose textarea{box-sizing:border-box;flex:1 1 0;width:0;min-width:0;max-width:100%;min-height:42px;max-height:100px;resize:none}
         #provodaMessengerModal .pm-attach,#provodaMessengerModal .pm-send{box-sizing:border-box;width:42px;height:42px;min-width:42px;min-height:42px;flex:0 0 42px;padding:0}
       }
+    `;
     document.head.appendChild(s);
   }
   function ensureModal(){
