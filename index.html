@@ -845,6 +845,8 @@ body.density-spacious #settingsSheet .settings-subsection{padding-top:17px;margi
 .notification-bell svg{transition:transform .2s ease}
 .notification-bell-count{position:absolute;right:-6px;top:-6px;min-width:19px;height:19px;padding:0 5px;display:grid;place-items:center;border-radius:99px;background:#ef4444;color:#fff;border:2px solid #101720;font-size:10px;font-weight:850;line-height:1}
 .notification-bell-count.hidden{display:none!important}
+.notification-bell.has-unread{border-color:rgba(248,113,113,.7);box-shadow:0 0 0 2px rgba(239,68,68,.12),0 0 14px rgba(239,68,68,.18)}
+.notification-bell.has-unread:not(.has-task-alert) .notification-bell-count{display:grid}
 .notification-bell.has-task-alert{color:#fff;border-color:rgba(59,130,246,.75);background:linear-gradient(135deg,rgba(37,99,235,.28),rgba(220,38,38,.24));animation:provoda-bell-pulse 1.35s ease-in-out infinite;box-shadow:0 0 0 1px rgba(59,130,246,.18),0 0 18px rgba(59,130,246,.22)}
 .notification-bell.has-task-alert svg{filter:drop-shadow(0 0 5px rgba(96,165,250,.85))}
 @keyframes provoda-bell-pulse{0%,100%{border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,.22),0 0 10px rgba(59,130,246,.18)}50%{border-color:#ef4444;box-shadow:0 0 0 1px rgba(239,68,68,.28),0 0 18px rgba(239,68,68,.32)}}
@@ -2849,6 +2851,7 @@ function updateNotificationBell(){
  badge.textContent=unread>99?'99+':String(unread);
  badge.classList.toggle('hidden',unread===0);
  bell.classList.toggle('has-task-alert',taskAlerts>0);
+ bell.classList.toggle('has-unread',unread>0);
  bell.setAttribute('aria-label',taskAlerts?'Есть новые задачи · открыть уведомления':unread?'Есть непрочитанные уведомления':'Открыть уведомления');
 }
 function renderNotificationCenter(){
@@ -4013,6 +4016,6 @@ window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change'
 
 <script src="./monthly-stories.js?v=7"></script>
 <script src="./global-stories.js?v=2"></script>
-<script src="./provoda-messenger.js?v=24"></script>
+<script src="./provoda-messenger.js?v=25"></script>
 </body>
 </html>
