@@ -172,7 +172,7 @@
       bell.insertAdjacentElement('afterend',button);
     }
     button.classList.remove('hidden');
-    button.style.setProperty('display',enabled?'grid':'none','important');
+    button.style.setProperty('display','grid','important');
     button.style.setProperty('visibility','visible','important');
     button.style.setProperty('opacity','1','important');
     button.style.setProperty('z-index','10','important');
