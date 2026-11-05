@@ -14,7 +14,7 @@ insert into public.role_feature_flags(role,is_enabled) values ('monthly_stories'
 
 create or replace function public.user_get_role_features()
 returns jsonb language sql stable security definer set search_path=''
-as $
+as $role_features$
  select jsonb_build_object(
   'shift_senior',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='shift_senior'),true),
   'employee_knz',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='employee_knz'),true),
