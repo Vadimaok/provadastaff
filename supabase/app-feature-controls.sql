@@ -8,6 +8,10 @@ create table if not exists public.app_feature_flags (
 );
 alter table public.app_feature_flags enable row level security;
 revoke all on public.app_feature_flags from anon, authenticated;
+alter table public.role_feature_flags drop constraint if exists role_feature_flags_role_check;
+alter table public.role_feature_flags add constraint role_feature_flags_role_check check (role in ('shift_senior','employee_knz','monthly_stories'));
+insert into public.role_feature_flags(role,is_enabled) values ('monthly_stories',false) on conflict(role) do nothing;
+
 insert into public.app_feature_flags(feature_key,is_enabled) values
  ('messenger',true),('global_stories',true),('catalog',true),('reports',true)
 on conflict(feature_key) do nothing;
