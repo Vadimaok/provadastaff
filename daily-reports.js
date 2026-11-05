@@ -8,7 +8,7 @@
   function ensureUI(){
     if(!$('#openDailyReportsBtn')){
       const anchor=$('#openKnzTasksBtn')||$('#openShiftPanelBtn')||$('#openSettingsBtn');
-      if(anchor){const b=document.createElement('button');b.type='button';b.id='openDailyReportsBtn';b.className='profile-menu-action';b.innerHTML='<span aria-hidden="true">▤</span><span>Сменные отчёты</span>';anchor.insertAdjacentElement('afterend',b);}
+      if(anchor){const b=document.createElement('button');b.type='button';b.id='openDailyReportsBtn';b.className='profile-menu-action';b.innerHTML='<span aria-hidden="true">▤</span><span>Сменные отчёты</span>';b.style.display=window.provodaAppFeatures?.reports===false?'none':'';anchor.insertAdjacentElement('afterend',b);}
     }
     if($('#dailyReportsSheet'))return;
     const style=document.createElement('style');
