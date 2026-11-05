@@ -302,13 +302,20 @@
   async function sendImage(){
     const fileInput=$('#pmFile'),cameraInput=$('#pmCamera'),files=[...(fileInput.files||[]),...(cameraInput.files||[])];if(!files.length)return;
     if(!activeConversation||!activeUser){setStatus('Сначала открой чат.',true);return;}
-    const allowed=new Set(['image/jpeg','image/png','image/webp','image/heic']),selected=files.filter(f=>f.type.startsWith('image/')&&allowed.has(f.type)&&f.size<=12*1024*1024);
+    const mimeForFile=file=>{
+      const type=String(file?.type||'').toLowerCase().split(';')[0].trim();
+      const ext=String(file?.name||'').split('.').pop().toLowerCase();
+      const byExtension={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',heic:'image/heic',heif:'image/heic'};
+      const normalized=type==='image/jpg'?'image/jpeg':type;
+      return ['image/jpeg','image/png','image/webp','image/heic'].includes(normalized)?normalized:(byExtension[ext]||'');
+    };
+    const allowed=new Set(['image/jpeg','image/png','image/webp','image/heic']),selected=files.filter(f=>allowed.has(mimeForFile(f))&&Number(f.size)>0&&f.size<=12*1024*1024);
     if(!selected.length){setStatus(files.some(f=>f.size>12*1024*1024)?'Фото больше 12 МБ. Выбери файл поменьше.':'Формат не поддерживается. Используй JPG, PNG, WebP или HEIC.',true);fileInput.value='';cameraInput.value='';return;}
     if(selected.length<files.length)setStatus('Некоторые фото пропущены: нужен JPG, PNG, WebP или HEIC до 12 МБ.',true);
     $('#pmAttach').disabled=true;$('#pmSend').disabled=true;const body=$('#pmText').value.trim();let sent=0;
     try{
       for(let i=0;i<selected.length;i++){
-        const file=selected[i],ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic'})[file.type],nonce=(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),path=activeConversation+'/'+cloudUser.id+'/'+nonce+'.'+ext;
+        const file=selected[i],mime=mimeForFile(file),ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic'})[mime],nonce=(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),path=activeConversation+'/'+cloudUser.id+'/'+nonce+'.'+ext;
         setStatus('Отправляю фото '+(i+1)+' из '+selected.length+'…');
         const {data:sessionData,error:sessionError}=await cloudClient.auth.getSession();
         if(sessionError)throw new Error('Не удалось проверить авторизацию: '+sessionError.message);
@@ -316,7 +323,8 @@
         if(!token)throw new Error('Сессия истекла. Войди в приложение заново.');
         // Use the Supabase Storage SDK so browser File uploads are sent as multipart/form-data.
         // This also preserves SDK URL encoding and returns structured Storage errors instead of proxy HTML.
-        const {data:uploaded,error:uploadError}=await cloudClient.storage.from('provoda-messenger').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false});
+        const uploadBody=new Blob([file],{type:mime});
+        const {data:uploaded,error:uploadError}=await cloudClient.storage.from('provoda-messenger').upload(path,uploadBody,{contentType:mime,cacheControl:'3600',upsert:false});
         if(uploadError){
           let serverDetails='';
           try{
@@ -335,7 +343,7 @@
         if(!uploaded?.path)throw new Error('Хранилище не подтвердило загрузку фотографии.');
         const {error:signError}=await cloudClient.storage.from('provoda-messenger').createSignedUrl(path,60);
         if(signError){await cloudClient.storage.from('provoda-messenger').remove([path]);throw new Error('Фото загрузилось, но не открывается: '+(signError.message||'не удалось создать ссылку'));}
-        const {error}=await cloudClient.rpc('messenger_send_message',{p_conversation_id:activeConversation,p_body:i===0?body:'',p_attachment_path:path,p_attachment_mime:file.type,p_reply_to_message_id:i===0?(replyTarget?.id||null):null,p_forwarded_from_message_id:null});
+        const {error}=await cloudClient.rpc('messenger_send_message',{p_conversation_id:activeConversation,p_body:i===0?body:'',p_attachment_path:path,p_attachment_mime:mime,p_reply_to_message_id:i===0?(replyTarget?.id||null):null,p_forwarded_from_message_id:null});
         if(error){await cloudClient.storage.from('provoda-messenger').remove([path]);throw new Error('Фото загружено, но сообщение не сохранилось: '+(error.message||'ошибка отправки'));}
         sent++;
       }
