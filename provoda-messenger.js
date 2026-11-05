@@ -178,12 +178,15 @@
     button.style.setProperty('z-index','10','important');
   }
   async function refreshAccess(){
-    // Мессенджер — постоянная функция приложения: отдельный переключатель доступа не используется.
     enabled=typeof cloudClient!=='undefined'&&!!cloudClient&&typeof cloudUser!=='undefined'&&!!cloudUser;
+    if(enabled){try{const {data,error}=await cloudClient.rpc('user_get_app_features');if(error)throw error;enabled=data?.messenger!==false;}catch(e){console.info('Messenger feature flag:',e?.message||e);}}
     installHeaderButton();
+    const button=$('#provodaMessengerHeaderBtn');if(button){button.classList.toggle('hidden',!enabled);button.style.display=enabled?'grid':'none';}
+    if(!enabled){stopPresence();close();}
   }
   async function open(){
     if(!cloudClient||!cloudUser){if(typeof toast==='function')toast('Войди в аккаунт, чтобы открыть мессенджер.');return;}
+    await refreshAccess();if(!enabled){if(typeof toast==='function')toast('Мессенджер временно отключён администратором.');return;}
     ensureModal();$('#provodaMessengerModal').classList.add('open');$('#provodaMessengerModal').setAttribute('aria-hidden','false');
     $('#provodaMessengerModal .pm-shell').classList.remove('chat-open');$('#pmPeople').innerHTML='<div class="pm-empty">Загружаю пользователей…</div>';
     await Promise.all([loadUsers(),loadConversations()]);startPresence();startListSync();
