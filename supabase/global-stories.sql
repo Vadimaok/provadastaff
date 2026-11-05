@@ -1,5 +1,8 @@
 -- Provoda Staff: administrator-published global stories.
 -- Run once in Supabase Dashboard -> SQL Editor.
+-- IMPORTANT: create the provoda-global-stories bucket in Dashboard -> Storage first.
+-- Do not create buckets by inserting directly into storage.buckets: bucket provisioning
+-- must go through the Storage API / Dashboard so the Storage backend recognizes it.
 create table if not exists public.global_stories (
   id uuid primary key default gen_random_uuid(),
   caption text not null default '' check (char_length(caption) <= 180),
@@ -21,10 +24,6 @@ with check (public.is_current_admin() and created_by=(select auth.uid()) and exp
 drop policy if exists global_stories_admin_delete on public.global_stories;
 create policy global_stories_admin_delete on public.global_stories for delete to authenticated using (public.is_current_admin());
 
-insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
-values('provoda-global-stories','provoda-global-stories',false,104857600,
-array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime'])
-on conflict(id) do update set public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
 
 drop policy if exists global_stories_storage_read on storage.objects;
 create policy global_stories_storage_read on storage.objects for select to authenticated using(
