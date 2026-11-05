@@ -12,6 +12,18 @@ alter table public.role_feature_flags drop constraint if exists role_feature_fla
 alter table public.role_feature_flags add constraint role_feature_flags_role_check check (role in ('shift_senior','employee_knz','monthly_stories'));
 insert into public.role_feature_flags(role,is_enabled) values ('monthly_stories',false) on conflict(role) do nothing;
 
+create or replace function public.user_get_role_features()
+returns jsonb language sql stable security definer set search_path=''
+as $
+ select jsonb_build_object(
+  'shift_senior',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='shift_senior'),true),
+  'employee_knz',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='employee_knz'),true),
+  'monthly_stories',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='monthly_stories'),false)
+ );
+$;
+revoke all on function public.user_get_role_features() from public,anon;
+grant execute on function public.user_get_role_features() to authenticated;
+
 insert into public.app_feature_flags(feature_key,is_enabled) values
  ('messenger',true),('global_stories',true),('catalog',true),('reports',true)
 on conflict(feature_key) do nothing;
