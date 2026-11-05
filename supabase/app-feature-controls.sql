@@ -9,7 +9,7 @@ create table if not exists public.app_feature_flags (
 alter table public.app_feature_flags enable row level security;
 revoke all on public.app_feature_flags from anon, authenticated;
 alter table public.role_feature_flags drop constraint if exists role_feature_flags_role_check;
-alter table public.role_feature_flags add constraint role_feature_flags_role_check check (role in ('shift_senior','employee_knz','monthly_stories'));
+alter table public.role_feature_flags add constraint role_feature_flags_role_check check (role in ('shift_senior','employee_knz','monthly_stories','internal_chat'));
 insert into public.role_feature_flags(role,is_enabled) values ('monthly_stories',false) on conflict(role) do nothing;
 
 create or replace function public.user_get_role_features()
@@ -18,11 +18,28 @@ as $role_features$
  select jsonb_build_object(
   'shift_senior',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='shift_senior'),true),
   'employee_knz',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='employee_knz'),true),
-  'monthly_stories',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='monthly_stories'),false)
+  'monthly_stories',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='monthly_stories'),false),
+  'internal_chat',coalesce((select f.is_enabled from public.role_feature_flags f where f.role='internal_chat'),true)
  );
 $role_features$;
 revoke all on function public.user_get_role_features() from public,anon;
 grant execute on function public.user_get_role_features() to authenticated;
+
+
+create or replace function public.admin_set_role_feature(target_role text,is_enabled boolean)
+returns boolean language plpgsql security definer set search_path=''
+as $set_role_feature$
+begin
+ if not public.is_current_admin() then raise exception 'Доступ запрещён: нужны права администратора' using errcode='42501'; end if;
+ if target_role not in ('shift_senior','employee_knz','monthly_stories','internal_chat') then raise exception 'Недопустимая функция или роль'; end if;
+ insert into public.role_feature_flags(role,is_enabled,updated_by,updated_at)
+ values(target_role,is_enabled,(select auth.uid()),now())
+ on conflict(role) do update set is_enabled=excluded.is_enabled,updated_by=excluded.updated_by,updated_at=now();
+ return true;
+end;
+$set_role_feature$;
+revoke all on function public.admin_set_role_feature(text,boolean) from public,anon;
+grant execute on function public.admin_set_role_feature(text,boolean) to authenticated;
 
 insert into public.app_feature_flags(feature_key,is_enabled) values
  ('messenger',true),('global_stories',true),('catalog',true),('reports',true)
