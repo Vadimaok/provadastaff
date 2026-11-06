@@ -28,7 +28,10 @@ jobs:
           node -e "for (const file of ['app-version.json','manifest.webmanifest','capacitor.config.json','desktop/package.json']) { JSON.parse(require('fs').readFileSync(file, 'utf8')); console.log('Valid JSON:', file); }"
 
       - name: Check external JavaScript syntax
-        run: node --check daily-reports.js
+        run: |
+          for file in daily-reports.js monthly-stories.js global-stories.js provoda-messenger.js feedback.js; do
+            node --check "$file"
+          done
 
       - name: Check inline JavaScript syntax
         run: |
