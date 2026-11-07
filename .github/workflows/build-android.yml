@@ -2,6 +2,12 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Publish the Android APK to the GitHub Release
+        required: true
+        type: boolean
+        default: false
   push:
     paths:
       - "capacitor.config.json"
@@ -20,7 +26,7 @@ on:
       - ".github/workflows/build-android.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: provoda-android-release
@@ -250,16 +256,6 @@ jobs:
           "$APKSIGNER" verify --verbose "$APK"
           "$APKSIGNER" verify --print-certs "$APK"
 
-      - name: Publish APK to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v$VERSION"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Provoda Staff $VERSION" --notes "Provoda Staff installers for version $VERSION." || gh release view "$TAG" >/dev/null
-          cp android/app/build/outputs/apk/release/app-release.apk Provoda-Staff-Android.apk
-          gh release upload "$TAG" Provoda-Staff-Android.apk --clobber
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -267,3 +263,30 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    name: Publish approved Android release
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download signed APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Provoda-Staff-Android
+          path: dist
+
+      - name: Publish APK to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Provoda Staff $VERSION" --notes "Provoda Staff installers for version $VERSION." || gh release view "$TAG" >/dev/null
+          cp dist/app-release.apk Provoda-Staff-Android.apk
+          gh release upload "$TAG" Provoda-Staff-Android.apk --clobber

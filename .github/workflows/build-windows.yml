@@ -2,6 +2,12 @@ name: Build Windows EXE
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Publish the Windows EXE to the GitHub Release
+        required: true
+        type: boolean
+        default: false
   push:
     paths:
       - "desktop/**"
@@ -9,7 +15,7 @@ on:
       - ".github/workflows/build-windows.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -58,6 +64,31 @@ jobs:
           if ($item.Length -lt 10000000) { throw "Portable EXE looks unexpectedly small ($($item.Length) bytes)" }
           Write-Host "Verified EXE: $($item.FullName), $($item.Length) bytes"
 
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Provoda-Staff-Windows
+          path: desktop/dist/Provoda-Staff-*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish approved Windows release
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download portable EXE artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Provoda-Staff-Windows
+          path: desktop/dist
+
       - name: Publish EXE to GitHub Release
         shell: pwsh
         env:
@@ -68,11 +99,3 @@ jobs:
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) { gh release create $tag --title "Provoda Staff $version" --notes "Provoda Staff installers for version $version."; if ($LASTEXITCODE -ne 0) { gh release view $tag; if ($LASTEXITCODE -ne 0) { throw "Could not create or find GitHub release $tag" } } }
           gh release upload $tag "desktop/dist/Provoda-Staff-$version.exe" --clobber
-
-      - name: Upload Windows EXE
-        uses: actions/upload-artifact@v4
-        with:
-          name: Provoda-Staff-Windows
-          path: desktop/dist/Provoda-Staff-*.exe
-          if-no-files-found: error
-          retention-days: 30

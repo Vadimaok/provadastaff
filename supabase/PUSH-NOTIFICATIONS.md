@@ -4,7 +4,7 @@ The APK uses Android's system notification tray through Capacitor Push Notificat
 
 ## One-time setup
 
-1. In Firebase Console, create/select a Firebase project and add an Android app with package ID `com.vadimaok.minitrati`. Download its `google-services.json` file.
+1. In Firebase Console, create/select a Firebase project and add an Android app with package ID `com.provoda.staff`. Download its `google-services.json` file.
 2. In GitHub → Settings → Secrets and variables → Actions, add repository secret `GOOGLE_SERVICES_JSON_BASE64`. Its value must be the Base64 encoding of the complete JSON file (for example, `base64 -w 0 google-services.json` on Linux/macOS).
 3. In Firebase Console → Project settings → Service accounts, create a service-account JSON key for the Firebase Admin SDK. Keep it private.
 4. Deploy the Edge Function from this repository:
