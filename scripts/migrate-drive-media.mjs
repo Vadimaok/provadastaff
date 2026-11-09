@@ -7,11 +7,11 @@ const exportOnly = args.includes("--export");
 const manifestArg = args.find((arg) => !arg.startsWith("--")) || "./provoda-drive-media-manifest.json";
 const supabaseUrl = process.env.SUPABASE_URL;
 const anonKey = process.env.SUPABASE_ANON_KEY;
-const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
+const accessToken = process.env.SUPABASE_USER_ACCESS_TOKEN;
 const endpoint = supabaseUrl ? supabaseUrl.replace(/\/+$/, "") + "/functions/v1/google-drive-media-migrate" : "";
 async function callAdmin(payload) {
   if (!supabaseUrl || !anonKey || !accessToken) {
-    throw new Error("Set SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_ACCESS_TOKEN in your local environment.");
+    throw new Error("Set SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_USER_ACCESS_TOKEN in your local environment.");
   }
   const response = await fetch(endpoint, {
     method: "POST",
