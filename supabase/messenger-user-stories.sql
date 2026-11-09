@@ -31,6 +31,9 @@ create index if not exists messenger_user_stories_active_idx
 
 alter table public.messenger_user_stories enable row level security;
 
+-- RLS governs rows; grant only the operations used by the client module.
+grant select, insert, delete on public.messenger_user_stories to authenticated;
+
 drop policy if exists messenger_user_stories_read_active on public.messenger_user_stories;
 create policy messenger_user_stories_read_active
   on public.messenger_user_stories for select to authenticated
