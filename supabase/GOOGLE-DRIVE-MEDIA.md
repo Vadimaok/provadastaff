@@ -36,7 +36,8 @@ After deploying the function, call `{ "action": "create-folder" }` once with an 
 
 ## Gradual copy process
 
-Export a local manifest from the existing application records (the script reads only paths from `global_stories` and `messenger_messages`; it does not export message bodies or user content):\n\n```bash\nSUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_ACCESS_TOKEN=... \\\n  node scripts/migrate-drive-media.mjs --export\n```\n\nReview the generated local manifest. It is not committed. It contains only known Storage object paths:
+Export a local manifest from the existing application records (the script reads only paths from `global_stories` and `messenger_messages`; it does not export message bodies or user content):\n\n```bash\nSUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_USER_ACCESS_TOKEN=... \
+  node scripts/migrate-drive-media.mjs --export\n```\n\nReview the generated local manifest. It is not committed. It contains only known Storage object paths:
 
 ```json
 [
@@ -54,7 +55,7 @@ node scripts/migrate-drive-media.mjs ./media-manifest.json
 Only after reviewing the paths and confirming the destination folder, run:
 
 ```bash
-SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_ACCESS_TOKEN=... \
+SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_USER_ACCESS_TOKEN=... \
   node scripts/migrate-drive-media.mjs ./media-manifest.json --execute
 ```
 
