@@ -27,6 +27,9 @@ jobs:
         run: |
           node -e "for (const file of ['app-version.json','manifest.webmanifest','capacitor.config.json','desktop/package.json']) { JSON.parse(require('fs').readFileSync(file, 'utf8')); console.log('Valid JSON:', file); }"
 
+      - name: Verify employee stories security and integration
+        run: node scripts/check-user-stories.mjs
+
       - name: Check external JavaScript syntax
         run: |
           for file in daily-reports.js monthly-stories.js global-stories.js provoda-messenger.js provoda-user-stories.js feedback.js; do
