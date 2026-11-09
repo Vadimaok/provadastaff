@@ -11,7 +11,7 @@ assert.match(sql, /revoke all on public\.provoda_drive_media from anon, authenti
 assert.match(sql, /grant all on public\.provoda_drive_media to service_role/i);
 assert.match(fn, /rpc\("is_current_admin"\)/);
 assert.match(fn, /createSignedUrl\(path, 90\)/);
-assert.match(fn, /SHA-256/);
+assert.match(fn, /SHA-256/);\nassert.match(fn, /verifiedBytes.byteLength !== bytes.byteLength/);\nassert.match(fn, /migration_status: "verified"/);\nassert.match(fn, /list-candidates/);\nassert.match(fn, /allRows\("messenger_messages"/);
 assert.match(fn, /uploadType=resumable/);
 assert.doesNotMatch(fn, /permissions\.create|anyone/);
 assert.match(fn, /MAX_BYTES = 100 \* 1024 \* 1024/);
