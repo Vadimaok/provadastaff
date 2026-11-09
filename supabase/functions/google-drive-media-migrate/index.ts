@@ -55,8 +55,10 @@ async function requireAdmin(req: Request) {
   return { user: userData.user, service };
 }
 async function listCandidates(service: ReturnType<typeof createClient>, offset: number, limit: number) {
-  const safeOffset = Math.max(0, Math.floor(offset));
-  const safeLimit = Math.min(500, Math.max(1, Math.floor(limit)));
+  const offsetNumber = Number(offset);
+  const limitNumber = Number(limit);
+  const safeOffset = Number.isFinite(offsetNumber) ? Math.max(0, Math.floor(offsetNumber)) : 0;
+  const safeLimit = Number.isFinite(limitNumber) ? Math.min(500, Math.max(1, Math.floor(limitNumber))) : 250;
   const [stories, messages] = await Promise.all([
     service.from("global_stories").select("id,storage_path,media_type,created_at").not("storage_path", "is", null).order("id").range(safeOffset, safeOffset + safeLimit - 1),
     service.from("messenger_messages").select("id,conversation_id,attachment_path,attachment_mime,created_at").not("attachment_path", "is", null).order("id").range(safeOffset, safeOffset + safeLimit - 1),
@@ -169,6 +171,13 @@ Deno.serve(async (req) => {
     if (body?.action === "list-candidates") return json({ ok: true, ...await listCandidates(service, Number(body.offset || 0), Number(body.limit || 250)) });
     if (body?.action === "create-folder") {
       const token = await getDriveToken();
+      const query = "mimeType='application/vnd.google-apps.folder' and trashed=false and appProperties has { key='provodaStaffStorage' and value='true' }";
+      const lookup = await fetch("https://www.googleapis.com/drive/v3/files?" + new URLSearchParams({
+        q: query, fields: "files(id,name)", pageSize: "10", supportsAllDrives: "true", includeItemsFromAllDrives: "true",
+      }), { headers: { authorization: "Bearer " + token } });
+      const lookupData = await lookup.json().catch(() => ({}));
+      if (!lookup.ok) throw new Error("Google Drive folder lookup failed (" + lookup.status + ").");
+      if (lookupData.files?.length) return json({ ok: true, folder: lookupData.files[0], alreadyExists: true });
       const response = await fetch("https://www.googleapis.com/drive/v3/files?supportsAllDrives=true", {
         method: "POST",
         headers: { authorization: "Bearer " + token, "content-type": "application/json; charset=UTF-8" },
@@ -180,7 +189,7 @@ Deno.serve(async (req) => {
       });
       const folder = await response.json().catch(() => ({}));
       if (!response.ok || !folder.id) throw new Error("Google Drive folder creation failed (" + response.status + ").");
-      return json({ ok: true, folder: { id: folder.id, name: folder.name } });
+      return json({ ok: true, folder: { id: folder.id, name: folder.name }, alreadyExists: false });
     }
     if (body?.action === "health") {
       const folderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID");
