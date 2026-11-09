@@ -13,11 +13,11 @@ This PR introduces a **copy-only migration foundation**. It does not change how 
 
 ## Google account setup
 
-Use a dedicated Google account for Provoda Staff with enough Drive storage. Create a Google Cloud project, enable the Google Drive API, configure an OAuth consent screen, and create an OAuth client. Obtain an offline refresh token with the `https://www.googleapis.com/auth/drive` scope. Use a dedicated account because this scope grants the integration broad access to that account's Drive. Keep the client secret and refresh token private.
+Use a dedicated Google account for Provoda Staff with enough Drive storage. Create a Google Cloud project, enable the Google Drive API, configure an OAuth consent screen, and create an OAuth client. Obtain an offline refresh token with the narrow `https://www.googleapis.com/auth/drive.file` scope (`access_type=offline`, `prompt=consent`). The Edge Function creates the private destination folder itself, so the app only needs access to files it creates rather than the whole Drive. Keep the client secret and refresh token private.
 
 A service account alone is **not** a valid owner for files in a normal personal "My Drive": service accounts have no personal Drive storage quota. For a Workspace Shared Drive, service-account access is possible when the account is a member and the API calls support shared drives. This implementation uses OAuth refresh-token credentials so it also works with a dedicated consumer Google account.
 
-Create a private destination folder in that account and copy its folder ID. Do not share the folder publicly or with all employees.
+After deploying the function, call `{ "action": "create-folder" }` once with an admin session, then save the returned folder ID as `GOOGLE_DRIVE_FOLDER_ID`. The folder is created by the OAuth app and is accessible under the `drive.file` scope. Do not share it publicly or with all employees.
 
 ## Supabase setup (manual approval required)
 
@@ -30,8 +30,9 @@ Create a private destination folder in that account and copy its folder ID. Do n
    - `GOOGLE_DRIVE_FOLDER_ID`
    - Existing Supabase function environment: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
    - Optional `APP_ORIGIN` (exact production app origin)
-4. The signed-in caller must be an administrator according to the existing `is_current_admin()` function. The Edge Function does not accept a client-supplied owner ID.
-5. Call the function with `{ "action": "health" }` using an admin session to verify OAuth and destination-folder access.
+4. Set the Google OAuth consent screen to Production for a long-running integration, or use an eligible internal Workspace app. Google documents that external apps left in Testing issue refresh tokens that expire after 7 days for Drive scopes. Refresh tokens can also be revoked or expire for other policy reasons; the function surfaces reauthorization failures.
+5. The signed-in caller must be an administrator according to the existing `is_current_admin()` function. The Edge Function does not accept a client-supplied owner ID.
+6. Call the function with `{ "action": "create-folder" }` once, save the returned folder ID in the `GOOGLE_DRIVE_FOLDER_ID` secret, then call `{ "action": "health" }` to verify access.
 
 ## Gradual copy process
 
