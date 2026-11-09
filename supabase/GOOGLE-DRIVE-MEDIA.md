@@ -36,30 +36,29 @@ After deploying the function, call `{ "action": "create-folder" }` once with an 
 
 ## Gradual copy process
 
-Export a local manifest from the existing application records (the script reads only paths from `global_stories` and `messenger_messages`; it does not export message bodies or user content):\n\n```bash\nSUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_USER_ACCESS_TOKEN=... \
-  node scripts/migrate-drive-media.mjs --export\n```\n\nReview the generated local manifest. It is not committed. It contains only known Storage object paths:
+Export a local manifest from the existing application records. The script reads only media paths and minimal identifiers from the global_stories and messenger_messages tables; it does not export message bodies or user content.
 
-```json
-[
-  { "bucket": "provoda-global-stories", "path": "USER_UUID/OBJECT.jpg" },
-  { "bucket": "provoda-messenger", "path": "CONVERSATION_UUID/USER_UUID/OBJECT.jpg" }
-]
-```
+~~~bash
+SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_USER_ACCESS_TOKEN=... \
+  node scripts/migrate-drive-media.mjs --export
+~~~
+
+Review the generated local manifest. It is not committed and contains only referenced Storage object paths.
 
 Run a dry run first:
 
-```bash
+~~~bash
 node scripts/migrate-drive-media.mjs ./media-manifest.json
-```
+~~~
 
 Only after reviewing the paths and confirming the destination folder, run:
 
-```bash
+~~~bash
 SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_USER_ACCESS_TOKEN=... \
   node scripts/migrate-drive-media.mjs ./media-manifest.json --execute
-```
+~~~
 
-The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads. Failed entries without a Drive file ID can be retried; entries with a Drive file ID are held for manual reconciliation to prevent duplicates. The export paginates the live `messenger_messages` and `global_stories` tables in bounded batches and currently covers messenger attachments and global stories. User stories from the separate unmerged stories PR and product catalog external image links are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function downloads the Drive copy again and compares both byte size and SHA-256 before marking a record `verified`. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
+The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads. Failed entries without a Drive file ID can be retried; entries with a Drive file ID are held for manual reconciliation to prevent duplicates. The export paginates the live messenger_messages and global_stories tables in bounded batches and covers messenger attachments and global stories. User stories from the separate unmerged stories PR, product catalog external image links, and orphaned Storage objects not referenced by those tables are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function downloads the Drive copy again and compares both byte size and SHA-256 before marking a record verified. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
 
 ## What this PR intentionally does not do
 
