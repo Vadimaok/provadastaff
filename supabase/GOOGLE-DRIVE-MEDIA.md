@@ -57,7 +57,7 @@ SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_ACCESS_TOKEN=... \
   node scripts/migrate-drive-media.mjs ./media-manifest.json --execute
 ```
 
-The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads; failed reservations can be retried. The export currently covers messenger attachments and global stories. User stories from the separate unmerged stories PR and product catalog external image links are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function verifies bytes with SHA-256 and records the result. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
+The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads. Failed entries without a Drive file ID can be retried; entries with a Drive file ID are held for manual reconciliation to prevent duplicates. The export paginates the live `messenger_messages` and `global_stories` tables and currently covers messenger attachments and global stories. User stories from the separate unmerged stories PR and product catalog external image links are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function downloads the Drive copy again and compares both byte size and SHA-256 before marking a record `verified`. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
 
 ## What this PR intentionally does not do
 
