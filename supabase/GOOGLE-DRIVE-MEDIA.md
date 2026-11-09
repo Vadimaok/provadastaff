@@ -13,7 +13,7 @@ This PR introduces a **copy-only migration foundation**. It does not change how 
 
 ## Google account setup
 
-Use a dedicated Google account for Provoda Staff with enough Drive storage. Create a Google Cloud project, enable the Google Drive API, configure an OAuth consent screen, and create an OAuth client. Obtain an offline refresh token with the narrow `https://www.googleapis.com/auth/drive.file` scope. Keep the client secret and refresh token private.
+Use a dedicated Google account for Provoda Staff with enough Drive storage. Create a Google Cloud project, enable the Google Drive API, configure an OAuth consent screen, and create an OAuth client. Obtain an offline refresh token with the `https://www.googleapis.com/auth/drive` scope. Use a dedicated account because this scope grants the integration broad access to that account's Drive. Keep the client secret and refresh token private.
 
 A service account alone is **not** a valid owner for files in a normal personal "My Drive": service accounts have no personal Drive storage quota. For a Workspace Shared Drive, service-account access is possible when the account is a member and the API calls support shared drives. This implementation uses OAuth refresh-token credentials so it also works with a dedicated consumer Google account.
 
@@ -35,7 +35,7 @@ Create a private destination folder in that account and copy its folder ID. Do n
 
 ## Gradual copy process
 
-Create a local JSON manifest (do not commit it) containing only known Storage object paths:
+Export a local manifest from the existing application records (the script reads only paths from `global_stories` and `messenger_messages`; it does not export message bodies or user content):\n\n```bash\nSUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_ACCESS_TOKEN=... \\\n  node scripts/migrate-drive-media.mjs --export\n```\n\nReview the generated local manifest. It is not committed. It contains only known Storage object paths:
 
 ```json
 [
@@ -57,7 +57,7 @@ SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_ACCESS_TOKEN=... \
   node scripts/migrate-drive-media.mjs ./media-manifest.json --execute
 ```
 
-The script processes files sequentially. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function verifies bytes with SHA-256 and records the result. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
+The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads; failed reservations can be retried. The export currently covers messenger attachments and global stories. User stories from the separate unmerged stories PR and product catalog external image links are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function verifies bytes with SHA-256 and records the result. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
 
 ## What this PR intentionally does not do
 
