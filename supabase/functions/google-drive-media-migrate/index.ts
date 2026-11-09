@@ -55,15 +55,23 @@ async function requireAdmin(req: Request) {
   return { user: userData.user, service };
 }
 async function listCandidates(service: ReturnType<typeof createClient>) {
+  async function allRows(table: string, columns: string, pathColumn: string) {
+    const rows: any[] = [];
+    for (let offset = 0; offset < 50000; offset += 500) {
+      const { data, error } = await service.from(table).select(columns).not(pathColumn, "is", null).order("id").range(offset, offset + 499);
+      if (error) throw new Error("Could not list " + table + ": " + error.message);
+      rows.push(...(data || []));
+      if ((data || []).length < 500) return rows;
+    }
+    throw new Error("Media inventory exceeded 50,000 rows; export in smaller reviewed batches.");
+  }
   const [stories, messages] = await Promise.all([
-    service.from("global_stories").select("id,storage_path,media_type,created_at").not("storage_path", "is", null).limit(5000),
-    service.from("messenger_messages").select("id,conversation_id,attachment_path,attachment_mime,created_at").not("attachment_path", "is", null).limit(5000),
+    allRows("global_stories", "id,storage_path,media_type,created_at", "storage_path"),
+    allRows("messenger_messages", "id,conversation_id,attachment_path,attachment_mime,created_at", "attachment_path"),
   ]);
-  if (stories.error) throw new Error("Could not list global story media: " + stories.error.message);
-  if (messages.error) throw new Error("Could not list messenger media: " + messages.error.message);
   const candidates = [
-    ...(stories.data || []).map((row: any) => ({ bucket: "provoda-global-stories", path: row.storage_path, recordType: "global_story", recordId: row.id, mimeType: row.media_type, createdAt: row.created_at })),
-    ...(messages.data || []).map((row: any) => ({ bucket: "provoda-messenger", path: row.attachment_path, recordType: "messenger_attachment", recordId: row.id, conversationId: row.conversation_id, mimeType: row.attachment_mime, createdAt: row.created_at })),
+    ...stories.map((row: any) => ({ bucket: "provoda-global-stories", path: row.storage_path, recordType: "global_story", recordId: row.id, mimeType: row.media_type, createdAt: row.created_at })),
+    ...messages.map((row: any) => ({ bucket: "provoda-messenger", path: row.attachment_path, recordType: "messenger_attachment", recordId: row.id, conversationId: row.conversation_id, mimeType: row.attachment_mime, createdAt: row.created_at })),
   ];
   const unique = new Map<string, any>();
   for (const item of candidates) if (item.path) unique.set(item.bucket + "\n" + item.path, item);
@@ -81,6 +89,7 @@ async function migrateOne(service: ReturnType<typeof createClient>, userId: stri
   if (priorError) throw priorError;
   if (prior?.migration_status === "copied" || prior?.migration_status === "verified") return { alreadyCopied: true, ...prior };
   if (prior?.migration_status === "pending") throw new Error("This file already has a pending migration. Check the Drive folder and registry before retrying.");
+  if (prior?.migration_status === "failed" && prior.drive_file_id) throw new Error("A Drive file already exists for this failed migration. Reconcile it before retrying to avoid duplicate files.");
   if (prior) {
     const { error } = await service.from("provoda_drive_media").update({ migration_status: "pending", created_by: userId }).eq("id", prior.id);
     if (error) throw error;
@@ -128,14 +137,30 @@ async function migrateOne(service: ReturnType<typeof createClient>, userId: stri
     const driveData = await uploaded.json().catch(() => ({}));
     if (!uploaded.ok || !driveData.id) throw new Error("Google Drive upload failed (" + uploaded.status + ").");
     uploadedDriveId = String(driveData.id);
+
+    // Verify the stored bytes, not just the Drive upload response metadata.
+    const verifyResponse = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(uploadedDriveId) + "?alt=media&supportsAllDrives=true", {
+      headers: { authorization: "Bearer " + token },
+    });
+    if (!verifyResponse.ok) throw new Error("Google Drive verification download failed (" + verifyResponse.status + ").");
+    const verifiedBytes = new Uint8Array(await verifyResponse.arrayBuffer());
+    const verifiedDigest = await crypto.subtle.digest("SHA-256", verifiedBytes);
+    const verifiedSha256 = Array.from(new Uint8Array(verifiedDigest), (b) => b.toString(16).padStart(2, "0")).join("");
+    if (verifiedBytes.byteLength !== bytes.byteLength || verifiedSha256 !== sha256) {
+      throw new Error("Drive copy verification failed: byte size or SHA-256 does not match. Drive file ID: " + uploadedDriveId);
+    }
     const { data: saved, error: saveError } = await service.from("provoda_drive_media").update({
       drive_file_id: uploadedDriveId, drive_file_name: fileName, mime_type: mime,
-      byte_size: bytes.byteLength, sha256, migration_status: "copied",
+      byte_size: bytes.byteLength, sha256, migration_status: "verified", verified_at: new Date().toISOString(),
     }).eq("id", rowId).select("id,drive_file_id,drive_file_name,mime_type,byte_size,sha256,migration_status").single();
-    if (saveError) throw new Error("Drive copy completed but registry update failed. Drive file ID for manual reconciliation: " + uploadedDriveId);
+    if (saveError) throw new Error("Drive copy verified but registry update failed. Drive file ID for manual reconciliation: " + uploadedDriveId);
     return { alreadyCopied: false, ...saved };
   } catch (error) {
-    await service.from("provoda_drive_media").update({ migration_status: "failed" }).eq("id", rowId);
+    if (uploadedDriveId) {
+      await service.from("provoda_drive_media").update({ drive_file_id: uploadedDriveId, migration_status: "failed" }).eq("id", rowId);
+    } else {
+      await service.from("provoda_drive_media").update({ migration_status: "failed" }).eq("id", rowId);
+    }
     throw error;
   }
 }
@@ -148,8 +173,10 @@ Deno.serve(async (req) => {
     const body = await req.json();
     if (body?.action === "list-candidates") return json({ ok: true, candidates: await listCandidates(service) });
     if (body?.action === "health") {
+      const folderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID");
+      if (!folderId) throw new Error("GOOGLE_DRIVE_FOLDER_ID is not configured.");
       const token = await getDriveToken();
-      const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") || "root") + "?fields=id,name,mimeType&supportsAllDrives=true", {
+      const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(folderId) + "?fields=id,name,mimeType&supportsAllDrives=true", {
         headers: { authorization: "Bearer " + token },
       });
       if (!response.ok) throw new Error("Google Drive folder check failed (" + response.status + ").");
