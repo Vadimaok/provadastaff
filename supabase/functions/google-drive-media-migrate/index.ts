@@ -54,28 +54,23 @@ async function requireAdmin(req: Request) {
   const service = createClient(url, serviceKey, { auth: { persistSession: false } });
   return { user: userData.user, service };
 }
-async function listCandidates(service: ReturnType<typeof createClient>) {
-  async function allRows(table: string, columns: string, pathColumn: string) {
-    const rows: any[] = [];
-    for (let offset = 0; offset < 50000; offset += 500) {
-      const { data, error } = await service.from(table).select(columns).not(pathColumn, "is", null).order("id").range(offset, offset + 499);
-      if (error) throw new Error("Could not list " + table + ": " + error.message);
-      rows.push(...(data || []));
-      if ((data || []).length < 500) return rows;
-    }
-    throw new Error("Media inventory exceeded 50,000 rows; export in smaller reviewed batches.");
-  }
+async function listCandidates(service: ReturnType<typeof createClient>, offset: number, limit: number) {
+  const safeOffset = Math.max(0, Math.floor(offset));
+  const safeLimit = Math.min(500, Math.max(1, Math.floor(limit)));
   const [stories, messages] = await Promise.all([
-    allRows("global_stories", "id,storage_path,media_type,created_at", "storage_path"),
-    allRows("messenger_messages", "id,conversation_id,attachment_path,attachment_mime,created_at", "attachment_path"),
+    service.from("global_stories").select("id,storage_path,media_type,created_at").not("storage_path", "is", null).order("id").range(safeOffset, safeOffset + safeLimit - 1),
+    service.from("messenger_messages").select("id,conversation_id,attachment_path,attachment_mime,created_at").not("attachment_path", "is", null).order("id").range(safeOffset, safeOffset + safeLimit - 1),
   ]);
+  if (stories.error) throw new Error("Could not list global story media: " + stories.error.message);
+  if (messages.error) throw new Error("Could not list messenger media: " + messages.error.message);
   const candidates = [
-    ...stories.map((row: any) => ({ bucket: "provoda-global-stories", path: row.storage_path, recordType: "global_story", recordId: row.id, mimeType: row.media_type, createdAt: row.created_at })),
-    ...messages.map((row: any) => ({ bucket: "provoda-messenger", path: row.attachment_path, recordType: "messenger_attachment", recordId: row.id, conversationId: row.conversation_id, mimeType: row.attachment_mime, createdAt: row.created_at })),
+    ...(stories.data || []).map((row: any) => ({ bucket: "provoda-global-stories", path: row.storage_path, recordType: "global_story", recordId: row.id, mimeType: row.media_type, createdAt: row.created_at })),
+    ...(messages.data || []).map((row: any) => ({ bucket: "provoda-messenger", path: row.attachment_path, recordType: "messenger_attachment", recordId: row.id, conversationId: row.conversation_id, mimeType: row.attachment_mime, createdAt: row.created_at })),
   ];
   const unique = new Map<string, any>();
   for (const item of candidates) if (item.path) unique.set(item.bucket + "\n" + item.path, item);
-  return [...unique.values()];
+  const hasMore = (stories.data || []).length === safeLimit || (messages.data || []).length === safeLimit;
+  return { candidates: [...unique.values()], nextOffset: hasMore ? safeOffset + safeLimit : null };
 }
 async function migrateOne(service: ReturnType<typeof createClient>, userId: string, bucket: string, path: string) {
   if (!ALLOWED_BUCKETS.has(bucket)) throw new Error("Unsupported source bucket.");
@@ -109,7 +104,7 @@ async function migrateOne(service: ReturnType<typeof createClient>, userId: stri
   try {
     const { data: signed, error: signedError } = await service.storage.from(bucket).createSignedUrl(path, 90);
     if (signedError || !signed?.signedUrl) throw new Error("Source object is unavailable in Supabase Storage.");
-    const source = await fetch(signed.signedUrl, { redirect: "error" });
+    const source = await fetch(signed.signedUrl);
     if (!source.ok) throw new Error("Could not read source object (" + source.status + ").");
     const mime = (source.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
     const declaredLength = Number(source.headers.get("content-length") || 0);
@@ -171,7 +166,7 @@ Deno.serve(async (req) => {
   try {
     const { user, service } = await requireAdmin(req);
     const body = await req.json();
-    if (body?.action === "list-candidates") return json({ ok: true, candidates: await listCandidates(service) });
+    if (body?.action === "list-candidates") return json({ ok: true, ...await listCandidates(service, Number(body.offset || 0), Number(body.limit || 250)) });
     if (body?.action === "health") {
       const folderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID");
       if (!folderId) throw new Error("GOOGLE_DRIVE_FOLDER_ID is not configured.");
