@@ -2403,7 +2403,7 @@ function stopCloudLiveSync(){
   cloudSyncChannel=null;
 }
 async function pollRejectedReports(){
-  if(!cloudClient||!cloudUser)return;
+  if(!cloudClient||!cloudUser||currentUserRole!=='employee_knz'||roleFeatureFlags.employee_knz===false)return;
   try{
     const {data,error}=await cloudClient.rpc('user_list_my_knz_tasks');
     if(error)throw error;
@@ -2430,8 +2430,10 @@ async function pollRejectedReports(){
 }
 function startRejectedReportPolling(){
   if(rejectedPollTimer)clearInterval(rejectedPollTimer);
+  rejectedPollTimer=null;
   rejectedPollReady=false;
   lastRejectedTaskIds=new Set();
+  if(!cloudClient||!cloudUser||currentUserRole!=='employee_knz'||roleFeatureFlags.employee_knz===false)return;
   pollRejectedReports();
   rejectedPollTimer=setInterval(pollRejectedReports,5000);
 }
@@ -2552,7 +2554,6 @@ async function activateCloudUser(user,forceReload=false){
     void refreshAdminAccess();
     void refreshCurrentUserRole();
     startTaskNotificationPolling();
-    startRejectedReportPolling();
     startDeviceSession();
 
     try{
@@ -3665,14 +3666,26 @@ async function openRequestedTeamView(){
   }
 }
 async function refreshCurrentUserRole(){
-  if(!cloudClient||!cloudUser){currentUserRole='employee';currentUserKuznetsova=false;applyRoleUI();return;}
+  if(!cloudClient||!cloudUser){stopRejectedReportPolling();currentUserRole='employee';currentUserKuznetsova=false;applyRoleUI();return;}
   try{const {data,error}=await cloudClient.rpc('user_get_my_role');if(error)throw error;currentUserRole=['employee','employee_knz','shift_senior'].includes(data)?data:'employee';}
   catch(e){console.info('Role could not be loaded:',e?.message||e);}
   try{const {data,error}=await cloudClient.rpc('user_get_my_shift_role');if(error)throw error;currentUserShiftRole=data||null;}catch{currentUserShiftRole=null;}
   try{const {data,error}=await cloudClient.rpc('is_current_kuznetsova');if(error)throw error;currentUserKuznetsova=!!data;}catch{currentUserKuznetsova=false;}
   applyRoleUI();
-  if(currentUserRole==='employee_knz')refreshKnzRejectedBanner();
+  if(currentUserRole==='employee_knz')void refreshKnzTaskPollingAccess();else stopRejectedReportPolling();
   openRequestedTeamView();
+}
+async function refreshKnzTaskPollingAccess(){
+  stopRejectedReportPolling();
+  if(!cloudClient||!cloudUser||currentUserRole!=='employee_knz')return;
+  const userId=cloudUser.id;
+  try{
+    const {data,error}=await cloudClient.rpc('user_get_role_features');
+    if(error)throw error;
+    if(!cloudUser||cloudUser.id!==userId||currentUserRole!=='employee_knz')return;
+    roleFeatureFlags={...roleFeatureFlags,employee_knz:data?.employee_knz!==false};
+    if(roleFeatureFlags.employee_knz)startRejectedReportPolling();
+  }catch(error){console.info('KNZ task polling paused until access can be verified:',error?.message||error);}
 }
 async function refreshKnzRejectedBanner(){
   const banner=document.querySelector('#knzRejectedBanner');if(!banner||!cloudClient||!cloudUser||currentUserRole!=='employee_knz')return;
