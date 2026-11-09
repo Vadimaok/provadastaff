@@ -2,7 +2,7 @@ name: Validate Provoda Staff
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/guard-knz-task-poller]
   pull_request:
     branches: [main]
   workflow_dispatch:
