@@ -54,55 +54,90 @@ async function requireAdmin(req: Request) {
   const service = createClient(url, serviceKey, { auth: { persistSession: false } });
   return { user: userData.user, service };
 }
+async function listCandidates(service: ReturnType<typeof createClient>) {
+  const [stories, messages] = await Promise.all([
+    service.from("global_stories").select("id,storage_path,media_type,created_at").not("storage_path", "is", null).limit(5000),
+    service.from("messenger_messages").select("id,conversation_id,attachment_path,attachment_mime,created_at").not("attachment_path", "is", null).limit(5000),
+  ]);
+  if (stories.error) throw new Error("Could not list global story media: " + stories.error.message);
+  if (messages.error) throw new Error("Could not list messenger media: " + messages.error.message);
+  const candidates = [
+    ...(stories.data || []).map((row: any) => ({ bucket: "provoda-global-stories", path: row.storage_path, recordType: "global_story", recordId: row.id, mimeType: row.media_type, createdAt: row.created_at })),
+    ...(messages.data || []).map((row: any) => ({ bucket: "provoda-messenger", path: row.attachment_path, recordType: "messenger_attachment", recordId: row.id, conversationId: row.conversation_id, mimeType: row.attachment_mime, createdAt: row.created_at })),
+  ];
+  const unique = new Map<string, any>();
+  for (const item of candidates) if (item.path) unique.set(item.bucket + "\n" + item.path, item);
+  return [...unique.values()];
+}
 async function migrateOne(service: ReturnType<typeof createClient>, userId: string, bucket: string, path: string) {
   if (!ALLOWED_BUCKETS.has(bucket)) throw new Error("Unsupported source bucket.");
   if (!path || path.length > 1024 || path.startsWith("/") || path.split("/").some((part) => part === ".." || !part)) {
     throw new Error("Invalid source object path.");
   }
+  let rowId: string;
   const { data: prior, error: priorError } = await service.from("provoda_drive_media")
     .select("id,drive_file_id,drive_file_name,mime_type,byte_size,sha256,migration_status")
     .eq("source_bucket", bucket).eq("source_path", path).maybeSingle();
   if (priorError) throw priorError;
-  if (prior) return { alreadyCopied: true, ...prior };
-
-  const { data: signed, error: signedError } = await service.storage.from(bucket).createSignedUrl(path, 90);
-  if (signedError || !signed?.signedUrl) throw new Error("Source object is unavailable in Supabase Storage.");
-  const source = await fetch(signed.signedUrl, { redirect: "error" });
-  if (!source.ok) throw new Error("Could not read source object (" + source.status + ").");
-  const mime = (source.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-  const declaredLength = Number(source.headers.get("content-length") || 0);
-  if (!ALLOWED_MIME.has(mime)) throw new Error("Unsupported source MIME type: " + (mime || "unknown"));
-  if (declaredLength > MAX_BYTES) throw new Error("Source file exceeds the 100 MB migration limit.");
-  const bytes = new Uint8Array(await source.arrayBuffer());
-  if (!bytes.byteLength || bytes.byteLength > MAX_BYTES) throw new Error("Source file is empty or exceeds the 100 MB migration limit.");
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  const sha256 = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
-  const fileName = safeName(path, mime);
-  const token = await getDriveToken();
-  const folderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID");
-  if (!folderId) throw new Error("GOOGLE_DRIVE_FOLDER_ID is not configured.");
-
-  const init = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true", {
-    method: "POST",
-    headers: { authorization: "Bearer " + token, "content-type": "application/json; charset=UTF-8",
-      "x-upload-content-type": mime, "x-upload-content-length": String(bytes.byteLength) },
-    body: JSON.stringify({ name: fileName, mimeType: mime, parents: [folderId], appProperties: { provodaSourceBucket: bucket, provodaSourceSha256: sha256 } }),
-  });
-  if (!init.ok) throw new Error("Google Drive upload session could not be created (" + init.status + ").");
-  const sessionUrl = init.headers.get("location");
-  if (!sessionUrl || !sessionUrl.startsWith("https://www.googleapis.com/upload/drive/")) throw new Error("Google Drive returned an invalid upload session.");
-  const uploaded = await fetch(sessionUrl, { method: "PUT", headers: { "content-type": mime, "content-length": String(bytes.byteLength) }, body: bytes });
-  const driveData = await uploaded.json().catch(() => ({}));
-  if (!uploaded.ok || !driveData.id) throw new Error("Google Drive upload failed (" + uploaded.status + ").");
-  const { data: saved, error: saveError } = await service.from("provoda_drive_media").insert({
-    source_bucket: bucket, source_path: path, drive_file_id: driveData.id, drive_file_name: fileName,
-    mime_type: mime, byte_size: bytes.byteLength, sha256, migration_status: "copied", created_by: userId,
-  }).select("id,drive_file_id,drive_file_name,mime_type,byte_size,sha256,migration_status").single();
-  if (saveError) {
-    // Do not delete the Drive copy automatically: retain it for reconciliation after an uncertain DB write.
-    throw new Error("Drive copy completed but migration registry write failed. Reconcile file ID " + driveData.id + " manually.");
+  if (prior?.migration_status === "copied" || prior?.migration_status === "verified") return { alreadyCopied: true, ...prior };
+  if (prior?.migration_status === "pending") throw new Error("This file already has a pending migration. Check the Drive folder and registry before retrying.");
+  if (prior) {
+    const { error } = await service.from("provoda_drive_media").update({ migration_status: "pending", created_by: userId }).eq("id", prior.id);
+    if (error) throw error;
+    rowId = prior.id;
+  } else {
+    const { data: reservation, error } = await service.from("provoda_drive_media")
+      .insert({ source_bucket: bucket, source_path: path, created_by: userId, migration_status: "pending" })
+      .select("id").single();
+    if (error) {
+      if (error.code === "23505") throw new Error("A migration for this source path was started concurrently. Refresh the registry before retrying.");
+      throw error;
+    }
+    rowId = reservation.id;
   }
-  return { alreadyCopied: false, ...saved };
+
+  let uploadedDriveId: string | null = null;
+  try {
+    const { data: signed, error: signedError } = await service.storage.from(bucket).createSignedUrl(path, 90);
+    if (signedError || !signed?.signedUrl) throw new Error("Source object is unavailable in Supabase Storage.");
+    const source = await fetch(signed.signedUrl, { redirect: "error" });
+    if (!source.ok) throw new Error("Could not read source object (" + source.status + ").");
+    const mime = (source.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    const declaredLength = Number(source.headers.get("content-length") || 0);
+    if (!ALLOWED_MIME.has(mime)) throw new Error("Unsupported source MIME type: " + (mime || "unknown"));
+    if (declaredLength > MAX_BYTES) throw new Error("Source file exceeds the 100 MB migration limit.");
+    const bytes = new Uint8Array(await source.arrayBuffer());
+    if (!bytes.byteLength || bytes.byteLength > MAX_BYTES) throw new Error("Source file is empty or exceeds the 100 MB migration limit.");
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    const sha256 = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+    const fileName = safeName(path, mime);
+    const token = await getDriveToken();
+    const folderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID");
+    if (!folderId) throw new Error("GOOGLE_DRIVE_FOLDER_ID is not configured.");
+
+    const init = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true", {
+      method: "POST",
+      headers: { authorization: "Bearer " + token, "content-type": "application/json; charset=UTF-8",
+        "x-upload-content-type": mime, "x-upload-content-length": String(bytes.byteLength) },
+      body: JSON.stringify({ name: fileName, mimeType: mime, parents: [folderId], appProperties: { provodaSourceBucket: bucket, provodaSourceSha256: sha256 } }),
+    });
+    if (!init.ok) throw new Error("Google Drive upload session could not be created (" + init.status + ").");
+    const sessionUrl = init.headers.get("location");
+    if (!sessionUrl || !sessionUrl.startsWith("https://www.googleapis.com/upload/drive/")) throw new Error("Google Drive returned an invalid upload session.");
+    const uploaded = await fetch(sessionUrl, { method: "PUT", headers: { "content-type": mime, "content-length": String(bytes.byteLength) }, body: bytes });
+    const driveData = await uploaded.json().catch(() => ({}));
+    if (!uploaded.ok || !driveData.id) throw new Error("Google Drive upload failed (" + uploaded.status + ").");
+    uploadedDriveId = String(driveData.id);
+    const { data: saved, error: saveError } = await service.from("provoda_drive_media").update({
+      drive_file_id: uploadedDriveId, drive_file_name: fileName, mime_type: mime,
+      byte_size: bytes.byteLength, sha256, migration_status: "copied",
+    }).eq("id", rowId).select("id,drive_file_id,drive_file_name,mime_type,byte_size,sha256,migration_status").single();
+    if (saveError) throw new Error("Drive copy completed but registry update failed. Drive file ID for manual reconciliation: " + uploadedDriveId);
+    return { alreadyCopied: false, ...saved };
+  } catch (error) {
+    await service.from("provoda_drive_media").update({ migration_status: "failed" }).eq("id", rowId);
+    throw error;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -111,6 +146,7 @@ Deno.serve(async (req) => {
   try {
     const { user, service } = await requireAdmin(req);
     const body = await req.json();
+    if (body?.action === "list-candidates") return json({ ok: true, candidates: await listCandidates(service) });
     if (body?.action === "health") {
       const token = await getDriveToken();
       const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") || "root") + "?fields=id,name,mimeType&supportsAllDrives=true", {
