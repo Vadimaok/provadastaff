@@ -167,6 +167,21 @@ Deno.serve(async (req) => {
     const { user, service } = await requireAdmin(req);
     const body = await req.json();
     if (body?.action === "list-candidates") return json({ ok: true, ...await listCandidates(service, Number(body.offset || 0), Number(body.limit || 250)) });
+    if (body?.action === "create-folder") {
+      const token = await getDriveToken();
+      const response = await fetch("https://www.googleapis.com/drive/v3/files?supportsAllDrives=true", {
+        method: "POST",
+        headers: { authorization: "Bearer " + token, "content-type": "application/json; charset=UTF-8" },
+        body: JSON.stringify({
+          name: "Provoda Staff Media",
+          mimeType: "application/vnd.google-apps.folder",
+          appProperties: { provodaStaffStorage: "true" },
+        }),
+      });
+      const folder = await response.json().catch(() => ({}));
+      if (!response.ok || !folder.id) throw new Error("Google Drive folder creation failed (" + response.status + ").");
+      return json({ ok: true, folder: { id: folder.id, name: folder.name } });
+    }
     if (body?.action === "health") {
       const folderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID");
       if (!folderId) throw new Error("GOOGLE_DRIVE_FOLDER_ID is not configured.");
