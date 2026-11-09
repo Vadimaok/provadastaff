@@ -24,8 +24,17 @@ async function callAdmin(payload) {
 }
 
 if (exportOnly) {
-  const result = await callAdmin({ action: "list-candidates" });
-  const manifest = (result.candidates || []).map(({ bucket, path }) => ({ bucket, path }));
+  const manifestMap = new Map();
+  let offset = 0;
+  for (;;) {
+    const page = await callAdmin({ action: "list-candidates", offset, limit: 250 });
+    for (const item of page.candidates || []) {
+      manifestMap.set(item.bucket + String.fromCharCode(10) + item.path, { bucket: item.bucket, path: item.path });
+    }
+    if (page.nextOffset === null || page.nextOffset === undefined) break;
+    offset = page.nextOffset;
+  }
+  const manifest = [...manifestMap.values()];
   await writeFile(manifestArg, JSON.stringify(manifest, null, 2) + "\n", { flag: "wx" });
   console.log("Exported", manifest.length, "referenced media objects to", manifestArg);
   console.log("No files were copied. Review this manifest before running with --execute.");
