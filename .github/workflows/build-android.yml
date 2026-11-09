@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir -p www
           cp index.html www/index.html
-          cp supabase-config.js daily-reports.js monthly-stories.js provoda-messenger.js global-stories.js feedback.js provoda-logo.svg manifest.webmanifest app-version.json www/
+          cp supabase-config.js daily-reports.js monthly-stories.js provoda-messenger.js provoda-user-stories.js global-stories.js feedback.js provoda-logo.svg manifest.webmanifest app-version.json www/
           echo "Bundled web assets:"
           ls -lh www
 
