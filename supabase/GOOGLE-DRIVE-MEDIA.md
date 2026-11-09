@@ -57,7 +57,7 @@ SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_ACCESS_TOKEN=... \
   node scripts/migrate-drive-media.mjs ./media-manifest.json --execute
 ```
 
-The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads. Failed entries without a Drive file ID can be retried; entries with a Drive file ID are held for manual reconciliation to prevent duplicates. The export paginates the live `messenger_messages` and `global_stories` tables and currently covers messenger attachments and global stories. User stories from the separate unmerged stories PR and product catalog external image links are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function downloads the Drive copy again and compares both byte size and SHA-256 before marking a record `verified`. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
+The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads. Failed entries without a Drive file ID can be retried; entries with a Drive file ID are held for manual reconciliation to prevent duplicates. The export paginates the live `messenger_messages` and `global_stories` tables in bounded batches and currently covers messenger attachments and global stories. User stories from the separate unmerged stories PR and product catalog external image links are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function downloads the Drive copy again and compares both byte size and SHA-256 before marking a record `verified`. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
 
 ## What this PR intentionally does not do
 
@@ -65,7 +65,7 @@ The script processes files sequentially. The registry reserves each source path 
 - Does not replace existing Supabase Storage uploads or signed-URL reads.
 - Does not rewrite `global_stories.storage_path`, messenger attachment paths, or any other application data.
 - Does not delete old Supabase files.
-- Does not claim a copy is verified merely because upload succeeded; `copied` is distinct from a future `verified` state.
+- A file is marked `verified` only after the Drive copy is downloaded again and its byte size and SHA-256 match the source; failed verification keeps the source untouched.
 - Does not migrate product photos or arbitrary external links.
 
 A follow-up cutover PR must add a server-side media delivery proxy that checks the actual message/story authorization before streaming private Drive content (including HTTP Range for video), then update each app surface to use provider-neutral media IDs. Only after real-device tests and byte-for-byte verification should a separate, explicitly approved cleanup process consider deleting legacy objects.
