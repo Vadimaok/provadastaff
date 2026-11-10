@@ -8,7 +8,7 @@ This PR introduces a **copy-only migration foundation**. It does not change how 
 - Google Drive copies are private; the migration function does not create public links or permissions.
 - The source objects and all application rows remain untouched.
 - A registry stores the source bucket/path, Drive file ID, size, MIME type and SHA-256.
-- Re-running the same source path is idempotent: an existing registry entry is returned instead of uploading a second copy.
+- Re-running a verified source path is idempotent: a verified registry entry is returned instead of uploading a second copy. Legacy `copied` entries are not treated as verified and require manual reconciliation.
 - No automatic source deletion, URL rewrite, or production schema change occurs until the SQL and Edge Function are manually deployed.
 
 ## Google account setup
@@ -58,7 +58,7 @@ SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_USER_ACCESS_TOKEN=... \
   node scripts/migrate-drive-media.mjs ./media-manifest.json --execute
 ~~~
 
-The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads. Failed entries without a Drive file ID can be retried; entries with a Drive file ID are held for manual reconciliation to prevent duplicates. The export paginates messenger_messages, global_stories, and admin_tasks in bounded batches. It covers messenger attachments, global stories, and base64 image data stored in admin_tasks.screenshot_data. User stories from the separate unmerged stories PR, product_catalog external image URLs, and orphaned Storage objects not referenced by application rows are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function downloads the Drive copy again and compares both byte size and SHA-256 before marking a record verified. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
+The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads. Failed entries without a Drive file ID can be retried; entries with a Drive file ID and legacy `copied` entries are held for manual reconciliation to prevent duplicates or falsely reporting an unverified copy as complete. The export paginates messenger_messages, global_stories, and admin_tasks in bounded batches. It covers messenger attachments, global stories, and base64 image data stored in admin_tasks.screenshot_data. User stories from the separate unmerged stories PR, product_catalog external image URLs, and orphaned Storage objects not referenced by application rows are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function downloads the Drive copy again and compares both byte size and SHA-256 before marking a record verified. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
 
 ## What this PR intentionally does not do
 
