@@ -28,4 +28,4 @@ comment on table public.provoda_drive_media is
 comment on column public.provoda_drive_media.sha256 is
   'SHA-256 of source and downloaded Drive bytes; migration is verified only when both match.';
 comment on column public.provoda_drive_media.migration_status is
-  'pending, verified, or failed. No source deletion is automated.';
+  'pending, copied (legacy and unverified), verified, or failed. Only verified is complete; copied requires manual reconciliation. No source deletion is automated.';
