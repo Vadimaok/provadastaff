@@ -17,6 +17,7 @@ on:
       - "daily-reports.js"
       - "monthly-stories.js"
       - "provoda-messenger.js"
+      - "provoda-user-stories.js"
       - "global-stories.js"
       - "feedback.js"
       - "supabase/**"
