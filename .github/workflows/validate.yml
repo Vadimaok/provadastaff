@@ -2,7 +2,7 @@ name: Validate Provoda Staff
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/guard-knz-task-poller]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -30,6 +30,9 @@ jobs:
 
       - name: Verify release workflows require manual approval
         run: node scripts/check-release-gates.mjs
+
+      - name: Verify KNZ task polling is role-gated
+        run: node scripts/check-knz-task-poller.mjs
 
       - name: Check external JavaScript syntax
         run: |
