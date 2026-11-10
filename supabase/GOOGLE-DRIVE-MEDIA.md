@@ -36,14 +36,14 @@ After deploying the function, call `{ "action": "create-folder" }` once with an 
 
 ## Gradual copy process
 
-Export a local manifest from the existing application records. The script reads only media paths and minimal identifiers from the global_stories and messenger_messages tables; it does not export message bodies or user content.
+Export a local manifest from the existing application records. The script reads only media paths and minimal identifiers from global_stories and messenger_messages, plus task IDs for rows that contain an inline screenshot. It does not export message bodies or screenshot bytes into the manifest; each screenshot is read only when its individual migration is explicitly executed.
 
 ~~~bash
 SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_USER_ACCESS_TOKEN=... \
   node scripts/migrate-drive-media.mjs --export
 ~~~
 
-Review the generated local manifest. It is not committed and contains only referenced Storage object paths.
+Review the generated local manifest. It is not committed and contains only referenced Storage bucket/path pairs and admin-task screenshot IDs, never the media bytes.
 
 Run a dry run first:
 
@@ -58,7 +58,7 @@ SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_USER_ACCESS_TOKEN=... \
   node scripts/migrate-drive-media.mjs ./media-manifest.json --execute
 ~~~
 
-The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads. Failed entries without a Drive file ID can be retried; entries with a Drive file ID are held for manual reconciliation to prevent duplicates. The export paginates the live messenger_messages and global_stories tables in bounded batches and covers messenger attachments and global stories. User stories from the separate unmerged stories PR, product catalog external image links, and orphaned Storage objects not referenced by those tables are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function downloads the Drive copy again and compares both byte size and SHA-256 before marking a record verified. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
+The script processes files sequentially. The registry reserves each source path before copying to prevent concurrent duplicate uploads. Failed entries without a Drive file ID can be retried; entries with a Drive file ID are held for manual reconciliation to prevent duplicates. The export paginates messenger_messages, global_stories, and admin_tasks in bounded batches. It covers messenger attachments, global stories, and base64 image data stored in admin_tasks.screenshot_data. User stories from the separate unmerged stories PR, product_catalog external image URLs, and orphaned Storage objects not referenced by application rows are not included. Each source object is limited to 100 MB and supported image/video MIME types. Large uploads use Drive's resumable upload protocol. The function downloads the Drive copy again and compares both byte size and SHA-256 before marking a record verified. Drive API quotas/rate limits still apply; keep batches modest and retry failed entries individually.
 
 ## What this PR intentionally does not do
 
