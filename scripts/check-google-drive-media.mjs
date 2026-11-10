@@ -14,6 +14,8 @@ assert.match(fn, /rpc\("is_current_admin"\)/);
 assert.match(fn, /createSignedUrl\(path, 90\)/);
 assert.match(fn, /verifiedBytes\.byteLength !== bytes\.byteLength/);
 assert.match(fn, /migration_status: "verified"/);
+assert.match(fn, /prior\?\.migration_status === "verified"/, "only verified copies may be treated as complete");
+assert.match(fn, /prior\?\.migration_status === "copied"\) throw new Error\("This Drive copy is not verified/, "unverified copies must be reconciled, not silently accepted");
 assert.match(fn, /list-candidates/);
 assert.match(fn, /from\("messenger_messages"\)/);
 assert.match(fn, /from\("global_stories"\)/);
