@@ -84,7 +84,8 @@ async function migrateOne(service: ReturnType<typeof createClient>, userId: stri
     .select("id,drive_file_id,drive_file_name,mime_type,byte_size,sha256,migration_status")
     .eq("source_bucket", bucket).eq("source_path", path).maybeSingle();
   if (priorError) throw priorError;
-  if (prior?.migration_status === "copied" || prior?.migration_status === "verified") return { alreadyCopied: true, ...prior };
+  if (prior?.migration_status === "verified") return { alreadyCopied: true, ...prior };
+  if (prior?.migration_status === "copied") throw new Error("This Drive copy is not verified. Reconcile it manually before retrying.");
   if (prior?.migration_status === "pending") throw new Error("This file already has a pending migration. Check the Drive folder and registry before retrying.");
   if (prior?.migration_status === "failed" && prior.drive_file_id) throw new Error("A Drive file already exists for this failed migration. Reconcile it before retrying to avoid duplicate files.");
   if (prior) {
