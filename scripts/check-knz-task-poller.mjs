@@ -19,7 +19,7 @@ assert.match(startBody, /roleFeatureFlags\.employee_knz\s*===\s*false/, 'poll ti
 
 const accessBody = bodyOf('refreshKnzTaskPollingAccess');
 assert.match(accessBody, /rpc\(['"]user_get_role_features['"]\)/, 'poll access must be verified from the server');
-assert.match(accessBody, /data\?\.employee_knz\s*!==\s*false/, 'server feature state must be applied');
+assert.match(accessBody, /data\?\.employee_knz\s*===\s*true/, 'polling must fail closed unless the server explicitly enables the feature');
 assert.match(accessBody, /startRejectedReportPolling\(\)/, 'polling must start only after access is verified');
 
 const roleBody = bodyOf('refreshCurrentUserRole');
