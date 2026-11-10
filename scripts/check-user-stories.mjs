@@ -9,7 +9,7 @@ const android = readFileSync('.github/workflows/build-android.yml', 'utf8');
 assert.match(html, /provoda-user-stories\.js/, 'employee stories module must be loaded');
 assert.match(android, /provoda-user-stories\.js/, 'employee stories module must be included in Android bundle');
 const androidPushPaths = android.match(/push:\s*\n\s*paths:\s*\n([\s\S]*?)\n\s*permissions:/)?.[1] || '';
-assert.match(androidPushPaths, /[\"']provoda-user-stories\\.js[\"']/, 'employee story module changes must trigger an Android build');
+assert.match(androidPushPaths, /["']provoda-user-stories\.js["']/, 'employee story module changes must trigger an Android build');
 assert.match(client, /createSignedUrl\(/, 'private media must be served through signed URLs');
 assert.match(client, /storage\.from\(BUCKET\)\.upload\(/, 'stories must upload through the private bucket');
 assert.match(client, /expires_at/, 'stories must have an expiry');
