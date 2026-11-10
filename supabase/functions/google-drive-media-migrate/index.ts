@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Vary": "Origin",
 };
-const ALLOWED_BUCKETS = new Set(["provoda-messenger", "provoda-global-stories", "provoda-user-stories"]);
+const ALLOWED_BUCKETS = new Set(["provoda-messenger", "provoda-global-stories", "provoda-user-stories", "admin-task-screenshots"]);
 const MAX_BYTES = 100 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
   "image/jpeg", "image/png", "image/webp", "image/gif", "image/heic",
@@ -59,19 +59,22 @@ async function listCandidates(service: ReturnType<typeof createClient>, offset: 
   const limitNumber = Number(limit);
   const safeOffset = Number.isFinite(offsetNumber) ? Math.max(0, Math.floor(offsetNumber)) : 0;
   const safeLimit = Number.isFinite(limitNumber) ? Math.min(500, Math.max(1, Math.floor(limitNumber))) : 250;
-  const [stories, messages] = await Promise.all([
+  const [stories, messages, taskScreenshots] = await Promise.all([
     service.from("global_stories").select("id,storage_path,media_type,created_at").not("storage_path", "is", null).order("id").range(safeOffset, safeOffset + safeLimit - 1),
     service.from("messenger_messages").select("id,conversation_id,attachment_path,attachment_mime,created_at").not("attachment_path", "is", null).order("id").range(safeOffset, safeOffset + safeLimit - 1),
+    service.from("admin_tasks").select("id").not("screenshot_data", "is", null).neq("screenshot_data", "").order("id").range(safeOffset, safeOffset + safeLimit - 1),
   ]);
   if (stories.error) throw new Error("Could not list global story media: " + stories.error.message);
   if (messages.error) throw new Error("Could not list messenger media: " + messages.error.message);
+  if (taskScreenshots.error) throw new Error("Could not list task screenshots: " + taskScreenshots.error.message);
   const candidates = [
     ...(stories.data || []).map((row: any) => ({ bucket: "provoda-global-stories", path: row.storage_path, recordType: "global_story", recordId: row.id, mimeType: row.media_type, createdAt: row.created_at })),
     ...(messages.data || []).map((row: any) => ({ bucket: "provoda-messenger", path: row.attachment_path, recordType: "messenger_attachment", recordId: row.id, conversationId: row.conversation_id, mimeType: row.attachment_mime, createdAt: row.created_at })),
+    ...(taskScreenshots.data || []).map((row: any) => ({ bucket: "admin-task-screenshots", path: row.id, recordType: "admin_task_screenshot", recordId: row.id })),
   ];
   const unique = new Map<string, any>();
   for (const item of candidates) if (item.path) unique.set(item.bucket + "\n" + item.path, item);
-  const hasMore = (stories.data || []).length === safeLimit || (messages.data || []).length === safeLimit;
+  const hasMore = (stories.data || []).length === safeLimit || (messages.data || []).length === safeLimit || (taskScreenshots.data || []).length === safeLimit;
   return { candidates: [...unique.values()], nextOffset: hasMore ? safeOffset + safeLimit : null };
 }
 async function migrateOne(service: ReturnType<typeof createClient>, userId: string, bucket: string, path: string) {
@@ -105,15 +108,33 @@ async function migrateOne(service: ReturnType<typeof createClient>, userId: stri
 
   let uploadedDriveId: string | null = null;
   try {
-    const { data: signed, error: signedError } = await service.storage.from(bucket).createSignedUrl(path, 90);
-    if (signedError || !signed?.signedUrl) throw new Error("Source object is unavailable in Supabase Storage.");
-    const source = await fetch(signed.signedUrl);
-    if (!source.ok) throw new Error("Could not read source object (" + source.status + ").");
-    const mime = (source.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-    const declaredLength = Number(source.headers.get("content-length") || 0);
+    let mime: string;
+    let bytes: Uint8Array;
+    if (bucket === "admin-task-screenshots") {
+      const { data: task, error: taskError } = await service.from("admin_tasks").select("screenshot_data").eq("id", path).maybeSingle();
+      if (taskError) throw new Error("Could not read task screenshot: " + taskError.message);
+      if (!task?.screenshot_data) throw new Error("Task screenshot is no longer available.");
+      const match = /^data:(image\/(?:jpeg|png|webp|gif|heic));base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(String(task.screenshot_data).trim());
+      if (!match) throw new Error("Task screenshot is not a supported base64 image.");
+      mime = match[1].toLowerCase();
+      const encoded = match[2].replace(/\s/g, "");
+      if (encoded.length > Math.ceil(MAX_BYTES * 4 / 3) + 4) throw new Error("Task screenshot exceeds the 100 MB migration limit.");
+      let binary: string;
+      try { binary = atob(encoded); } catch { throw new Error("Task screenshot base64 data is invalid."); }
+      if (!binary.length || binary.length > MAX_BYTES) throw new Error("Task screenshot is empty or exceeds the 100 MB migration limit.");
+      bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    } else {
+      const { data: signed, error: signedError } = await service.storage.from(bucket).createSignedUrl(path, 90);
+      if (signedError || !signed?.signedUrl) throw new Error("Source object is unavailable in Supabase Storage.");
+      const source = await fetch(signed.signedUrl);
+      if (!source.ok) throw new Error("Could not read source object (" + source.status + ").");
+      mime = (source.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+      const declaredLength = Number(source.headers.get("content-length") || 0);
+      if (declaredLength > MAX_BYTES) throw new Error("Source file exceeds the 100 MB migration limit.");
+      bytes = new Uint8Array(await source.arrayBuffer());
+    }
     if (!ALLOWED_MIME.has(mime)) throw new Error("Unsupported source MIME type: " + (mime || "unknown"));
-    if (declaredLength > MAX_BYTES) throw new Error("Source file exceeds the 100 MB migration limit.");
-    const bytes = new Uint8Array(await source.arrayBuffer());
     if (!bytes.byteLength || bytes.byteLength > MAX_BYTES) throw new Error("Source file is empty or exceeds the 100 MB migration limit.");
     const digest = await crypto.subtle.digest("SHA-256", bytes);
     const sha256 = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
