@@ -19,6 +19,10 @@ assert.match(fn, /prior\?\.migration_status === "copied"\) throw new Error\("Thi
 assert.match(fn, /list-candidates/);
 assert.match(fn, /from\("messenger_messages"\)/);
 assert.match(fn, /from\("global_stories"\)/);
+assert.ok(fn.includes('from("admin_tasks")'), "task screenshot inventory must be included");
+assert.ok(fn.includes("admin-task-screenshots"), "inline task screenshots need a dedicated migration source");
+assert.ok(fn.includes("atob(encoded)"), "inline screenshots must be decoded only during per-file migration");
+assert.ok(fn.includes("data:(image\\/(?:jpeg|png|webp|gif|heic));base64,"), "only supported image data URIs may be decoded");
 assert.match(fn, /\.range\(safeOffset, safeOffset \+ safeLimit - 1\)/);
 assert.match(fn, /body\?\.action === "create-folder"/);
 assert.match(fn, /appProperties has/);
