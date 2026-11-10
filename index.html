@@ -3683,7 +3683,7 @@ async function refreshKnzTaskPollingAccess(){
     const {data,error}=await cloudClient.rpc('user_get_role_features');
     if(error)throw error;
     if(!cloudUser||cloudUser.id!==userId||currentUserRole!=='employee_knz')return;
-    roleFeatureFlags={...roleFeatureFlags,employee_knz:data?.employee_knz!==false};
+    roleFeatureFlags={...roleFeatureFlags,employee_knz:data?.employee_knz===true};
     if(roleFeatureFlags.employee_knz)startRejectedReportPolling();
   }catch(error){console.info('KNZ task polling paused until access can be verified:',error?.message||error);}
 }
