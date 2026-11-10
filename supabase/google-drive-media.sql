@@ -4,7 +4,7 @@
 
 create table if not exists public.provoda_drive_media (
   id uuid primary key default gen_random_uuid(),
-  source_bucket text not null check (source_bucket in ('provoda-messenger','provoda-global-stories','provoda-user-stories')),
+  source_bucket text not null check (source_bucket in ('provoda-messenger','provoda-global-stories','provoda-user-stories','admin-task-screenshots')),
   source_path text not null check (char_length(source_path) between 1 and 1024),
   drive_file_id text,
   drive_file_name text,
