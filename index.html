@@ -3667,12 +3667,27 @@ async function openRequestedTeamView(){
 }
 async function refreshCurrentUserRole(){
   if(!cloudClient||!cloudUser){stopRejectedReportPolling();currentUserRole='employee';currentUserKuznetsova=false;applyRoleUI();return;}
-  try{const {data,error}=await cloudClient.rpc('user_get_my_role');if(error)throw error;currentUserRole=['employee','employee_knz','shift_senior'].includes(data)?data:'employee';}
-  catch(e){console.info('Role could not be loaded:',e?.message||e);}
+  const userId=cloudUser.id;
+  let roleResolved=false;
+  try{
+    const {data,error}=await cloudClient.rpc('user_get_my_role');
+    if(error)throw error;
+    if(!cloudUser||cloudUser.id!==userId)return;
+    currentUserRole=['employee','employee_knz','shift_senior'].includes(data)?data:'employee';
+    roleResolved=true;
+  }catch(e){
+    if(!cloudUser||cloudUser.id!==userId)return;
+    currentUserRole='employee';
+    currentUserShiftRole=null;
+    currentUserKuznetsova=false;
+    roleFeatureFlags={...roleFeatureFlags,employee_knz:false};
+    stopRejectedReportPolling();
+    console.info('Role could not be loaded:',e?.message||e);
+  }
   try{const {data,error}=await cloudClient.rpc('user_get_my_shift_role');if(error)throw error;currentUserShiftRole=data||null;}catch{currentUserShiftRole=null;}
   try{const {data,error}=await cloudClient.rpc('is_current_kuznetsova');if(error)throw error;currentUserKuznetsova=!!data;}catch{currentUserKuznetsova=false;}
   applyRoleUI();
-  if(currentUserRole==='employee_knz')void refreshKnzTaskPollingAccess();else stopRejectedReportPolling();
+  if(roleResolved&&currentUserRole==='employee_knz')void refreshKnzTaskPollingAccess();else stopRejectedReportPolling();
   openRequestedTeamView();
 }
 async function refreshKnzTaskPollingAccess(){
