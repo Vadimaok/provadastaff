@@ -59,22 +59,25 @@ async function listCandidates(service: ReturnType<typeof createClient>, offset: 
   const limitNumber = Number(limit);
   const safeOffset = Number.isFinite(offsetNumber) ? Math.max(0, Math.floor(offsetNumber)) : 0;
   const safeLimit = Number.isFinite(limitNumber) ? Math.min(500, Math.max(1, Math.floor(limitNumber))) : 250;
-  const [stories, messages, taskScreenshots] = await Promise.all([
+  const [stories, messages, userStories, taskScreenshots] = await Promise.all([
     service.from("global_stories").select("id,storage_path,media_type,created_at").not("storage_path", "is", null).order("id").range(safeOffset, safeOffset + safeLimit - 1),
     service.from("messenger_messages").select("id,conversation_id,attachment_path,attachment_mime,created_at").not("attachment_path", "is", null).order("id").range(safeOffset, safeOffset + safeLimit - 1),
+    service.from("messenger_user_stories").select("id,user_id,media_path,media_type,created_at").not("media_path", "is", null).order("id").range(safeOffset, safeOffset + safeLimit - 1),
     service.from("admin_tasks").select("id").not("screenshot_data", "is", null).neq("screenshot_data", "").order("id").range(safeOffset, safeOffset + safeLimit - 1),
   ]);
   if (stories.error) throw new Error("Could not list global story media: " + stories.error.message);
   if (messages.error) throw new Error("Could not list messenger media: " + messages.error.message);
+  if (userStories.error) throw new Error("Could not list employee story media. Apply supabase/messenger-user-stories.sql before running the inventory: " + userStories.error.message);
   if (taskScreenshots.error) throw new Error("Could not list task screenshots: " + taskScreenshots.error.message);
   const candidates = [
     ...(stories.data || []).map((row: any) => ({ bucket: "provoda-global-stories", path: row.storage_path, recordType: "global_story", recordId: row.id, mimeType: row.media_type, createdAt: row.created_at })),
     ...(messages.data || []).map((row: any) => ({ bucket: "provoda-messenger", path: row.attachment_path, recordType: "messenger_attachment", recordId: row.id, conversationId: row.conversation_id, mimeType: row.attachment_mime, createdAt: row.created_at })),
+    ...(userStories.data || []).map((row: any) => ({ bucket: "provoda-user-stories", path: row.media_path, recordType: "messenger_user_story", recordId: row.id, userId: row.user_id, mimeType: row.media_type, createdAt: row.created_at })),
     ...(taskScreenshots.data || []).map((row: any) => ({ bucket: "admin-task-screenshots", path: row.id, recordType: "admin_task_screenshot", recordId: row.id })),
   ];
   const unique = new Map<string, any>();
   for (const item of candidates) if (item.path) unique.set(item.bucket + "\n" + item.path, item);
-  const hasMore = (stories.data || []).length === safeLimit || (messages.data || []).length === safeLimit || (taskScreenshots.data || []).length === safeLimit;
+  const hasMore = (stories.data || []).length === safeLimit || (messages.data || []).length === safeLimit || (userStories.data || []).length === safeLimit || (taskScreenshots.data || []).length === safeLimit;
   return { candidates: [...unique.values()], nextOffset: hasMore ? safeOffset + safeLimit : null };
 }
 async function migrateOne(service: ReturnType<typeof createClient>, userId: string, bucket: string, path: string) {
