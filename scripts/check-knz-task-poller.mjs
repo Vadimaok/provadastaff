@@ -23,8 +23,12 @@ assert.match(accessBody, /data\?\.employee_knz\s*===\s*true/, 'polling must fail
 assert.match(accessBody, /startRejectedReportPolling\(\)/, 'polling must start only after access is verified');
 
 const roleBody = bodyOf('refreshCurrentUserRole');
+assert.match(roleBody, /const userId=cloudUser\.id/, 'role refresh must capture the session owner');
+assert.match(roleBody, /cloudUser\.id!==userId/, 'stale role responses must not cross account changes');
+assert.match(roleBody, /currentUserRole='employee'/, 'role lookup errors must fall back to the least-privileged role');
+assert.match(roleBody, /roleResolved&&currentUserRole==='employee_knz'/, 'KNZ polling must not start when role lookup fails');
 assert.match(roleBody, /void\s+refreshKnzTaskPollingAccess\(\)/, 'role refresh must control KNZ polling');
-assert.match(roleBody, /else\s+stopRejectedReportPolling\(\)/, 'non-KNZ roles must stop KNZ polling');
+assert.match(roleBody, /else\s+stopRejectedReportPolling\(\)/, 'non-KNZ or unresolved roles must stop KNZ polling');
 
 const starts = [...html.matchAll(/startRejectedReportPolling\(\);/g)];
 assert.equal(starts.length, 1, 'polling must not be started unconditionally during login');
