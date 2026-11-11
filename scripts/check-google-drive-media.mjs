@@ -19,6 +19,9 @@ assert.match(fn, /prior\?\.migration_status === "copied"\) throw new Error\("Thi
 assert.match(fn, /list-candidates/);
 assert.match(fn, /from\("messenger_messages"\)/);
 assert.match(fn, /from\("global_stories"\)/);
+assert.match(fn, /from\("messenger_user_stories"\)/, "employee story rows must be included in the media inventory");
+assert.match(fn, /bucket: "provoda-user-stories"/, "employee story files must map to their private source bucket");
+assert.match(fn, /userStories\.data/, "employee story inventory must participate in pagination");
 assert.ok(fn.includes('from("admin_tasks")'), "task screenshot inventory must be included");
 assert.ok(fn.includes("admin-task-screenshots"), "inline task screenshots need a dedicated migration source");
 assert.ok(fn.includes("atob(encoded)"), "inline screenshots must be decoded only during per-file migration");
