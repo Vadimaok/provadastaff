@@ -36,7 +36,7 @@ After deploying the function, call `{ "action": "create-folder" }` once with an 
 
 ## Gradual copy process
 
-Export a local manifest from the existing application records. The script reads only media paths and minimal identifiers from global_stories and messenger_messages, plus task IDs for rows that contain an inline screenshot. It does not export message bodies or screenshot bytes into the manifest; each screenshot is read only when its individual migration is explicitly executed.
+Export a local manifest from the existing application records. The script reads only media paths and minimal identifiers from global_stories, messenger_messages and messenger_user_stories, plus task IDs for rows that contain an inline screenshot. If employee stories are enabled, apply `supabase/messenger-user-stories.sql` before running the inventory; otherwise the inventory will stop with an explicit prerequisite error rather than silently skipping that media. It does not export message bodies or screenshot bytes into the manifest; each screenshot is read only when its individual migration is explicitly executed.
 
 ~~~bash
 SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_USER_ACCESS_TOKEN=... \
