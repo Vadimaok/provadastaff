@@ -51,7 +51,7 @@ begin
   )
   select jsonb_build_object(
     'enabled',true,'user_id',u.id,
-    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
+    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),'Сотрудник'),
     'email',u.email,'avatar_data',nullif(u.raw_user_meta_data->>'avatar_data',''),
     'month_start',v_month,'spent',coalesce(es.spent,0),
     'budget',case when coalesce(d.data->>'budgetMonthly','') ~ '^[0-9]+([.][0-9]+)?$' then (d.data->>'budgetMonthly')::numeric else 7000 end,
@@ -103,7 +103,7 @@ begin
   if not coalesce((select f.is_enabled from public.role_feature_flags f where f.role='monthly_stories'),false) then return '[]'::jsonb; end if;
   select coalesce(jsonb_agg(jsonb_build_object(
     'user_id',u.id,
-    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
+    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),'Сотрудник'),
     'avatar_data',nullif(u.raw_user_meta_data->>'avatar_data',''),
     'role_label',case
       when au.user_id is not null then 'Администратор'
@@ -111,7 +111,7 @@ begin
       when ur.role='shift_senior' then 'Старший КНЗ'
       when ur.role='employee_knz' then 'Сотрудник КНЗ'
       else 'Сотрудник' end
-  ) order by lower(coalesce(u.raw_user_meta_data->>'display_name',u.raw_user_meta_data->>'username',u.email))), '[]'::jsonb)
+  ) order by lower(coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),'Сотрудник'))), '[]'::jsonb)
   into v_result
   from public.monthly_story_shares s
   join auth.users u on u.id=s.user_id and u.deleted_at is null
@@ -208,7 +208,7 @@ begin
   if not coalesce((select f.is_enabled from public.role_feature_flags f where f.role='internal_chat'),false) then raise exception 'Мессенджер отключён администратором' using errcode='42501'; end if;
   select coalesce(jsonb_agg(jsonb_build_object(
     'user_id',u.id,
-    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
+    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),'Сотрудник'),
     'avatar_data',nullif(u.raw_user_meta_data->>'avatar_data',''),
     'role_label',case
       when au.user_id is not null then 'Администратор'
@@ -217,7 +217,7 @@ begin
       when ur.role='employee_knz' then 'Сотрудник КНЗ'
       else 'Сотрудник' end,
     'shift_role',case when ur.shift_role='day' then 'Дневная смена' when ur.shift_role='night' then 'Ночная смена' else null end
-  ) order by lower(coalesce(u.raw_user_meta_data->>'display_name',u.raw_user_meta_data->>'username',u.email))), '[]'::jsonb)
+  ) order by lower(coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),'Сотрудник'))), '[]'::jsonb)
   into v_result
   from auth.users u
   left join public.admin_users au on au.user_id=u.id
@@ -253,7 +253,7 @@ begin
   if not coalesce((select f.is_enabled from public.role_feature_flags f where f.role='internal_chat'),false) then return '[]'::jsonb; end if;
   select coalesce(jsonb_agg(jsonb_build_object(
     'conversation_id',c.id,'user_id',u.id,
-    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
+    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),'Сотрудник'),
     'avatar_data',nullif(u.raw_user_meta_data->>'avatar_data',''),
     'role_label',case when au.user_id is not null then 'Администратор' when cr.title is not null then cr.title when ur.role='shift_senior' then 'Старший КНЗ' when ur.role='employee_knz' then 'Сотрудник КНЗ' else 'Сотрудник' end,
     'shift_role',case when ur.shift_role='day' then 'Дневная смена' when ur.shift_role='night' then 'Ночная смена' else null end,
