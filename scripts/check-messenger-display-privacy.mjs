@@ -35,6 +35,9 @@ for (const source of [migration, employeeSql, messengerSql]) {
 }
 assert.match(migration, /begin;/i);
 assert.match(migration, /commit;\s*$/i);
+for (const name of ['_provoda_monthly_story_payload', 'user_list_shared_monthly_stories', 'messenger_list_users', 'messenger_list_conversations']) {
+  assert.match(functionBlock(migration, name), /\\$function\\$;\\s*$/i, name + ': SQL function terminator is missing');
+}
 assert.match(migration, /security definer/i);
 assert.match(migration, /set search_path to ''/i);
 console.log('Employee-facing display-name privacy checks passed.');
