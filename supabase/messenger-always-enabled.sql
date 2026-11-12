@@ -20,11 +20,11 @@ begin
   if v_user is null then raise exception 'Нужна авторизация' using errcode='42501'; end if;
   select coalesce(jsonb_agg(jsonb_build_object(
     'user_id',u.id,
-    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
+    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),'Сотрудник'),
     'avatar_data',nullif(u.raw_user_meta_data->>'avatar_data',''),
     'role_label',case when au.user_id is not null then 'Администратор' when cr.title is not null then cr.title when ur.role='shift_senior' then 'Старший КНЗ' when ur.role='employee_knz' then 'Сотрудник КНЗ' else 'Сотрудник' end,
     'shift_role',case when ur.shift_role='day' then 'Дневная смена' when ur.shift_role='night' then 'Ночная смена' else null end
-  ) order by lower(coalesce(u.raw_user_meta_data->>'display_name',u.raw_user_meta_data->>'username',u.email))), '[]'::jsonb)
+  ) order by lower(coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),'Сотрудник'))), '[]'::jsonb)
   into v_result
   from auth.users u
   left join public.admin_users au on au.user_id=u.id
@@ -58,7 +58,7 @@ begin
   if v_user is null then raise exception 'Нужна авторизация' using errcode='42501'; end if;
   select coalesce(jsonb_agg(jsonb_build_object(
     'conversation_id',c.id,'user_id',u.id,
-    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),u.email,'Сотрудник'),
+    'name',coalesce(nullif(trim(u.raw_user_meta_data->>'display_name'),''),nullif(trim(u.raw_user_meta_data->>'username'),''),nullif(trim(u.raw_user_meta_data->>'name'),''),'Сотрудник'),
     'avatar_data',nullif(u.raw_user_meta_data->>'avatar_data',''),
     'role_label',case when au.user_id is not null then 'Администратор' when cr.title is not null then cr.title when ur.role='shift_senior' then 'Старший КНЗ' when ur.role='employee_knz' then 'Сотрудник КНЗ' else 'Сотрудник' end,
     'shift_role',case when ur.shift_role='day' then 'Дневная смена' when ur.shift_role='night' then 'Ночная смена' else null end,
