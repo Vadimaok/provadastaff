@@ -61,7 +61,7 @@ begin
   where u.id=p_user_id and u.deleted_at is null;
   return coalesce(v_story,jsonb_build_object('enabled',false));
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.user_list_shared_monthly_stories()
  RETURNS jsonb
@@ -88,7 +88,7 @@ begin
   where s.is_enabled and u.id<>v_user and au.user_id is null;
   return v_result;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.messenger_list_users()
  RETURNS jsonb
@@ -114,7 +114,7 @@ begin
   where u.id<>v_user and u.deleted_at is null;
   return v_result;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.messenger_list_conversations()
  RETURNS jsonb
@@ -143,6 +143,6 @@ begin
   where v_user in(c.participant_a,c.participant_b) and u.deleted_at is null;
   return v_result;
 end;
-$function$
+$function$;
 
 commit;
