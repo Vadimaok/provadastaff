@@ -9,7 +9,9 @@ assert.match(urlMatch[1], /signed\.set\(r\.id,\{path:r\.storage_path,url:data\.s
 
 const loadMatch = source.match(/async function load\(\)\{([\s\S]*?)\nasync function strip/);
 assert.ok(loadMatch, 'Global story loader must exist');
-const featureDisabledPath = loadMatch[1].slice(0, loadMatch[1].indexOf('const {data,error}=cloudClient.from'));
+const dataQueryIndex = loadMatch[1].indexOf('const {data,error}=await cloudClient.from');
+assert.notEqual(dataQueryIndex, -1, 'the successful story query must be present');
+const featureDisabledPath = loadMatch[1].slice(0, dataQueryIndex);
 assert.match(featureDisabledPath, /rows=\[\];signed\.clear\(\)/, 'disabling the feature must still clear cached URLs');
 const successfulRefreshPath = loadMatch[1].slice(loadMatch[1].indexOf('rows=Array.isArray(data)?data:[];'));
 assert.doesNotMatch(successfulRefreshPath, /signed\.clear\(\)/, 'successful periodic refreshes must not discard all valid signed URLs');
