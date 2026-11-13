@@ -9,7 +9,10 @@ assert.match(urlMatch[1], /signed\.set\(r\.id,\{path:r\.storage_path,url:data\.s
 
 const loadMatch = source.match(/async function load\(\)\{([\s\S]*?)\nasync function strip/);
 assert.ok(loadMatch, 'Global story loader must exist');
-assert.doesNotMatch(loadMatch[1], /signed\.clear\(\)/, 'successful periodic refreshes must not discard all valid signed URLs');
+const featureDisabledPath = loadMatch[1].slice(0, loadMatch[1].indexOf('const {data,error}=cloudClient.from'));
+assert.match(featureDisabledPath, /rows=\[\];signed\.clear\(\)/, 'disabling the feature must still clear cached URLs');
+const successfulRefreshPath = loadMatch[1].slice(loadMatch[1].indexOf('rows=Array.isArray(data)?data:[];'));
+assert.doesNotMatch(successfulRefreshPath, /signed\.clear\(\)/, 'successful periodic refreshes must not discard all valid signed URLs');
 assert.match(loadMatch[1], /const activeIds=new Set\(rows\.map\(r=>r\.id\)\)/, 'the cache must be reconciled against active stories');
 assert.match(loadMatch[1], /for\(const id of signed\.keys\(\)\)if\(!activeIds\.has\(id\)\)signed\.delete\(id\)/, 'removed or expired stories must be evicted from the cache');
 
