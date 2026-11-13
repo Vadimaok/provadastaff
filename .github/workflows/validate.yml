@@ -31,6 +31,9 @@ jobs:
       - name: Verify release workflows require manual approval
         run: node scripts/check-release-gates.mjs
 
+      - name: Verify global story signed URL cache
+        run: node scripts/check-global-story-url-cache.mjs
+
       - name: Check external JavaScript syntax
         run: |
           for file in daily-reports.js monthly-stories.js global-stories.js provoda-messenger.js feedback.js; do
