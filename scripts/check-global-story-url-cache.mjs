@@ -20,9 +20,9 @@ assert.match(loadMatch[1], /for\(const id of signed\.keys\(\)\)if\(!activeIds\.h
 
 const featureGate = loadMatch[1].indexOf("if(feature.error||feature.data?.global_stories!==true)");
 assert.ok(featureGate >= 0 && featureGate < dataQueryIndex, 'global stories must fail closed before querying story rows when the feature flag is unavailable or disabled');
-assert.match(loadMatch[1], /rows=\\[\\];signed\\.clear\\(\\)/, 'a failed or disabled feature check must clear stale rows and signed URLs');
+assert.match(loadMatch[1], /rows=\[\];signed\.clear\(\)/, 'a failed or disabled feature check must clear stale rows and signed URLs');
 
-const publishMatch = source.match(/async function publish\\(e\\)\\{([\\s\\S]*?)\\nasync function remove/);
+const publishMatch = source.match(/async function publish\(e\)\{([\s\S]*?)\nasync function remove/);
 assert.ok(publishMatch, 'Global story publisher must exist');
 const publishGate = publishMatch[1].indexOf('if(feature.error||feature.data?.global_stories!==true)');
 const uploadIndex = publishMatch[1].indexOf(".storage.from(BUCKET).upload");
