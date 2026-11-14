@@ -18,4 +18,14 @@ assert.doesNotMatch(successfulRefreshPath, /signed\.clear\(\)/, 'successful peri
 assert.match(loadMatch[1], /const activeIds=new Set\(rows\.map\(r=>r\.id\)\)/, 'the cache must be reconciled against active stories');
 assert.match(loadMatch[1], /for\(const id of signed\.keys\(\)\)if\(!activeIds\.has\(id\)\)signed\.delete\(id\)/, 'removed or expired stories must be evicted from the cache');
 
-console.log('Global story signed URL cache checks passed.');
+const featureGate = loadMatch[1].indexOf("if(feature.error||feature.data?.global_stories!==true)");
+assert.ok(featureGate >= 0 && featureGate < dataQueryIndex, 'global stories must fail closed before querying story rows when the feature flag is unavailable or disabled');
+assert.match(loadMatch[1], /rows=\\[\\];signed\\.clear\\(\\)/, 'a failed or disabled feature check must clear stale rows and signed URLs');
+
+const publishMatch = source.match(/async function publish\\(e\\)\\{([\\s\\S]*?)\\nasync function remove/);
+assert.ok(publishMatch, 'Global story publisher must exist');
+const publishGate = publishMatch[1].indexOf('if(feature.error||feature.data?.global_stories!==true)');
+const uploadIndex = publishMatch[1].indexOf(".storage.from(BUCKET).upload");
+assert.ok(publishGate >= 0 && uploadIndex > publishGate, 'publishing must fail closed before uploading when feature access cannot be verified');
+
+console.log('Global story cache and fail-closed feature checks passed.');
